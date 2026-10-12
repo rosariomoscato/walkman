@@ -16,4 +16,19 @@ interface ProfileDao {
 
     @Insert
     suspend fun insert(profile: ProfileEntity): Long
+
+    @Query("SELECT * FROM profile WHERE id = :id")
+    suspend fun get(id: Long): ProfileEntity?
+
+    @Query("SELECT * FROM profile WHERE isActive = 1 LIMIT 1")
+    suspend fun active(): ProfileEntity?
+
+    @Query("UPDATE profile SET isActive = 0")
+    suspend fun clearActive()
+
+    @Query("UPDATE profile SET isActive = 1 WHERE id = :id")
+    suspend fun activate(id: Long)
+
+    @Query("DELETE FROM profile WHERE id = :id")
+    suspend fun delete(id: Long)
 }

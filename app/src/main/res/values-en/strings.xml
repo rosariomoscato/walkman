@@ -6,7 +6,7 @@
     <string name="nav_settings">Settings</string>
 
     <string name="home_empty_title">No profile configured</string>
-    <string name="home_empty_body">Your library will appear here after connecting to a Navidrome server. Profile setup will be enabled in upcoming app updates.</string>
+    <string name="home_empty_body">Set up a profile to connect to your Navidrome server.</string>
     <string name="home_section_recently_added">Recently added</string>
 
     <string name="settings_title">Settings</string>
@@ -20,6 +20,13 @@
     <string name="settings_language_italian">Italiano</string>
     <string name="settings_language_english">English</string>
     <string name="settings_system">System</string>
+    <string name="settings_app_lock">App lock</string>
+    <string name="settings_app_lock_help">Require device biometrics or PIN when WalkTape opens.</string>
+    <string name="settings_app_lock_unavailable">Unavailable: set up a system biometric or PIN to enable it.</string>
+    <string name="lock_title">WalkTape is locked</string>
+    <string name="lock_body">Unlock with device biometrics or PIN to continue.</string>
+    <string name="lock_prompt_title">Unlock WalkTape</string>
+    <string name="lock_unlock">Unlock</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_version">Version</string>
 

@@ -1,0 +1,103 @@
+package com.walktape.app.core.profiles
+
+import androidx.room.withTransaction
+import com.walktape.app.core.db.ProfileEntity
+import com.walktape.app.core.db.WalkTapeDatabase
+import com.walktape.app.core.net.ApiError
+import com.walktape.app.core.net.ApiResult
+import com.walktape.app.core.net.Credentials
+import com.walktape.app.core.net.OpenSubsonicClient
+import com.walktape.app.core.net.ServerAddress
+import com.walktape.app.core.net.ServerInfo
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.util.UUID
+
+class ProfileRepository(
+    private val database: WalkTapeDatabase,
+    private val vault: CredentialVault,
+    private val filesRoot: File,
+) {
+    private val dao = database.profileDao()
+    private val mutex = Mutex()
+    val profiles = dao.observeAll()
+
+    suspend fun addVerified(name: String, url: String, username: String, password: String,
+                            allowLocalHttp: Boolean): ApiResult<Long> = withContext(Dispatchers.IO) {
+        if (name.isBlank() || name.length > 80 || username.isBlank() || password.isEmpty()) {
+            return@withContext ApiResult.Failure(ApiError.InvalidRequest)
+        }
+        val address = ServerAddress.parse(url, allowLocalHttp)
+            ?: return@withContext ApiResult.Failure(ApiError.InvalidRequest)
+        when (val result = OpenSubsonicClient(address, Credentials(username, password)).ping()) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> mutex.withLock {
+                val keyId = UUID.randomUUID().toString()
+                try {
+                    val encrypted = vault.encrypt(keyId, password)
+                    val id = database.withTransaction {
+                        val id = dao.insert(ProfileEntity(name = name.trim(), serverUrl = address.url.toString(),
+                            username = username, createdAt = System.currentTimeMillis(), credentialId = keyId,
+                            encryptedPassword = encrypted, allowLocalHttp = allowLocalHttp))
+                        if (dao.active() == null) dao.activate(id)
+                        id
+                    }
+                    ApiResult.Success(id)
+                } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                    vault.delete(keyId)
+                    ApiResult.Failure(ApiError.InvalidRequest)
+                } catch (_: java.security.GeneralSecurityException) {
+                    vault.delete(keyId)
+                    ApiResult.Failure(ApiError.CredentialsUnavailable)
+                }
+            }
+        }
+    }
+
+    suspend fun clientFor(id: Long): OpenSubsonicClient? = withContext(Dispatchers.IO) {
+        val profile = dao.get(id) ?: return@withContext null
+        val address = ServerAddress.parse(profile.serverUrl, profile.allowLocalHttp) ?: return@withContext null
+        try {
+            OpenSubsonicClient(address, Credentials(profile.username,
+                vault.decrypt(profile.credentialId, profile.encryptedPassword)))
+        } catch (_: java.security.GeneralSecurityException) { null }
+          catch (_: IllegalArgumentException) { null }
+    }
+
+    suspend fun verify(id: Long): ApiResult<ServerInfo> =
+        clientFor(id)?.ping() ?: ApiResult.Failure(ApiError.CredentialsUnavailable)
+
+    suspend fun activate(id: Long): Boolean = mutex.withLock {
+        database.withTransaction {
+            val profile = dao.get(id) ?: return@withTransaction false
+            if (profile.credentialId.isEmpty()) return@withTransaction false
+            dao.clearActive()
+            dao.activate(id)
+            true
+        }
+    }
+
+    fun directory(id: Long): File {
+        require(id > 0)
+        return File(filesRoot, "profiles/$id")
+    }
+
+    suspend fun localBytes(id: Long): Long = withContext(Dispatchers.IO) {
+        directory(id).walkTopDown().filter { it.isFile }.sumOf { it.length() }
+    }
+
+    /** Only private data of this profile; failed cleanup is retryable, never a server mutation. */
+    suspend fun remove(id: Long): Boolean = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val profile = dao.get(id) ?: return@withLock false
+            val folder = directory(id)
+            if (folder.exists() && !folder.deleteRecursively()) return@withLock false
+            vault.delete(profile.credentialId)
+            dao.delete(id)
+            true
+        }
+    }
+}

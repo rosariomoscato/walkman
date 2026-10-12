@@ -53,11 +53,11 @@ Criterio di uscita: shell nativa avviabile, design documentato e nessun dato dim
 
 Dipendenze: wave 02.
 
-- [ ] W03-T01 — Implementare client Navidrome/OpenSubsonic, autenticazione e gestione degli errori di protocollo e rete.
-- [ ] W03-T02 — Implementare più profili con uno attivo, credenziali protette e isolamento dei dati.
-- [ ] W03-T03 — Creare configurazione guidata e verifica connessione; supportare HTTPS e HTTP nei contesti concordati.
+- [x] W03-T01 — Implementare client Navidrome/OpenSubsonic, autenticazione e gestione degli errori di protocollo e rete.
+- [x] W03-T02 — Implementare più profili con uno attivo, credenziali protette e isolamento dei dati.
+- [x] W03-T03 — Creare configurazione guidata e verifica connessione; supportare HTTPS e HTTP nei contesti concordati.
 - [ ] W03-T04 — Implementare condivisione/scansione QR di configurazione senza password e blocco biometrico opzionale.
-- [ ] W03-T05 — Implementare cambio/rimozione profilo, conferme per i download e ripristino dello stato separato.
+- [x] W03-T05 — Implementare cambio/rimozione profilo, conferme per i download e ripristino dello stato separato.
 - [ ] W03-T06 — Verificare login reale, credenziali errate, server irraggiungibile, VPN assente e isolamento fra due profili.
 
 Criterio di uscita: collegamento reale al server e gestione dei profili verificati senza esposizione di credenziali.

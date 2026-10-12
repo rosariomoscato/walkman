@@ -12,6 +12,7 @@ key.properties
 
 # Build Android
 .gradle/
+.kotlin/
 build/
 app/build/
 *.apk.idsig

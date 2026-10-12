@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profiles_title">Profili e connessione</string>
+    <string name="profile_add">Aggiungi profilo</string>
+    <string name="profile_name">Nome profilo</string>
+    <string name="profile_url">URL del server</string>
+    <string name="profile_username">Nome utente Navidrome</string>
+    <string name="profile_password">Password</string>
+    <string name="profile_setup_help">Inserisci il server e le credenziali Navidrome. La connessione viene verificata prima di salvare. Sul telefono usa l’indirizzo LAN/Tailscale del computer, non localhost.</string>
+    <string name="profile_http_opt_in">Consenti HTTP su rete locale o VPN</string>
+    <string name="profile_http_help">HTTP non cifra la connessione: usalo solo su rete locale fidata o VPN attiva. WalkTape non attiva Tailscale.</string>
+    <string name="profile_verify_save">Verifica e salva</string>
+    <string name="profile_active">Profilo attivo</string>
+    <string name="profile_activate">Attiva</string>
+    <string name="profile_remove">Rimuovi</string>
+    <string name="profile_remove_confirm">Rimuovere %1$s? Credenziali e dati locali, inclusi eventuali download (%2$d byte), verranno eliminati. Il server non verrà modificato.</string>
+    <string name="connection_verify">Verifica connessione</string>
+    <string name="connection_ok">Connessione verificata</string>
+    <string name="connection_https">HTTPS — connessione cifrata</string>
+    <string name="connection_http">HTTP — rete locale / VPN</string>
+    <string name="action_cancel">Annulla</string>
+    <string name="error_configuration">Controlla URL, campi obbligatori e nome profilo (univoco, massimo 80 caratteri). HTTP richiede il consenso locale/VPN.</string>
+    <string name="error_credentials_storage">Credenziali protette non disponibili. Rimuovi e configura nuovamente il profilo.</string>
+    <string name="error_local_storage">Impossibile eliminare i dati locali. Riprova.</string>
+    <string name="error_network">Server non raggiungibile. Controlla indirizzo, rete e VPN, poi riprova.</string>
+    <string name="error_timeout">Il server non risponde in tempo. Riprova.</string>
+    <string name="error_tls">Certificato HTTPS non valido o connessione TLS non riuscita.</string>
+    <string name="error_response">La risposta non è una risposta OpenSubsonic valida.</string>
+    <string name="error_http">Errore HTTP. Controlla il server e gli eventuali proxy.</string>
+    <string name="error_auth">Nome utente o password errati.</string>
+    <string name="error_permission">Permessi insufficienti sul server.</string>
+    <string name="error_auth_method">Il server non supporta questa autenticazione token+salt.</string>
+    <string name="error_version">Versione del protocollo incompatibile.</string>
+    <string name="error_protocol">Il server ha rifiutato la richiesta.</string>
+    <string name="error_qr_generation">Impossibile generare il codice QR.</string>
+    <string name="home_connected_body">Profilo collegato. La libreria verrà indicizzata nella prossima fase di sviluppo.</string>
+    <string name="profile_share_qr">Condividi QR</string>
+    <string name="profile_share_qr_body">Il QR contiene URL, nome profilo e nome utente. La password non è inclusa: va inserita sul dispositivo che scansiona.</string>
+    <string name="profile_scan_qr">Scansiona QR</string>
+    <string name="action_close">Chiudi</string>
+</resources>

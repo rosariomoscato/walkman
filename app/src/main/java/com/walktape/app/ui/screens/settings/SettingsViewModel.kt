@@ -27,6 +27,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setAppLockEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setAppLockEnabled(enabled)
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

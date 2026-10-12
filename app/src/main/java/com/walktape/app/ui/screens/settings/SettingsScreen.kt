@@ -2,6 +2,7 @@ package com.walktape.app.ui.screens.settings
 
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
+import androidx.biometric.BiometricManager
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -17,9 +18,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -36,6 +40,7 @@ import com.walktape.app.ui.nav.WalkTapeDestination
 @Composable
 fun SettingsScreen(
     onOpenDiagnostics: () -> Unit,
+    onOpenProfiles: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
 ) {
@@ -66,6 +71,15 @@ fun SettingsScreen(
         LanguageChooser(context = context)
 
         SectionHeader(text = stringResource(R.string.settings_system))
+
+        TextButton(onClick = onOpenProfiles, modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(stringResource(R.string.profiles_title))
+        }
+
+        AppLockSetting(
+            enabled = settings.appLockEnabled,
+            onCheckedChange = viewModel::setAppLockEnabled
+        )
 
         Row(
             modifier = Modifier
@@ -104,6 +118,41 @@ private fun SettingLabel(text: String, paddingStart: Int) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = paddingStart.dp)
     )
+}
+
+@Composable
+private fun AppLockSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val context = LocalContext.current
+    val capability = remember {
+        BiometricManager.from(context).canAuthenticate(
+            BiometricManager.Authenticators.BIOMETRIC_WEAK or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        )
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_app_lock),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(
+                    if (capability == BiometricManager.BIOMETRIC_SUCCESS) R.string.settings_app_lock_help
+                    else R.string.settings_app_lock_unavailable
+                ),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (capability == BiometricManager.BIOMETRIC_SUCCESS) {
+            Switch(checked = enabled, onCheckedChange = onCheckedChange)
+        }
+    }
 }
 
 @Composable

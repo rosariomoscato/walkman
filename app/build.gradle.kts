@@ -63,8 +63,24 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.okhttp)
+    implementation(libs.gson)
+    implementation(libs.zxing.core)
+    implementation(libs.zxing.embedded)
+    implementation(libs.androidx.biometric)
 
     testImplementation(libs.junit)
+    testImplementation(libs.mockwebserver)
+    androidTestImplementation(libs.androidx.test.runner)
+    androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.mockwebserver)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
+}
+
+// Opt-in only: the test reads secrets itself; Gradle receives only a local file path.
+tasks.withType<Test>().configureEach {
+    if (providers.gradleProperty("realServerTest").orNull == "true") {
+        systemProperty("walktape.testServerFile", rootProject.file("local/test-server.env").absolutePath)
+    }
 }

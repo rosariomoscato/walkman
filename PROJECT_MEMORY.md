@@ -1,14 +1,14 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-12 (fine wave 02).
+Ultimo aggiornamento: 2026-10-12 (wave 03: T01–T05 tranne verifiche telefoniche di T04).
 
 ## Punto di ripresa
 
-- Fase: wave 02 completata e verificata su emulatore; shell nativa WalkTape avviabile (home/impostazioni/diagnostica, temi, IT/EN, layout adattivo).
-- Prossima wave: **03 — Profili e connessione reale**; primo task **W03-T01** (client Navidrome/OpenSubsonic con autenticazione token+salt e gestione errori).
+- Fase: wave 03 in corso. Completati e verificati W03-T01, T02, T03, T05; W03-T04 implementato (codec QR 6/6 test, UI) ma con verifiche parziali (camera/biometria su telefono); W03-T06 aperto: login reale, credenziali errate e isolamento due profili già verificati su computer ed emulatore (server reale via 10.0.2.2), restano VPN assente e prove su telefono.
+- Prossima azione: verifiche T04/T06 su telefono (LAN/Tailscale, scansione QR, blocco biometrico, due profili) con l'utente; in parallelo si può avviare la wave 04 (indicizzazione libreria).
 - Prima di continuare: leggere `docs/ARCHITECTURE.md` (con emendamenti wave 02) e `DESIGN.md` (token vincolanti).
-- Modifiche wave 02 NON committate: commit/push solo su richiesta esplicita dell'utente.
-- Per le build usare `.\gradlew.bat` con `JAVA_HOME` impostato al JBR nel comando; `local.properties` fornisce l'SDK path.
+- Wave 02 committata e pubblicata su `origin/main`: commit `62b5630`. Il codice wave 03 NON è committato (commit/push solo su richiesta esplicita).
+- Per le build usare `.\gradlew.bat` con `JAVA_HOME` impostato al JBR nel comando; `local.properties` fornisce l'SDK path. Emulatore di riferimento `walktape_aosp`, spento al termine di questo incremento.
 
 ## Documenti di riferimento
 
@@ -45,6 +45,11 @@ Ultimo aggiornamento: 2026-10-12 (fine wave 02).
 - D18 — App mono-modulo `:app` (package `com.walktape.app`), contenitore manuale `Graph` senza framework DI; Room con schema esportato in `app/schemas/` e `MIGRATIONS` da estendere a ogni cambio schema; preferenze in DataStore; per-app locale via AppCompat (it/en); backup cloud disattivato (`allowBackup=false` + `dataExtractionRules` che esclude tutto).
 - D19 — Emulatore di riferimento per le verifiche: AVD **`walktape_aosp`** (system image AOSP `android-36/default/x86_64`, 3 GB RAM/4 core, avvio headless con swiftshader). L'immagine google_apis va sistematicamente in ANR su questo host (carico kDrive/Docker): usare sempre l'AOSP per l'automazione.
 - D20 — Verifica UI su emulatore senza capacità visive del modello: `uiautomator dump` per contenuti/coordinate e colore medio degli screenshot (System.Drawing) per i temi; procedure collaudate in WORKLOG wave 02.
+- D21 — Credenziali profili: cipher-text AES-GCM in Room (`credentialId`, `encryptedPassword`), chiavi non esportabili per profilo in Android Keystore con AAA bindato all'id; la password in chiaro esiste solo in memoria durante login/uso. Migrazione v2 disattiva i profili della shell wave-02 (metadati conservati, richiesto nuovo login).
+- D22 — Isolamento profili: dati per profilo in `filesDir/profiles/<id>`; attivazione transatomica (un solo profilo attivo); rimozione = conferma con byte locali → directory + chiave Keystore + riga DB; mai mutazioni server.
+- D23 — QR configurazione: JSON v1 `{v,n,u,un}` senza password (fallback URL nudo; nome vuoto ammesso); zxing core 3.5.4 per generazione locale, zxing-android-embedded 4.3.0 per scansione; la password si inserisce sempre a mano sul dispositivo che scansiona.
+- D24 — Blocco app opzionale (default off): interruttore visibile solo se `canAuthenticate(BIOMETRIC_WEAK|DEVICE_CREDENTIAL)`; gate BiometricPrompt all'avvio dopo la prima emissione DataStore (mai su default).
+- D25 — Verifica su emulatore sotto carico host: precompilare gli APK con `pm compile -m speed -f` prima di `am instrument` (evita ANR "failed to complete startup"); build Gradle lunghi via processo detached con log su file + `-Dkotlin.compiler.execution.strategy=in-process` (il daemon Kotlin separato fallisce sotto pressione memoria).
 
 ## Ambiente noto e dati di riferimento
 
@@ -60,7 +65,9 @@ Ultimo aggiornamento: 2026-10-12 (fine wave 02).
 
 ## Da verificare / informazioni mancanti
 
-- Raggiungibilità LAN/Tailscale dal telefono (wave 03).
+- Raggiungibilità LAN/Tailscale dal telefono (wave 03, T06): richiede telefono.
+- Verifiche telefono pendenti: scansione QR via camera, dialog condivisione QR su profilo reale, gate biometrico interattivo, VPN assente, due profili reali (wave 03, T04/T06).
+- HTTPS contro un server TLS reale non ancora esercitato (percorsi HTTPS unit-testati; server locale solo HTTP).
 - Testi con contenuti reali via `getLyricsBySongId` (wave 07); funzioni mutative su account di test (wave 07+).
 - Audio combinato su hardware reale (wave 09); Android Auto in auto (wave 10).
 - TalkBack, caratteri ingranditi, contrasti misurati (wave 06/12).
@@ -69,9 +76,9 @@ Ultimo aggiornamento: 2026-10-12 (fine wave 02).
 
 ## Stato dei file e del lavoro
 
-- Progetto Android completo nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schema Room, test unit). APK debug verificato su emulatore (v0.1.0).
+- Progetto Android completo nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schema Room 1+2, test unit e androidTest). APK debug verificato su emulatore (v0.1.0).
+- Wave 03 implementata nel working tree (client OpenSubsonic, profili, vault Keystore, QR, blocco opzionale): NON committata; commit/push solo su richiesta esplicita.
 - `local/` e `.playwright-mcp/` esclusi da Git. `local.properties` escluso da Git. `NEXT_PROMPT.md` è un documento locale, escluso da Git su richiesta dell'utente (non pubblicato).
-- Modifiche wave 02 **non committate**; nessun push senza richiesta esplicita.
 - Consultare `git status` alla ripresa: non assumere che file non tracciati siano eliminabili.
 
 ## Protocollo di handoff
