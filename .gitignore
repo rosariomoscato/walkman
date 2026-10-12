@@ -1,0 +1,24 @@
+# Configurazione locale e segreti (mai nel repository)
+local/
+*.local.properties
+local.properties
+*.jks
+*.keystore
+key.properties
+
+# Output degli strumenti browser
+.playwright-mcp/
+
+# Build Android
+.gradle/
+build/
+app/build/
+*.apk.idsig
+captures/
+.externalNativeBuild/
+.cxx/
+
+# IDE
+.idea/
+*.iml
+.DS_Store
