@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WalkTape</string>
+
+    <string name="nav_home">La mia musica</string>
+    <string name="nav_settings">Impostazioni</string>
+
+    <string name="home_empty_title">Nessun profilo configurato</string>
+    <string name="home_empty_body">La libreria comparirà qui dopo la connessione a un server Navidrome. La configurazione dei profili sarà disponibile con i prossimi aggiornamenti dell\'app.</string>
+    <string name="home_section_recently_added">Aggiunti di recente</string>
+
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_appearance">Aspetto</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_system">Sistema</string>
+    <string name="settings_theme_light">Chiaro</string>
+    <string name="settings_theme_dark">Scuro</string>
+    <string name="settings_language">Lingua</string>
+    <string name="settings_language_system">Sistema</string>
+    <string name="settings_language_italian">Italiano</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_system">Sistema</string>
+    <string name="settings_diagnostics">Diagnostica</string>
+    <string name="settings_version">Versione</string>
+
+    <string name="diagnostics_title">Diagnostica</string>
+    <string name="diagnostics_description">Rapporto tecnico del dispositivo. I dati sensibili (URL con credenziali, token) vengono oscurati automaticamente.</string>
+    <string name="diagnostics_copy">Copia rapporto</string>
+    <string name="diagnostics_export">Esporta</string>
+    <string name="diagnostics_copied">Rapporto copiato</string>
+    <string name="diagnostics_export_subject">WalkTape — rapporto diagnostico</string>
+</resources>

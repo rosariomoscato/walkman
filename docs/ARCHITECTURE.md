@@ -2,6 +2,8 @@
 
 Stato: ricerca di fattibilità completata su fonti ufficiali e server reale. Documento vincolante per lo scaffold della wave 02.
 
+> Emendamenti wave 02 (verificati in build reale): AGP 9 usa il **Kotlin built-in** (plugin `kotlin.android` rimosso; versione Kotlin decisa da AGP); `compileSdk = 37` (navigation-compose 2.10.2 richiede API 37; piattaforma `android-37.0` installata) con `targetSdk = 36` invariato; Media3 aggiornato a **1.11.1**; aggiunti KSP 2.3.12, Room 2.8.5, DataStore 1.2.1, Navigation Compose 2.10.2, lifecycle 2.11.0, activity-compose 1.13.0, core-ktx 1.19.1, appcompat 1.8.0, material-icons (via BOM 1.7.8). Dettagli nel WORKLOG della wave 02.
+
 ## Stack e versioni scelte
 
 | Componente | Versione | Fonte |

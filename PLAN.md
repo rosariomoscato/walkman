@@ -40,12 +40,12 @@ Criterio di uscita: percorso tecnico documentato, ambiente di build disponibile 
 
 Dipendenze: wave 01.
 
-- [ ] W02-T01 — Creare progetto Android nativo nella radice attuale, preservando documentazione, skill e configurazione OpenCode.
-- [ ] W02-T02 — Impostare architettura, archivio locale con migrazioni, dipendenze e gestione della configurazione.
-- [ ] W02-T03 — Scrivere `DESIGN.md`: TPS-L2, token, tipografia, materiali, spaziature, stati, accessibilità e temi.
-- [ ] W02-T04 — Creare componenti Compose condivisi e navigazione di base, con layout adattivi.
-- [ ] W02-T05 — Predisporre italiano/inglese, preferenze del dispositivo e diagnostica locale con oscuramento dei dati sensibili.
-- [ ] W02-T06 — Verificare compilazione, avvio, navigazione, temi e layout su emulatore disponibile.
+- [x] W02-T01 — Creare progetto Android nativo nella radice attuale, preservando documentazione, skill e configurazione OpenCode.
+- [x] W02-T02 — Impostare architettura, archivio locale con migrazioni, dipendenze e gestione della configurazione.
+- [x] W02-T03 — Scrivere `DESIGN.md`: TPS-L2, token, tipografia, materiali, spaziature, stati, accessibilità e temi.
+- [x] W02-T04 — Creare componenti Compose condivisi e navigazione di base, con layout adattivi.
+- [x] W02-T05 — Predisporre italiano/inglese, preferenze del dispositivo e diagnostica locale con oscuramento dei dati sensibili.
+- [x] W02-T06 — Verificare compilazione, avvio, navigazione, temi e layout su emulatore disponibile.
 
 Criterio di uscita: shell nativa avviabile, design documentato e nessun dato dimostrativo presentato come dato reale del server.
 

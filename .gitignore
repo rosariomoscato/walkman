@@ -1,5 +1,6 @@
 # Configurazione locale e segreti (mai nel repository)
 local/
+NEXT_PROMPT.md
 *.local.properties
 local.properties
 *.jks
