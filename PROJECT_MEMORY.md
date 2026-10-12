@@ -45,7 +45,7 @@ Ultimo aggiornamento: 2026-10-12 (fine wave 01).
 
 ## Ambiente noto e dati di riferimento
 
-- Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman`, repository Git (nessun commit ancora).
+- Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman`, repository Git con remote `origin` = https://github.com/rosariomoscato/walkman, branch `main` tracciato. Commit iniziale `47ef5c0` (documentazione wave 00-01) pubblicato su richiesta esplicita dell'utente. Identità commit non persistita nella config: fornita per-commit (`-c`) con email noreply GitHub (`53149348+rosariomoscato@users.noreply.github.com`); ai prossimi commit richiesti usare la stessa identità o concordare la configurazione persistente.
 - Shell: Windows PowerShell 5.1. Usare `npx.cmd`: `npx.ps1` è bloccato dalla execution policy. In PS 5.1 l'header `Range` con `Invoke-WebRequest` non è impostabile: usare `[System.Net.HttpWebRequest]::AddRange`.
 - Node 22.23.1 disponibile; `rg` non nel PATH: usare gli strumenti dedicati di ricerca.
 - Playwright MCP attivo su **Edge** (user agent Edg/155 verificato); usarlo per verifiche web/browser, mai come prova Android.
@@ -69,7 +69,7 @@ Ultimo aggiornamento: 2026-10-12 (fine wave 01).
 
 - Radice: `.gitignore`, `local/` (escluso da Git), documentazione di piano, `docs/ARCHITECTURE.md`, skill e configurazioni OpenCode. Nessun progetto Android ancora: lo scaffold arriva con W02-T01.
 - Cartella `.playwright-mcp/` (snapshot/log browser) generata dagli strumenti: esclusa da Git.
-- Nessun commit, push, repository remoto o release creato.
+- Repository remoto pubblicato (solo documentazione, nessun codice applicativo); commit/push successivi solo su richiesta esplicita.
 - Consultare `git status` alla ripresa: non assumere che file non tracciati siano eliminabili.
 
 ## Protocollo di handoff

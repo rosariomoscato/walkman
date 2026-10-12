@@ -100,3 +100,16 @@ Verifiche (tutte su ambiente reale, non emulatore):
 Stato: wave 01 completata; criterio di uscita soddisfatto (percorso tecnico documentato, ambiente di build disponibile, vincoli espliciti). Nessuna incompatibilità col perimetro approvata emersa; unica deriva potenziale: suggerimenti/artisti simili dipendono da integrazioni esterne del server, già prevista da SPEC come “secondo disponibilità server”.
 
 Prossimo passo: **W02-T01**, creare il progetto Android nativo nella radice preservando documentazione, skill e configurazioni.
+
+## 2026-10-12 — Commit e push iniziali su richiesta dell'utente
+
+Task: operazione git richiesta esplicitamente dall'utente (fuori dalle wave).
+
+- Verificati `git status`, assenza di remote e contenuto dei file in stage; `local/` e `.playwright-mcp/` esclusi da `.gitignore`, nessun segreto incluso (controllato anche `opencode.json`).
+- Identità commit senza modificare la config Git: `user.name`/`user.email` forniti solo per il commit (`-c`), con email noreply GitHub ricavata dall'ID pubblico dell'account (53149348+rosariomoscato@users.noreply.github.com).
+- Commit `47ef5c0` (57 file), branch rinominato `master` → `main`, remote `origin` = https://github.com/rosariomoscato/walkman, push con tracking `main` → `origin/main` riuscito.
+- Verifica: `git status` pulito dopo il primo commit; push confermato da Git (`* [new branch] main -> main`).
+
+Stato: repository pubblicato con la sola documentazione (nessun codice applicativo). Nessun segreto nel repository.
+
+Prossimo passo: invariato (**W02-T01**).
