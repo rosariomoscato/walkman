@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_controls">Controlli di riproduzione</string>
+    <string name="playback_open_controls">Apri controlli di riproduzione</string>
+    <string name="playback_unknown_title">Brano in riproduzione</string>
+    <string name="playback_play">Riproduci</string>
+    <string name="playback_pause">Pausa</string>
+    <string name="playback_previous">Precedente o inizio brano</string>
+    <string name="playback_next">Successivo</string>
+    <string name="playback_seek">Posizione di riproduzione</string>
+    <string name="playback_seek_position">Posizione %1$s di %2$s</string>
+    <string name="playback_repeat_off">Ripetizione: disattivata</string>
+    <string name="playback_repeat_one">Ripetizione: brano</string>
+    <string name="playback_repeat_all">Ripetizione: coda</string>
+    <string name="playback_volume">Volume multimediale: %1$d / %2$d</string>
+    <string name="playback_volume_description">Volume multimediale Android</string>
+    <string name="playback_volume_fixed">Il volume è gestito dal dispositivo collegato.</string>
+    <string name="playback_playing">In riproduzione</string>
+    <string name="playback_paused">In pausa</string>
+    <string name="playback_buffering">Caricamento audio…</string>
+    <string name="playback_waiting">Riproduzione temporaneamente sospesa</string>
+    <string name="playback_ended">Fine coda</string>
+    <string name="playback_error">Riproduzione non disponibile. Verifica la connessione e riprova.</string>
+</resources>

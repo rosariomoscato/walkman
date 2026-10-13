@@ -4,7 +4,7 @@
     <string name="library_tab_playlists">Playlists</string>
     <string name="library_tab_all">All</string>
     <string name="home_continue">Continue listening</string>
-    <string name="home_continue_empty">No queue to resume. Playback controls will be available with the audio engine.</string>
+    <string name="home_continue_empty">No saved queue to resume.</string>
     <string name="home_recent_added">Recently added</string>
     <string name="home_recent_played">Recently played</string>
     <string name="home_favorites">Favorites</string>
@@ -48,4 +48,5 @@
     <string name="sort_song_duration">Duration</string>
     <string name="action_retry">Retry</string>
     <string name="action_back">Back</string>
+    <string name="playback_play_album">Play album</string>
 </resources>

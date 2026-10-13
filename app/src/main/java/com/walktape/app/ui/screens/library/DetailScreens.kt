@@ -1,5 +1,6 @@
 package com.walktape.app.ui.screens.library
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -7,11 +8,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -107,20 +112,32 @@ fun AlbumDetailScreen(
                             )
                         }
                     }
+                    if (songs.isNotEmpty()) {
+                        FilledTonalButton(
+                            onClick = { Graph.playback.playQueue(songs, 0) },
+                            modifier = Modifier.padding(top = 12.dp)
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                            Text(stringResource(R.string.playback_play_album))
+                        }
+                    }
                 }
             }
             val discs = songs.map { it.discNumber }.distinct()
-            items(songs, key = { it.id }) { song ->
-                SongDetailRow(song, discs.size > 1)
+            itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
+                SongDetailRow(song, discs.size > 1) { Graph.playback.playQueue(songs, index) }
             }
         }
     }
 }
 
 @Composable
-private fun SongDetailRow(song: SongEntity, multiDisc: Boolean) {
+private fun SongDetailRow(song: SongEntity, multiDisc: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text(

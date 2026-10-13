@@ -307,3 +307,88 @@ File principali: `core/db/Browse*`, `core/library/{BrowseQueries,PlaylistIndex,L
 Stato: **wave 04 completata** (T01–T06 verificati; criterio di uscita soddisfatto). Modifiche non committate. Prossima azione precisa: **W05-T01** — servizio di riproduzione Media3 (`MediaSessionService` + ExoPlayer) con streaming MP3/FLAC e DataSource autenticato dal client OpenSubsonic.
 
 Nota: dettaglio playlist reale sul server da ripetere in wave 07 quando esisterà una playlist di prova (l'account di test non ne ha); il percorso è coperto da fixture e API reali di lista.
+
+## 2026-10-13 — Commit e push del completamento wave 04
+
+Task: operazione Git richiesta esplicitamente dall'utente.
+
+- Ispezionati status, diff e stage (32 file); nessun file riservato, credenziale, APK o artefatto di build incluso; `NEXT_PROMPT.md` resta ignorato.
+- Commit `26584bc` — "Wave 04: Panoramica, playlist in lettura, filtri e ricerca unificata" (32 file, 1.872 inserimenti/57 rimozioni), messaggio con verifiche allegate.
+- Push ordinario riuscito su `https://github.com/rosariomoscato/walktape.git`: `fa17b0e..26584bc main -> main`.
+- Verifica: HEAD e origin/main entrambi `26584bcd2b6c1c1bcb7660c556b6adf37341a4bb`; working tree pulita subito dopo il push. Note successive restano locali.
+
+Prossima azione invariata: **W05-T01** (servizio di riproduzione Media3).
+
+## 2026-10-13 — W05-T01: servizio Media3 e streaming originale reale
+
+Task: **W05-T01 completato**. Configurazione base dei servizi T05 e breve prova preliminare T07; quei task restano aperti.
+
+- Letti documenti di progetto e controllati status/diff: HEAD `26584bc`, origin/main allineato; modifiche preesistenti solo alle note post-push in memoria/log, preservate.
+- Attivati Media3 ExoPlayer/session e aggiunto datasource-okhttp **1.11.1**. `playback/PlaybackService` ospita ExoPlayer e MediaSession con notifica predefinita, PendingIntent per l'activity, attributi music/media, focus automatico, becoming-noisy e wake lock locale. Manifest con permessi e foreground type mediaPlayback.
+- `SubsonicStreamDataSourceFactory`: URI logiche con profilo+brano, niente credenziali nei media; risoluzione ad ogni apertura via client OpenSubsonic, token+salt fresco, `format=raw`, Range e DataSpec preservati. JSON rifiutato come contenuto audio. HTTP streaming senza timeout totale, timeout connessione/lettura e redirect disabilitati. Media di altro profilo rifiutati prima della rete; cambio profilo arresta/svuota prima di caricare nuove credenziali. Callback async attende il collegamento iniziale Room/Keystore. Sessione disponibile a UID app/controller trusted.
+- `PlaybackConnection`/Graph/MainActivity: MediaController sul main executor, bind onStart/release onStop. Dettaglio album: pulsante Riproduci album e tap su traccia, metadati titolo/artista/album. Touch target minimo 48dp e stringhe IT/EN. Continua ascolto indica l'assenza di coda salvata (persistenza T04).
+- File principali: `playback/{SubsonicStream,SubsonicStreamDataSource,PlaybackService,PlaybackConnection}.kt`, `core/net/{OpenSubsonicClient,Connection}.kt`, Graph/MainActivity, manifest/build/catalogo versioni, DetailScreens/stringhe, test JVM e Android in `playback/`. Nessuna migrazione DB.
+
+Verifiche:
+
+- **Server reale host** (credenziali lette localmente senza stampa): campioni MP3 e FLAC via `stream.view?format=raw` → 200 `audio/mpeg`/`audio/flac`; Range 0–1023 → 206, Content-Range corretto e 1024 byte. Anche senza `format` i campioni con client `probe` sono originali; corretta l'assunzione di transcode predefinito per tutti i client. Prima richiesta di sonda con URL malformato → 404, corretta e ripetuta con successo.
+- **Build finale**: `assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug -PrealServerTest=true`, JBR Android Studio, compiler in-process, log in temp fuori dal repo → BUILD SUCCESSFUL (6m32s). Lint **0 errori/18 warning**: versioni/target fissati, attributi per API nuove, plurali/risorsa non usata/KTX; ExportedService previsto per la sessione, accesso filtrato dal servizio. Nessun warning ignorato tramite nuova baseline.
+- **JVM: 45/45**, nessun fallimento/skipped (39 regressione incluso login reale + 6 URI/isolamento/token/parametri streaming).
+- **Android AOSP: 6/6**, esecuzione finale 59,49 s: 5 DataSource con MockWebServer (Range chiuso 1000–1007 e lettura byte, salt diverso a ogni apertura, JSON rifiutato, credenziali assenti, profilo errato senza rete); 1 end-to-end sul **server reale via 10.0.2.2**, campioni MP3+FLAC con decoder emulatore, posizione >1 s, pausa stabile, cambio/rimozione profilo ferma e svuota la sessione. MediaController esercitato sul main thread; nessuna attesa fissa per caricamento credenziali nella versione finale.
+- **UI reale emulatore**: indice conservato 6.403 brani/196 artisti; aperto Greatest Hits di Björk, pulsante Riproduci album → sessione con coda di 15, PLAYING e metadati corretti, posizione ~33 s. Home Android + KEYCODE_SLEEP → posizione ~87 s ancora PLAYING; dumpsys power `Asleep`, wake lock ExoPlayer, servizio foreground tipo mediaPlayback/notifica transport confermati. Prova breve, non ascolto qualitativo né hardware.
+- Risolti durante compilazione: firme Media3 verificate con `javap` e sorgenti ufficiali, `HttpUrl` non accetta scheme custom (codec logico JVM-puro), URI Android distinto da java.net.URI, nomi androidTest senza spazi per DEX minSdk26; primo test APK obsoleto ricostruito con assembleDebugAndroidTest. Primo build interattivo in timeout: passaggio al percorso detached già previsto da D25.
+- ANR **System UI** durante il controllo UI, chiuso con Wait; causa non isolata, non attribuita al filesystem né all'app. Prove audio automatiche riuscite.
+- File env temporaneo in `/data/local/tmp` rimosso e assenza verificata; profilo di test e2e rimosso e profilo precedente ripristinato. Nessuna operazione mutativa su playlist/preferiti. Emulatore chiuso a fine incremento.
+
+Fonti ufficiali: sorgente AndroidX MediaSessionService (branch release) e OkHttpDataSource **tag 1.11.1**, link in ARCHITECTURE. Developer.android.com non raggiungibile tramite webfetch; browser MCP non avviabile (cerca Chrome non installato), nessuna configurazione/installazione aggiunta. Android verificato tramite Gradle/ADB, non browser.
+
+Documenti: PLAN, ARCHITECTURE, DESIGN, PROJECT_MEMORY e prompt locale aggiornati. **Discrepanza con prompt**: `git ls-files` conferma `docs/PHONE_TESTS.md` già tracciato; il file originario è preservato. Nuova checklist hardware esclusivamente in `local/PHONE_TESTS_W05.md`, ignore verificato insieme a NEXT_PROMPT.
+
+Non eseguiti: Motorola/ascolto qualitativo, schermo spento prolungato su hardware, chiamate/focus concorrente/cuffie/Bluetooth/lockscreen completo (T05/T07), TLS reale, regressione UI completa wave04 in questo incremento. Coda modificabile/persistita, ripetizione/seek/volume esposti, timer, copertina notifica/player e qualità configurabile seguono i task pertinenti. Nessun commit/push. Prossima azione precisa: **W05-T02**.
+
+## 2026-10-13 — Riscontro dell'utente sul Motorola G55 5G
+
+Task: **W05-T01**, verifiche parziali **W05-T05/T07**, raggiungibilità **W03-T06**. Fonte: prove hardware eseguite e riferite dall'utente in chat; non esecuzione diretta dell'agente.
+
+- Dispositivo: **Motorola G55 5G / Android 16**. Connessione: **Tailscale**.
+- MP3: **OK**. FLAC: **OK**.
+- Pausa/ripresa dalla notifica: **OK**.
+- Schermo spento per 10 minuti: **OK**.
+- Osservazione: nessun comando play/pausa/avanti/indietro dentro l'app; per pausa/ripresa l'utente ha minimizzato e usato il widget di sistema. È la parte ancora aperta di **W05-T02**, da rendere accessibile nell'app nel prossimo incremento.
+- Questi ascolti confermano la raggiungibilità del server via Tailscale dal telefono. Non attestano LAN, VPN assente, QR/biometria, cambio profilo hardware, chiamate/cuffie/Bluetooth/lockscreen completo; W03-T04/T06 e W05-T05/T07 conservano i task aperti pertinenti.
+- Aggiornati PLAN, PROJECT_MEMORY, NEXT_PROMPT locale e checklist hardware privata `local/PHONE_TESTS_W05.md`; codice/APK invariati. Verifica documentale tramite diff; nessun nuovo build/test automatico necessario. Modifiche preesistenti preservate; nessun commit/push.
+
+Prossima azione precisa: **W05-T02**, controlli di riproduzione dentro l'app sopra MediaController, prima della scocca definitiva wave 06.
+
+## 2026-10-13 — W05-T02: controlli di riproduzione nell'app
+
+Task: **W05-T02 completato**. W05-T01/T06/T05 restano come già registrati (fine coda default e stop&clear sono coperti; timer e interruzioni complete no).
+
+Implementazione:
+
+- `PlaybackSnapshot`/`PlaybackFailure`: stato immutabile per la UI (metadati, posizione/durata effettiva, disponibilità comandi, ripetizione, volume Android) senza URL, credenziali o messaggi d'eccezione.
+- `PlaybackConnection`: snapshot via `Player.Listener.onEvents` + polling 500 ms solo con media e connessione attiva (Media3 non emette eventi per il avanzamento regolare). Comandi sul main looper con `isCommandAvailable`: play/pausa (con prepare da idle e ripartenza da inizio coda dopo `STATE_ENDED`), `seekToPrevious`/`seekToNext`, seek ms limitato a durata e media seekable con chiave traccia+indice (un gesto non si applica alla traccia/profilo successivo), ripetizione OFF→ONE→ALL→OFF. Coda richiesta validata contro il profilo attivo; job pendente annullato sul disconnect; riconnessione onStart senza avvio automatico (verificato). Scollegamento riportato come CONNECTION senza crash.
+- Volume: `AudioManager.STREAM_MUSIC` reale (slider, `setStreamVolume`; mai `Player.setVolume`, verificato gain 1.0); `volumeControlStream` sull'activity e sulla finestra del pannello; permesso normale `MODIFY_AUDIO_SETTINGS`. ExoPlayer con `setDeviceVolumeControlEnabled(true)`.
+- `PlaybackControls` (shell, sopra la navigation bar/rail): titolo/artista, precedente/play-pausa/successivo, apertura pannello; barra a due righe con font scale >130% o larghezza <320dp; pannello `ModalBottomSheet` scrollabile con stato, seek con tempi, ripetizione e volume; slider con nodo unico accessibile (`clearAndSetSemantics` con `ProgressBarRangeInfo` + `setProgress`), after aver rilevato cursore ed etichetta esposti come nodi separati (diagnostica via `sendStatus`); indicatore di caricamento e messaggi di errore generici. Stringhe IT/EN.
+- `PlaybackService`: reset di `repeatMode` al cambio profilo. Test diagnostico volume separato (`VolumeKeyDiagnosticTest`, opt-in `-e volumeKeyDiagnostic true`).
+
+Verifiche (tutte su emulatore AOSP `walktape_aosp`; server reale via 10.0.2.2 con credenziali da file locale, poi rimosso):
+
+- Build `assembleDebug assembleDebugAndroidTest testDebugUnitTest lintDebug -PrealServerTest=true`: **BUILD SUCCESSFUL**; lint 0 errori/18 warning (informazioni già note). JVM **45/45** (regressione + login reale).
+- Android **6/6** (esecuzione finale ~114 s): 5 DataSource + `PlaybackServiceTest` esteso, che ora oltre a MP3/FLAC reali e cambio profilo esercita dall'UI: pausa/play con sincronizzazione bridge↔sessione, seek accessibile (10.000 ms precisi in pausa) e **seek touch iniettato** (~60% della traccia senza avviare la riproduzione), precedente/successivo con metadati aggiornati, gesto di seek non più valido ignorato sulla traccia successiva, ripetizione brano/coda con **wrap effettivo a fine traccia**, ripetizione off con **fine coda** e ripartenza dal primo brano con play, slider volume → volume Android a 0 con gain del player invariato e **intervallo device-volume reale** pubblicato dalla sessione, variazione volume da sistema riflessa nell'app, riconnessione bridge senza avvio automatico e con ripetizione conservata.
+- UI reale via dump: home → album → "Riproduci album" → sessione PLAYING con coda 15; barra di trasporto sopra la navigazione con "Precedente o inizio brano/Pausa/Successivo/Apri controlli"; pannello con "In riproduzione", slider 0:48/4:46, "Ripetizione: disattivata"→"brano" via tap, "Volume multimediale: 5 / 15", pausa → "In pausa" e icona "Riproduci". Un dump fallito con "null root node" si è ripreso al tentativo successivo; primo tap su "Riproduci album" dopo la riapertura dell'app non ha avviato la riproduzione (sessione NONE), riuscito al secondo tentativo con logcat pulito: nessun errore ExoPlayer/Media3 né crash registrati; non isolato oltre.
+- **Limitazioni registrate**: (1) su questo AVD l'iniezione di `KEYCODE_VOLUME_UP` (`input keyevent` e `sendKeyDownUpSync`) non modifica il volume musica, mentre `AudioManager` funziona; pertanto i tasti fisici restano da verificare sul Motorola (aggiunto alla checklist locale). (2) Il `MediaController` locale non espone i comandi di scrittura volume dispositivo; `deviceInfo.maxVolume` riflette però l'intervallo reale dopo `setDeviceVolumeControlEnabled(true)`. Nessuna delle due riguarda il comportamento utente dell'app su telefono, ma restano non attestati lì.
+- Correzioni durante il lavoro: attesa posizione in pausa basata su campioni stabili (l'attesa fissa 300 ms falliva sotto carico), nomi azione accessibilità (`AccessibilityAction.ACTION_SET_PROGRESS.id`), semantica slider unificata, `setDeviceVolumeControlEnabled`, WAKEUP+KEEP_SCREEN_ON nei test per il display e la strategia volume.
+
+Non eseguiti: prove su telefono dei nuovi comandi (l'utente testerà l'APK aggiornato), tasti volume fisici, interruzioni/cuffie/Bluetooth (T05/T07), TalkBack sui nuovi controlli (solo nodi verificati), font scale reale oltre la regola adattiva del layout. Nessun commit/push.
+
+File principali: `playback/{PlaybackSnapshot,PlaybackConnection,PlaybackService}.kt`, `ui/components/PlaybackControls.kt`, `res/values{,-en}/playback.xml`, manifest, test `playback/{PlaybackServiceTest,VolumeKeyDiagnosticTest}.kt`. Documenti aggiornati: PLAN, ARCHITECTURE, DESIGN, memoria, prompt locale, checklist telefono locale.
+
+Prossima azione precisa: **W05-T03** — coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni e ripristino dell'ordine.
+
+## 2026-10-13 — Riscontro dell'utente sui comandi in-app (T02)
+
+Task: **W05-T02**, prove hardware. Fonte: riscontro dell'utente in chat.
+
+- L'utente ha installato l'APK T02 sul Motorola G55 5G / Android 16 e conferma che **funziona** (comandi di riproduzione dentro l'app). Nessun dettaglio fornito sui singoli punti della checklist (seek, ripetizione, volume/tasti fisici, fine coda): la checklist locale resta con le voci non ancora attestate esplicitamente.
+- Nessuna azione sul codice. Aggiornati WORKLOG, memoria, piano e checklist locale; commit dell'incremento W05-T01+T02 su richiesta esplicita.

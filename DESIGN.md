@@ -73,6 +73,10 @@ Regole:
 
 Incremento W04-T02/T03: apertura sulla tab Panoramica con sezioni Continua ascolto, Aggiunti/Ascoltati di recente, Preferiti, Download e Playlist. Le sezioni senza dati usano testo vuoto esplicito; riproduzione e download sono collegati nelle wave dedicate. Tab Playlist con dettaglio nell'ordine server e tab Tutti per ricerca unificata; filtri genere/anno e chip disponibilità offline. Sono comandi di consultazione, senza azioni di modifica playlist premature; token visivi invariati.
 
+Incremento W05-T01: dettaglio album con `FilledTonalButton` “Riproduci album” e icona Play; tap sulla traccia avvia l'album dalla posizione selezionata. Righe interattive con altezza minima 48dp. Sono comandi collegati al servizio reale; la scocca/player definitiva resta wave 06. Palette e tipografia invariate. La sezione Continua ascolto indica l'assenza di una coda **salvata**, in attesa della persistenza W05-T04.
+
+Incremento W05-T02: barra Material3 sopra la navigazione, visibile solo con una traccia nella sessione, anche nei dettagli/impostazioni/diagnostica e con navigation rail. Titolo/artista, precedente/play-pausa/successivo e apertura del pannello, icone funzionali con descrizioni IT/EN e tasti 56dp. Con font scale >130% o larghezza <320dp la barra passa su due righe. Il pannello ModalBottomSheet è scrollabile, con metadati/stato, seek continuo e tempi, ripetizione off/brano/coda e volume multimediale Android; si chiude svuotando la coda. Seek disabilitato senza durata reale/seekability, comandi disabilitati quando la sessione non li espone; caricamento lineare e messaggio errore senza dettagli sensibili. Nessuna nuova palette, animazione decorativa o scocca definitiva in questo incremento.
+
 - Italiano predefinito (`values/`), inglese (`values-en/`), scelta per-app via `AppCompatDelegate.setApplicationLocales` + `locales_config` (it, en); date/numeri con formati di sistema.
 
 ## Icona app (provvisoria)

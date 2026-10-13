@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="playback_controls">Playback controls</string>
+    <string name="playback_open_controls">Open playback controls</string>
+    <string name="playback_unknown_title">Current track</string>
+    <string name="playback_play">Play</string>
+    <string name="playback_pause">Pause</string>
+    <string name="playback_previous">Previous or restart track</string>
+    <string name="playback_next">Next</string>
+    <string name="playback_seek">Playback position</string>
+    <string name="playback_seek_position">Position %1$s of %2$s</string>
+    <string name="playback_repeat_off">Repeat: off</string>
+    <string name="playback_repeat_one">Repeat: track</string>
+    <string name="playback_repeat_all">Repeat: queue</string>
+    <string name="playback_volume">Media volume: %1$d / %2$d</string>
+    <string name="playback_volume_description">Android media volume</string>
+    <string name="playback_volume_fixed">Volume is managed by the connected device.</string>
+    <string name="playback_playing">Playing</string>
+    <string name="playback_paused">Paused</string>
+    <string name="playback_buffering">Loading audio…</string>
+    <string name="playback_waiting">Playback temporarily suspended</string>
+    <string name="playback_ended">End of queue</string>
+    <string name="playback_error">Playback unavailable. Check the connection and try again.</string>
+</resources>

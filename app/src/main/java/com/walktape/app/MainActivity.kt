@@ -1,6 +1,7 @@
 package com.walktape.app
 
 import android.os.Bundle
+import android.media.AudioManager
 import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -49,12 +50,14 @@ import com.walktape.app.ui.nav.WalkTapeDestination
 import com.walktape.app.ui.nav.WalkTapeNavHost
 import com.walktape.app.ui.screens.settings.SettingsViewModel
 import com.walktape.app.ui.theme.WalkTapeTheme
+import com.walktape.app.ui.components.PlaybackControls
 
 class MainActivity : AppCompatActivity() {
 
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        volumeControlStream = AudioManager.STREAM_MUSIC
         enableEdgeToEdge()
         setContent {
             val windowSizeClass = calculateWindowSizeClass(this@MainActivity)
@@ -83,6 +86,16 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        Graph.playback.connect()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        Graph.playback.disconnect()
     }
 }
 
@@ -140,26 +153,29 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
 
     Scaffold(
         bottomBar = {
-            if (showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
-                NavigationBar {
-                    WalkTapeDestination.entries.forEach { destination ->
-                        NavigationBarItem(
-                            selected = currentRoute == destination.route,
-                            onClick = {
-                                navController.navigate(destination.route) {
-                                    popUpTo(Routes.HOME) { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
-                            icon = {
-                                Icon(
-                                    imageVector = destination.icon,
-                                    contentDescription = stringResource(destination.labelRes)
-                                )
-                            },
-                            label = { Text(stringResource(destination.labelRes)) }
-                        )
+            Column {
+                PlaybackControls()
+                if (showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
+                    NavigationBar {
+                        WalkTapeDestination.entries.forEach { destination ->
+                            NavigationBarItem(
+                                selected = currentRoute == destination.route,
+                                onClick = {
+                                    navController.navigate(destination.route) {
+                                        popUpTo(Routes.HOME) { saveState = true }
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                },
+                                icon = {
+                                    Icon(
+                                        imageVector = destination.icon,
+                                        contentDescription = stringResource(destination.labelRes)
+                                    )
+                                },
+                                label = { Text(stringResource(destination.labelRes)) }
+                            )
+                        }
                     }
                 }
             }

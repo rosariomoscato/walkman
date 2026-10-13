@@ -81,8 +81,8 @@ Completamento 2026-10-13 (secondo incremento): Panoramica con sezioni concordate
 
 Dipendenze: wave 04.
 
-- [ ] W05-T01 — Implementare servizio di riproduzione e sessione multimediale con streaming MP3/FLAC.
-- [ ] W05-T02 — Implementare play/pausa, precedente/successivo, seek, ripetizione e volume di sistema.
+- [x] W05-T01 — Implementare servizio di riproduzione e sessione multimediale con streaming MP3/FLAC.
+- [x] W05-T02 — Implementare play/pausa, precedente/successivo, seek, ripetizione e volume di sistema.
 - [ ] W05-T03 — Implementare coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni nella selezione e ripristino dell'ordine.
 - [ ] W05-T04 — Persistire coda e posizione per profilo; ripristinare senza avvio automatico.
 - [ ] W05-T05 — Gestire audio focus, chiamate, scollegamento cuffie e comandi Bluetooth/notifica/lockscreen.
@@ -90,6 +90,12 @@ Dipendenze: wave 04.
 - [ ] W05-T07 — Verificare riproduzione a schermo spento e interruzioni su emulatore e Motorola, distinguendo gli esiti.
 
 Criterio di uscita: ascolto end-to-end reale e comportamento della sessione/coda verificato, comprese le interruzioni.
+
+Incremento 2026-10-13: **W05-T01 completato**. MediaSessionService/ExoPlayer con DataSource OkHttp autenticato per richiesta, originali `format=raw`, URI di coda senza segreti e vincolate al profilo; arresto/svuotamento al cambio profilo. Riproduzione da dettaglio album e da traccia. Build debug/androidTest + lint riusciti (0 errori, 18 warning), 45/45 JVM con login reale, 6/6 Android (5 DataSource con fixture HTTP + 1 end-to-end MP3/FLAC sul server reale via emulatore, pausa e cambio profilo inclusi). UI reale: album con coda di 15 brani, sessione PLAYING; breve prova background/schermo spento con posizione in avanzamento e servizio foreground confermati via dumpsys. Non è prova Motorola né ascolto qualitativo. T02–T07 restano aperti: la configurazione base di focus/becoming-noisy e i comandi predefiniti Media3 non completano tutte le verifiche di quei task. Checklist hardware privata: `local/PHONE_TESTS_W05.md`. Prossima azione: **W05-T02**.
+
+Riscontro hardware utente 2026-10-13 (**W05-T01/T05/T07**, reachability W03-T06): Motorola G55 5G, Android 16, **Tailscale** — MP3 OK, FLAC OK, pausa/ripresa dalla notifica OK, schermo spento 10 minuti OK. Comandi interni all'app assenti nell'APK T01, esigenza confermata per **W05-T02**. T05/T07 restano `[ ]`: chiamate/interruzioni/cuffie/Bluetooth/lockscreen completo non ancora verificati sul telefono. LAN e cambio profilo hardware non riferiti. Evidenza fornita dall'utente, distinta dai test eseguiti dall'agente.
+
+Completamento 2026-10-13: **W05-T02 completato**. Barra di trasporto nell'app (precedente/play-pausa/successivo, metadati) e pannello con seek preciso (accessibile e touch, gesti non applicati a tracce cambiate), ripetizione off/brano/coda con effetti reali sulla coda, volume Android via slider sincronizzato con il sistema; riallineamento onStop/onStart della sessione senza avvio automatico. Verifiche: build/lint ok (0 errori/18 warning), 45/45 JVM (login reale), 6/6 Android sul server reale in emulatore (MP3+FLAC, comandi UI↔sessione, seek, ripetizioni, fine coda e ripartenza, volume Android, cambio profilo); UI reale su emulatore confermata via dump (barra + pannello + stato "In pausa"/ripetizione "brano"). **Riscontro utente: i comandi in-app funzionano sul Motorola G55 5G / Android 16.** Limitazione registrata: comandi volume dispositivo non esposti dal controller locale; iniezione tasti volume non efficace sull'AVD — tasti fisici da verificare sul Motorola. Prossima azione: **W05-T03**.
 
 ## Wave 06 — Player TPS-L2
 

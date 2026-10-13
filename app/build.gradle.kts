@@ -73,6 +73,9 @@ dependencies {
     implementation(libs.zxing.core)
     implementation(libs.zxing.embedded)
     implementation(libs.androidx.biometric)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
+    implementation(libs.androidx.media3.datasource.okhttp)
 
     testImplementation(libs.junit)
     testImplementation(libs.mockwebserver)

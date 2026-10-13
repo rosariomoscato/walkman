@@ -11,6 +11,7 @@ import com.walktape.app.core.profiles.ProfileRepository
 import com.walktape.app.core.library.CoverArtStore
 import com.walktape.app.core.library.LibrarySync
 import com.walktape.app.core.library.PlaylistIndex
+import com.walktape.app.playback.PlaybackConnection
 import java.io.File
 
 @Suppress("StaticFieldLeak")
@@ -32,6 +33,8 @@ object Graph {
     }
 
     fun app(): Context = appContext
+
+    val playback: PlaybackConnection by lazy { PlaybackConnection(appContext) }
 
     fun client(address: ServerAddress, credentials: Credentials) = OpenSubsonicClient(address, credentials)
 

@@ -1,11 +1,14 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-13 (wave 04 completata).
+Ultimo aggiornamento: 2026-10-13 (W05-T02 completato).
 
 ## Punto di ripresa
 
-- Fase: **wave 04 completata e verificata** (T01–T06). Prossima azione precisa: **W05-T01** — servizio `MediaSessionService` Media3 + ExoPlayer con streaming MP3/FLAC e DataSource autenticato (token+salt per richiesta) dal client OpenSubsonic esistente.
-- Wave 03: T01–T03/T05 pubblicati (`c97fe7d`); incremento wave 04 pubblicato (`fa17b0e`); **le modifiche che completano la wave 04 (secondo incremento) sono nel working tree, non committate** — commit/push solo su richiesta esplicita.
+- Fase: **W05-T02 completato e verificato**; wave 05 in corso (T03–T07 aperti), incrementi locali non committati. Prossima azione precisa: **W05-T03** — coda modificabile (riordino/rimozione/riproduci subito/dopo/in fondo), azioni dalla selezione multipla della libreria, shuffle senza ripetizioni nella selezione mantenendo il brano corrente e ripristino dell'ordine quando disattivato.
+- Verifiche T02: build/lint ok (0 errori/18 warning); 45/45 JVM (login reale); 6/6 Android sul server reale in emulatore con comandi UI esercitati da test (play/pausa, seek accessibile+touch, precedente/successivo, ripetizioni con wrap reale, fine coda e ripartenza, volume Android con gain player invariato, riconnessione senza autoplay); UI reale verificata via dump (barra sopra la navigazione, pannello con stato/tempi/ripetizione/volume). APK debug aggiornato nel percorso standard.
+- Limitazioni T02 da telefonare: tasti volume fisici (l'iniezione tasti sull'AVD non è efficace e il controller locale non espone i comandi volume dispositivo — dettagli in WORKLOG e `VolumeKeyDiagnosticTest`); TalkBack manuale e font scale reale sui nuovi controlli.
+- **Riscontro hardware dell'utente (T01)**: Motorola G55 5G / Android 16, Tailscale → MP3 OK, FLAC OK, pausa/ripresa dalla notifica OK, schermo spento 10 minuti OK. **Riscontro T02**: l'utente conferma che i comandi in-app funzionano sul telefono (dettagli per punto non forniti; checklist locale resta con voci non attestate esplicitamente). Chiamate/cuffie/Bluetooth/lockscreen completo e cambio profilo hardware non ancora riferiti; T05/T07 aperti.
+- Wave 03: T01–T03/T05 pubblicati (`c97fe7d`); wave 04 pubblicata per intero: primo incremento `fa17b0e`, completamento **`26584bc`** (push su richiesta dell'utente; HEAD e origin/main verificati allineati). Working tree pulita al push; note successive locali. Commit/push successivi solo su richiesta esplicita.
 - W03-T04/T06 restano aperti sulle prove telefono (checklist in `docs/PHONE_TESTS.md`).
 - Verifiche wave 04 (secondo incremento): 39/39 test JVM con login reale; Android 12/12 + 4/4 + regressione UI 1/1 su libreria reale (206 s, tutte le tab, dettagli, ricerca unificata, selezione, ordinamenti, playlist, filtri genere/anno/offline). Prestazioni fixture 10.000 brani: pagina filtrata 80 → 487 ms freddo / 205 ms caldo. Server reale: 459 album, 6.403 brani, 196 artisti; **l'account di test non ha playlist** (pipeline verificata con fixture + API reali di lista; dettaglio reale da ripetere in wave 07).
 - Prima di continuare: leggere `docs/ARCHITECTURE.md` e `DESIGN.md`. Per le build `.\gradlew.bat` con `JAVA_HOME` al JBR; emulatore `walktape_aosp` spento al termine dell'incremento.
@@ -41,7 +44,7 @@ Ultimo aggiornamento: 2026-10-13 (wave 04 completata).
 - D14 — **Emendata in wave 02**: AGP 9.4.0 con **Kotlin built-in** (versione Kotlin decisa da AGP; plugin `kotlin.android` non applicato), Gradle wrapper 9.8.1, Compose BOM 2026.09.00, Media3 1.11.1, compileSdk 37 (piattaforma android-37.0; richiesto da navigation-compose 2.10.2), **targetSdk 36** invariato, minSdk 26, KSP 2.3.12, Room 2.8.5, DataStore 1.2.1, Navigation 2.10.2, lifecycle 2.11.0, activity 1.13.0, core 1.19.1, appcompat 1.8.0. Riferimenti: WORKLOG wave 01/02, `gradle/libs.versions.toml`.
 - D15 — Ambiente build: Android Studio 2026.2.1.8 + JBR 25, SDK in `%LOCALAPPDATA%\Android\Sdk` con platform-tools 37.0.1, emulator 37.2.12, build-tools 37.0.0, piattaforme 36/37.0/37.2; `local.properties` nel progetto (sdk.dir) perché le variabili utente non si propagano alle shell dei tool.
 - D16 — Account di test `walktape-test` (non admin) sul server reale; credenziali solo in `local/test-server.env`, escluso da Git.
-- D17 — Client OpenSubsonic: autenticazione token+salt MD5 (`p=` rifiutato dal server); transcoding attivo lato server (Opus di default per client sconosciuti); download sempre originale; Range onorato su pass-through/download, ignorato su transcode.
+- D17 — Client OpenSubsonic: autenticazione token+salt MD5 (`p=` rifiutato dal server); transcoding disponibile lato server (Opus verificato su richieste esplicite). Non assumere un transcode predefinito per qualsiasi client: in W05-T01 anche `stream` senza formato con client `probe` restituisce originali nel campione. Download sempre originale; Range onorato su pass-through/download, ignorato su transcode.
 - D18 — App mono-modulo `:app` (package `com.walktape.app`), contenitore manuale `Graph` senza framework DI; Room con schema esportato in `app/schemas/` e `MIGRATIONS` da estendere a ogni cambio schema; preferenze in DataStore; per-app locale via AppCompat (it/en); backup cloud disattivato (`allowBackup=false` + `dataExtractionRules` che esclude tutto).
 - D19 — Emulatore di riferimento per le verifiche: AVD **`walktape_aosp`** (system image AOSP `android-36/default/x86_64`, 3 GB RAM/4 core, avvio headless con swiftshader). L'immagine google_apis va sistematicamente in ANR su questo host (carico kDrive/Docker): usare sempre l'AOSP per l'automazione.
 - D20 — Verifica UI su emulatore senza capacità visive del modello: `uiautomator dump` per contenuti/coordinate e colore medio degli screenshot (System.Drawing) per i temi; procedure collaudate in WORKLOG wave 02.
@@ -53,6 +56,8 @@ Ultimo aggiornamento: 2026-10-13 (wave 04 completata).
 - D26 — Room v3: indice per profilo, Paging 3.5.3, refresh progressivo con quattro dettagli album simultanei e sostituzione atomica dei brani. Cache copertine privata 250 MiB disco/16 MiB bitmap per store. Il cambio tab richiede chiavi dipendenti dal tipo effettivo dello snapshot, oltre che dal profilo (regressione verificata).
 - D27 — Room v4: playlist/posizioni per profilo con CASCADE, `local_audio` come catalogo disponibilità offline, `played`/`starred` per le sezioni home. Liste via `RawQuery` parametrizzate (`BrowseQueries`): ordinamenti in whitelist, LIKE con escape, filtro offline album/playlist = tutti i brani presenti nel catalogo. `LocalAudioCatalog` accetta solo path relativi canonici dentro la directory profilo e file non vuoti; popolamento reale in wave 08. Playlist lette senza username admin; cache non svuotata da errori di rete.
 - D28 — Verifica UI automatica su emulatore: la striscia tab scrollabile richiede ricerca per testTag (`library-tabs`, `testTagsAsResourceId`) + swipe alternati; i dialog ANR di sistema vanno chiusi via accessibilità ("Wait") e possono richiedere il riavvio dell'emulatore se il launcher resta bloccato. Registrare gli ANR come ambiente, non come difetti dell'app, salvo prova contraria.
+- D29 — W05-T01: Media3 1.11.1 (ExoPlayer/session/datasource-okhttp) con URI `wtstream://song/<profileId>/<id>` senza segreti, risolte a `stream.view?format=raw` con token+salt nuovo a ogni apertura. Client streaming senza call timeout totale (read 30 s/connect 10 s; redirect disabilitati). Cambio profilo = pausa/stop/clear prima di caricare credenziali; media di altri profili rifiutati. Callback attende il caricamento iniziale Room/Keystore. Connessioni sessione per UID app/controller trusted. Coda per ora in memoria, copertina notifica da integrare; persistenza T04, qualità W09-T01.
+- D30 — W05-T02: stato UI come `PlaybackSnapshot` immutabile (listener `onEvents` + polling 500 ms solo con media; nessun URL/segreto). Comandi sempre previa `isCommandAvailable` sul main looper; seek con chiave traccia+indice così un gesto in corso non si applica a traccia/profilo cambiati; play dopo fine coda riparte dal primo media; riconnessione bridge senza autoplay. Volume = volume Android `STREAM_MUSIC` via AudioManager (mai `Player.setVolume`), `volumeControlStream` su activity e finestra pannello, `setDeviceVolumeControlEnabled(true)` sul player per pubblicare l'intervallo reale. Su AVD l'iniezione tasti volume non è affidabile e il controller locale non espone comandi volume dispositivo: tasti fisici da verificare su telefono. Slider Compose con nodo accessibile unico (`clearAndSetSemantics` + `ProgressBarRangeInfo` + `setProgress`). Reset `repeatMode` al cambio profilo.
 
 ## Ambiente noto e dati di riferimento
 
@@ -61,26 +66,28 @@ Ultimo aggiornamento: 2026-10-13 (wave 04 completata).
 - Node 22.23.1 disponibile; `rg` non nel PATH: usare gli strumenti dedicati di ricerca.
 - Playwright MCP attivo su **Edge**; usarlo per verifiche web/browser, mai come prova Android.
 - Server: Navidrome 0.62.0 (`1b46b977`) su `http://localhost:4533`, API Subsonic 1.16.1 + OpenSubsonic (songLyrics, transcoding, formPost, playbackReport, transcodeOffset, indexBasedQueue). Libreria: 196 artisti, 460 cartelle.
-- Dal telefono usare indirizzo LAN/Tailscale del computer (non ancora verificato dal telefono).
+- Dal telefono usare indirizzo LAN/Tailscale del computer. Percorso Tailscale verificato dall'utente sul Motorola G55 5G / Android 16 con streaming MP3/FLAC; LAN non ancora verificata.
 - Hardware: Motorola G55 e successivi; Android 15/16; utente disponibile per test su telefono e in auto.
 - Host: kDrive sync della cartella progetto consuma CPU durante le build (~0,7 core); Docker Desktop presente. Segnalato all'utente il suggerimento di escludere `build/`/`.gradle/` dal sync kDrive.
 - Default approvati: cache audio 1 GB, copertine 250 MB, download solo Wi-Fi, originali nei download, avvio su “La mia musica”.
 
 ## Da verificare / informazioni mancanti
 
-- Raggiungibilità LAN/Tailscale dal telefono (wave 03, T06): richiede telefono.
+- Raggiungibilità LAN dal telefono ancora da verificare; Tailscale confermato dall'utente. W03-T06 resta aperto per le altre prove pendenti (VPN assente/isolamento e casi di errore sul telefono).
 - Verifiche telefono pendenti: scansione QR via camera, dialog condivisione QR su profilo reale, gate biometrico interattivo, VPN assente, due profili reali (wave 03, T04/T06).
 - HTTPS contro un server TLS reale non ancora esercitato (percorsi HTTPS unit-testati; server locale solo HTTP).
 - Testi con contenuti reali via `getLyricsBySongId` (wave 07); funzioni mutative su account di test (wave 07+).
 - Audio combinato su hardware reale (wave 09); Android Auto in auto (wave 10).
 - TalkBack, caratteri ingranditi, contrasti misurati (wave 06/12).
+- Checklist telefono wave 05 privata in `local/PHONE_TESTS_W05.md`: comandi in-app T02 (barra+pannello, seek, ripetizione, **tasti volume fisici**), MP3/FLAC, notifica, cambio profilo e schermo spento prolungato; interruzioni/cuffie/Bluetooth in T05/T07. **Discrepanza verificata**: `docs/PHONE_TESTS.md` è già tracciato da Git, non ignorato come indicato nel prompt; nessuna nuova prova telefono aggiunta a quel file. `NEXT_PROMPT.md` e la nuova checklist in `local/` sono ignorati.
 - Repository GitHub per release, identità distributore/contatto privacy, chiave di firma (wave 12).
 - Aggiornamenti patch disponibili (AGP 9.4.1, plugin compose 2.4.21): valutare al prossimo incremento.
 
 ## Stato dei file e del lavoro
 
 - Progetto Android nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schemi Room 1/2/3/4, test JVM e androidTest). APK debug verificato su emulatore (v0.1.0).
-- Pubblicati: wave 03 in `c97fe7d`, primo incremento wave 04 in `fa17b0e`. **Completamento wave 04 (secondo incremento) nel working tree, NON committato**; commit/push solo su richiesta esplicita.
+- Pubblicati: wave 03 in `c97fe7d`, wave 04 completa in `fa17b0e` + `26584bc`. Le eventuali note documentali successive al push restano locali; altri commit/push solo su nuova richiesta esplicita.
+- Working tree: **W05-T01+T02 committati su richiesta dell'utente** (hash nel WORKLOG); wave 05 prosegue con T03. APK debug aggiornato nel percorso standard, non pubblicato. Nessun cambio schema Room. Emulatore spento; file env temporaneo rimosso.
 - `local/` e `.playwright-mcp/` esclusi da Git. `local.properties` escluso da Git. `NEXT_PROMPT.md` è un documento locale, escluso da Git su richiesta dell'utente (non pubblicato).
 - Consultare `git status` alla ripresa: non assumere che file non tracciati siano eliminabili.
 

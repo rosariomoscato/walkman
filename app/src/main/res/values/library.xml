@@ -4,7 +4,7 @@
     <string name="library_tab_playlists">Playlist</string>
     <string name="library_tab_all">Tutti</string>
     <string name="home_continue">Continua ascolto</string>
-    <string name="home_continue_empty">Nessuna coda da riprendere. I controlli di riproduzione saranno disponibili con il motore audio.</string>
+    <string name="home_continue_empty">Nessuna coda salvata da riprendere.</string>
     <string name="home_recent_added">Aggiunti di recente</string>
     <string name="home_recent_played">Ascoltati di recente</string>
     <string name="home_favorites">Preferiti</string>
@@ -48,4 +48,5 @@
     <string name="sort_song_duration">Durata</string>
     <string name="action_retry">Riprova</string>
     <string name="action_back">Indietro</string>
+    <string name="playback_play_album">Riproduci album</string>
 </resources>

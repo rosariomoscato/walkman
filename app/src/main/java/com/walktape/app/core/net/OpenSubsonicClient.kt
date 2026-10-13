@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonToken
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -175,6 +176,24 @@ class OpenSubsonicClient(
         }
     }
 
+    /**
+     * Authenticated stream URL for the playback DataSource. The caller must supply a fresh
+     * salt for every request (D17). Default format "raw" bypasses server transcoding so the
+     * original file is streamed; quality selection belongs to W09-T01.
+     */
+    fun streamUrl(songId: String, salt: String, format: String? = "raw", maxBitRate: Int? = null): HttpUrl {
+        val url = address.url.newBuilder().addPathSegment("rest").addPathSegment("stream.view")
+            .addQueryParameter("u", credentials.username)
+            .addQueryParameter("t", credentials.token(salt))
+            .addQueryParameter("s", salt)
+            .addQueryParameter("v", "1.16.1")
+            .addQueryParameter("c", "WalkTape")
+            .addQueryParameter("id", songId)
+        format?.let { url.addQueryParameter("format", it) }
+        maxBitRate?.let { url.addQueryParameter("maxBitRate", it.toString()) }
+        return url.build()
+    }
+
     /** Repeated parameters are preserved for playlist endpoints in later waves. */
     internal suspend fun request(
         endpoint: String,
@@ -229,6 +248,18 @@ class OpenSubsonicClient(
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(30, TimeUnit.SECONDS)
             // Redirects can transfer authentication to another host or downgrade TLS.
+            .followRedirects(false).followSslRedirects(false)
+            .retryOnConnectionFailure(false)
+            .build()
+
+        /**
+         * Streaming client: no total call timeout, because a track may be read for minutes and
+         * the socket can stay idle while playback is paused; ExoPlayer resumes failed range
+         * requests on the original (pass-through) stream.
+         */
+        fun streamingHttpClient(): OkHttpClient = OkHttpClient.Builder()
+            .connectTimeout(10, TimeUnit.SECONDS)
+            .readTimeout(30, TimeUnit.SECONDS)
             .followRedirects(false).followSslRedirects(false)
             .retryOnConnectionFailure(false)
             .build()

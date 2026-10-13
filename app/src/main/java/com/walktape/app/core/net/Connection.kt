@@ -32,4 +32,5 @@ class Credentials(val username: String, private val password: String) {
 
 internal fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
-internal fun randomSalt(): String = ByteArray(16).also { SecureRandom().nextBytes(it) }.toHex()
+/** A fresh salt per request is a project decision (D17): never reuse one across calls. */
+fun randomSalt(): String = ByteArray(16).also { SecureRandom().nextBytes(it) }.toHex()
