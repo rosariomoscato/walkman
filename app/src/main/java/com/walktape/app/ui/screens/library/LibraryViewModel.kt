@@ -89,12 +89,59 @@ class LibraryViewModel : ViewModel() {
     val sorts = mutableSorts.asStateFlow()
     private val mutableSelection = MutableStateFlow<Set<String>>(emptySet())
     val selection = mutableSelection.asStateFlow()
+    private var selectionRevision = 0L
+    private val mutableQueueBusy = MutableStateFlow(false)
+    val queueBusy = mutableQueueBusy.asStateFlow()
+    private val mutableQueueError = MutableStateFlow(false)
+    val queueError = mutableQueueError.asStateFlow()
 
     fun toggleSelection(id: String) {
+        selectionRevision++
+        mutableQueueError.value = false
         mutableSelection.value = mutableSelection.value.let { if (id in it) it - id else it + id }
     }
 
-    fun clearSelection() { mutableSelection.value = emptySet() }
+    fun clearSelection() { selectionRevision++; mutableSelection.value = emptySet(); mutableQueueError.value = false }
+
+    /** Queue actions from the multi-selection; only tabs whose rows resolve to songs. */
+    enum class QueueInsert { NOW, NEXT, APPEND }
+
+    fun enqueueSelection(insert: QueueInsert, visibleItems: List<Any>) {
+        val profileId = activeProfile.value?.id ?: return
+        val ids = mutableSelection.value
+        if (ids.isEmpty() || mutableQueueBusy.value) return
+        val selectedTab = tab.value
+        val revision = selectionRevision
+        val displayedIds = when (selectedTab) {
+            LibraryTab.SONGS -> visibleItems.filterIsInstance<SongEntity>().filter { it.profileId == profileId }.map { it.id }
+            LibraryTab.ALBUMS -> visibleItems.filterIsInstance<AlbumEntity>().filter { it.profileId == profileId }.map { it.id }
+            else -> return
+        }
+        val orderedIds = displayedIds.filter { it in ids } + ids.filter { it !in displayedIds }
+        mutableQueueBusy.value = true
+        viewModelScope.launch {
+            try {
+                val dao = database.libraryDao()
+                val songs = if (selectedTab == LibraryTab.SONGS) {
+                    val rows = orderedIds.chunked(500).flatMap { dao.songsByIds(profileId, it) }.associateBy { it.id }
+                    orderedIds.mapNotNull { rows[it] }
+                } else {
+                    val rows = orderedIds.chunked(500).flatMap { dao.songsInAlbums(profileId, it) }.groupBy { it.albumId }
+                    orderedIds.flatMap { rows[it].orEmpty() }
+                }
+                if (revision != selectionRevision || activeProfile.value?.id != profileId) return@launch
+                val complete = if (selectedTab == LibraryTab.SONGS) songs.size == ids.size
+                    else ids.all { id -> songs.any { it.albumId == id } }
+                if (!complete || songs.isEmpty()) { mutableQueueError.value = true; return@launch }
+                when (insert) {
+                    QueueInsert.NOW -> Graph.playback.playNow(songs)
+                    QueueInsert.NEXT -> Graph.playback.playNext(songs)
+                    QueueInsert.APPEND -> Graph.playback.appendToQueue(songs)
+                }
+                clearSelection()
+            } finally { mutableQueueBusy.value = false }
+        }
+    }
 
     val pager: Flow<PagingData<Any>> = combine(activeProfile, mutableTab, mutableQuery, mutableSorts, mutableFilter) { profile, tab, query, sorts, filter ->
         LibraryRequest(profile?.id, tab, filter.copy(query = query), sorts[tab] ?: tab.defaultSort)

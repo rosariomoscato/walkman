@@ -21,4 +21,20 @@
     <string name="playback_waiting">Playback temporarily suspended</string>
     <string name="playback_ended">End of queue</string>
     <string name="playback_error">Playback unavailable. Check the connection and try again.</string>
+    <string name="queue_title">Queue</string>
+    <string name="queue_count">%1$d tracks</string>
+    <string name="queue_open">Open queue (%1$d tracks)</string>
+    <string name="queue_empty">The queue is empty.</string>
+    <string name="queue_shuffle_on">Shuffle queue</string>
+    <string name="queue_shuffle_off">Restore queue order</string>
+    <string name="queue_move_up">Move up</string>
+    <string name="queue_move_down">Move down</string>
+    <string name="queue_remove">Remove from queue</string>
+    <string name="queue_row_actions">Queue item actions</string>
+    <string name="queue_current">Now playing</string>
+    <string name="queue_reorder_hint">Manual reordering turns shuffle off.</string>
+    <string name="selection_play_now">Play now</string>
+    <string name="selection_play_next">Play next</string>
+    <string name="selection_add_to_queue">Add to queue</string>
+    <string name="selection_queue_unavailable">Some items are no longer available. Refresh the library and try again.</string>
 </resources>

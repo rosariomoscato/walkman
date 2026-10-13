@@ -83,7 +83,7 @@ Dipendenze: wave 04.
 
 - [x] W05-T01 — Implementare servizio di riproduzione e sessione multimediale con streaming MP3/FLAC.
 - [x] W05-T02 — Implementare play/pausa, precedente/successivo, seek, ripetizione e volume di sistema.
-- [ ] W05-T03 — Implementare coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni nella selezione e ripristino dell'ordine.
+- [x] W05-T03 — Implementare coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni nella selezione e ripristino dell'ordine.
 - [ ] W05-T04 — Persistire coda e posizione per profilo; ripristinare senza avvio automatico.
 - [ ] W05-T05 — Gestire audio focus, chiamate, scollegamento cuffie e comandi Bluetooth/notifica/lockscreen.
 - [ ] W05-T06 — Implementare arresto a fine coda, continuazione suggerita opzionale e timer con dissolvenza.
@@ -97,7 +97,10 @@ Riscontro hardware utente 2026-10-13 (**W05-T01/T05/T07**, reachability W03-T06)
 
 Completamento 2026-10-13: **W05-T02 completato**. Barra di trasporto nell'app (precedente/play-pausa/successivo, metadati) e pannello con seek preciso (accessibile e touch, gesti non applicati a tracce cambiate), ripetizione off/brano/coda con effetti reali sulla coda, volume Android via slider sincronizzato con il sistema; riallineamento onStop/onStart della sessione senza avvio automatico. Verifiche: build/lint ok (0 errori/18 warning), 45/45 JVM (login reale), 6/6 Android sul server reale in emulatore (MP3+FLAC, comandi UI↔sessione, seek, ripetizioni, fine coda e ripartenza, volume Android, cambio profilo); UI reale su emulatore confermata via dump (barra + pannello + stato "In pausa"/ripetizione "brano"). **Riscontro utente: i comandi in-app funzionano sul Motorola G55 5G / Android 16.** Limitazione registrata: comandi volume dispositivo non esposti dal controller locale; iniezione tasti volume non efficace sull'AVD — tasti fisici da verificare sul Motorola. Prossima azione: **W05-T03**.
 
+Completamento 2026-10-13: **W05-T03 completato**. Coda visibile nell'ordine d'ascolto, tap sull'occorrenza, rimozione, menu Sposta su/giù e azioni accessibili; copie duplicate con UUID distinti. Shuffle nativo gestito nel servizio, corrente mantenuto senza ricaricarlo, ordine originale conservato, sopravvive al rebind UI; nuovi gruppi NEXT/APPEND rispettano la posizione richiesta. Azioni multiple Album/Brani risolte da Room per profilo (anche fuori dalle pagine caricate); NEXT/APPEND non avviano coda vuota, NOW avvia. Build APK/app-test, **53/53 JVM** (login reale, fixture shuffle 10.000 occorrenze ~90 ms JVM), **7/7 Android** del motore (343 s, regressione audio/controlli + identità/shuffle/menu) + **2/2 Android** su selezioni dalla libreria reale (118 s, album in ordine disco/traccia e brani NEXT/NOW/APPEND), lint 0 errori/22 warning. Prototipo drag non verificato rimosso: riordino operativo dal menu, come richiesto dalla specifica. Nessuna prova Motorola del nuovo incremento; checklist privata aggiornata. Prossimo task **W05-T04**.
+
 ## Wave 06 — Player TPS-L2
+
 
 Dipendenze: wave 05; design wave 02.
 

@@ -2,6 +2,7 @@ package com.walktape.app.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.os.Bundle
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
@@ -10,6 +11,7 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import java.util.UUID
 import com.walktape.app.Graph
 import com.walktape.app.MainActivity
 import com.walktape.app.core.net.OpenSubsonicClient
@@ -56,6 +58,8 @@ class PlaybackService : MediaSessionService() {
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
+        val shuffle = ServiceShuffle(player)
+        player.addListener(shuffle)
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(PendingIntent.getActivity(this, 0,
                 Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -69,7 +73,13 @@ class PlaybackService : MediaSessionService() {
                         val profile = withTimeoutOrNull(5_000) { connection.filterNotNull().first() }
                         if (profile != null && mediaItems.all {
                                 SubsonicStream.songId(it.localConfiguration?.uri.toString(), profile.id) != null
-                            }) result.set(mediaItems)
+                            }) result.set(mediaItems.map { item ->
+                                val extras = Bundle(item.mediaMetadata.extras ?: Bundle.EMPTY).apply {
+                                    putString(QueueIdentity.SONG, SubsonicStream.songId(item.localConfiguration!!.uri.toString(), profile.id))
+                                }
+                                item.buildUpon().setMediaId(QueueIdentity.PREFIX + UUID.randomUUID())
+                                    .setMediaMetadata(item.mediaMetadata.buildUpon().setExtras(extras).build()).build()
+                            }.toMutableList())
                         else result.setException(IOException("Playback profile unavailable"))
                     }
                     job.invokeOnCompletion { if (!result.isDone) result.cancel(false) }
@@ -88,6 +98,7 @@ class PlaybackService : MediaSessionService() {
                     mediaSession.player.stop()
                     mediaSession.player.clearMediaItems()
                     mediaSession.player.repeatMode = Player.REPEAT_MODE_OFF
+                    mediaSession.player.shuffleModeEnabled = false
                     connection.value = active?.let { profile ->
                         Graph.profiles.clientFor(profile.id)?.let { StreamProfile(profile.id, it) }
                     }

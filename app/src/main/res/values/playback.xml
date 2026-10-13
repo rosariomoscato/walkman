@@ -21,4 +21,20 @@
     <string name="playback_waiting">Riproduzione temporaneamente sospesa</string>
     <string name="playback_ended">Fine coda</string>
     <string name="playback_error">Riproduzione non disponibile. Verifica la connessione e riprova.</string>
+    <string name="queue_title">Coda</string>
+    <string name="queue_count">%1$d brani</string>
+    <string name="queue_open">Apri la coda (%1$d brani)</string>
+    <string name="queue_empty">La coda è vuota.</string>
+    <string name="queue_shuffle_on">Mescola la coda</string>
+    <string name="queue_shuffle_off">Ripristina l\'ordine della coda</string>
+    <string name="queue_move_up">Sposta su</string>
+    <string name="queue_move_down">Sposta giù</string>
+    <string name="queue_remove">Rimuovi dalla coda</string>
+    <string name="queue_row_actions">Azioni del brano in coda</string>
+    <string name="queue_current">In riproduzione</string>
+    <string name="queue_reorder_hint">Riordinando manualmente disattivi l\'ascolto casuale.</string>
+    <string name="selection_play_now">Riproduci ora</string>
+    <string name="selection_play_next">Dopo il corrente</string>
+    <string name="selection_add_to_queue">Aggiungi in coda</string>
+    <string name="selection_queue_unavailable">Alcuni elementi non sono più disponibili. Aggiorna la libreria e riprova.</string>
 </resources>

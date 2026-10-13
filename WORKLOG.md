@@ -392,3 +392,37 @@ Task: **W05-T02**, prove hardware. Fonte: riscontro dell'utente in chat.
 
 - L'utente ha installato l'APK T02 sul Motorola G55 5G / Android 16 e conferma che **funziona** (comandi di riproduzione dentro l'app). Nessun dettaglio fornito sui singoli punti della checklist (seek, ripetizione, volume/tasti fisici, fine coda): la checklist locale resta con le voci non ancora attestate esplicitamente.
 - Nessuna azione sul codice. Aggiornati WORKLOG, memoria, piano e checklist locale; commit dell'incremento W05-T01+T02 su richiesta esplicita.
+
+## 2026-10-13 — Commit W05-T01+T02
+
+Task: operazione Git richiesta esplicitamente dall'utente.
+
+- Ispezionati status/diff/stage: 27 file, nessun file riservato né credenziali (uniche occorrenze `ND_USER`/`ND_PASS` sono i riferimenti al file di configurazione locale già usati dai test storici); `local/`, `local.properties` e `NEXT_PROMPT.md` restano esclusi.
+- Commit **`74be2d0`** — "Wave 05: motore di riproduzione e controlli (T01-T02)" (27 file, 1.669 inserimenti/36 rimozioni) con messaggio descrittivo e verifiche allegate.
+- Working tree pulita dopo il commit (documenti di progetto aggiornati prima dello stage). Nessun push: solo su nuova richiesta esplicita.
+
+Prossima azione precisa: **W05-T03** — coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni e ripristino dell'ordine.
+
+## 2026-10-13 — W05-T03: coda modificabile, selezione e shuffle nativo
+
+Task: **W05-T03 completato**, incremento locale dopo `74be2d0`. Note post-commit e bozza della sessione precedente preservate e investigate; nessun commit/push richiesto o eseguito.
+
+- Corretto lo shuffle della bozza: ExoPlayer nativo con permutazione completa ancorata al corrente in `ServiceShuffle`, mantenuta nel servizio. Nessun rimpiazzo della coda o ricaricamento del corrente al toggle. Sorgente ufficiale Timeline **1.11.1** conferma la serializzazione degli indici shuffle: la UI percorre getFirst/getNext in ordine reale, con repeat OFF per leggere la lista completa. Ordine canonico intatto al toggle off, stato conservato al rebind UI.
+- Normalizzati i MediaItems nel callback del servizio: UUID univoco per occorrenza, songId negli extras, URI originale logica e vincolata al profilo. Due copie dello stesso brano non condividono identità; rimozione, tap e move colpiscono ID stabili. Nuovi gruppi AFTER/NEXT o APPEND riconciliati con la permutazione senza perdita/doppioni/resurrezione; cambio profilo resetta anche shuffle.
+- Inserimenti serializzati e in attesa dell'identità normalizzata; profilo validato prima di agire. NEXT/APPEND con coda vuota rimangono in pausa, NOW avvia; coda non vuota mantiene intenzione d'ascolto salvo NOW. Riordino manuale disattiva shuffle e usa moveMediaItem conservando sorgente/posizione.
+- UI Coda da pannello: LazyColumn nell'ordine effettivo, corrente evidenziato, tap per ascoltare, X, menu Sposta su/Sposta giù/Rimuovi e azioni accessibili. Prototipo drag non ha superato i test touch (destinazione rimasta 0): rimosso il gesto/handle non operativo; il menu è verificato dall'UI. Riordino resta pienamente operativo, la specifica non impone il drag. Nuovi token/palette non introdotti.
+- Selezione multipla Album/Brani: FlowRow di azioni NOW/NEXT/APPEND; risoluzione Room per profilo con bind IN in blocchi di 500, ordine visualizzato + ordine disco/traccia degli album, anche per ID fuori dal paging snapshot. Cambio selezione/profilo annulla la richiesta; record mancanti non vengono omessi silenziosamente. Stato busy/error inline. Nuova query `songsByIds`, nessuna migrazione/schema modificato.
+
+Verifiche concluse:
+
+- Build `assembleDebug assembleDebugAndroidTest` riuscita, ultimi APK reinstallati/precompilati su `walktape_aosp`.
+- JVM `testDebugUnitTest -PrealServerTest=true`: **53/53, 0 failure/skip** (report HTML e XML controllati); 8 test QueueShuffle incl. permutazione completa/determinismo, duplicati come occorrenze, gruppi NEXT/APPEND e fixture 10.000 voci con modifiche (~90 ms JVM, non benchmark Android). Login reale incluso nella regressione.
+- **Android 7/7**, 343,445 s: DataSource 5, regressione T01/T02 1, nuovo test coda reale 1. MP3/FLAC dal Navidrome via 10.0.2.2; cinque occorrenze con brani duplicati e corrente all'indice 3: toggle shuffle conserva sorgente e posizione 10 s in pausa, visita tutte le occorrenze senza ripetizioni, riallineamento UI mantiene shuffle, off ripristina ordine e copia esatta. Rimozione individuale, tap, move del corrente a posizione 11 s invariata, riordino da menu, sostituzione esterna senza ricreare vecchie voci verificati.
+- **Android 2/2 selezione**, 117,991 s su profilo `UI check` con indice reale: brani APPEND da vuota in pausa, NEXT in shuffle collocato dopo corrente, NOW avvia l'inserito; due album con tutte le tracce in ordine disco/traccia. Code di test svuotate, ordinamenti originali ripristinati. Nessuna mutazione playlist/preferiti sul server.
+- Lint `lintDebug` separato: **BUILD SUCCESSFUL (2m55s), 0 errori/22 warning**; avvisi prevalentemente versioni/target, attributi, plurali (anche conteggi coda), risorsa non usata e KTX; nessuna baseline nuova.
+- Risolti durante verifiche: failure UI iniziale cold boot, identificazione righe duplicate tramite testTag/UUID, cache accessibilità con nodi eliminati e ricreati tra selezioni (`UiAutomation.clearCache` nel test), drag non verificato sostituito dal menu. Una build con JVM/lint in parallelo al carico emulatore ha perso la connessione al processo test (timeout 120 s, non assertion): ripetuti i controlli separati, tutti passati. Nessuna attribuzione della causa a kDrive.
+- Env temporaneo `/data/local/tmp/walktape-test-server.env` e marker `/data/local/tmp/wt-seed` rimossi; assenza env verificata. Profili temporanei rimossi e profilo precedente riattivato; emulatore spento e ADB senza dispositivi. Config originale `local/test-server.env` preservata, mai stampata.
+
+Fonti ufficiali: AndroidX Media3 **tag 1.11.1**, Timeline con `FIELD_SHUFFLED_WINDOW_INDICES`, Player/ShuffleOrder. Link e scelte in ARCHITECTURE; decisione D31 in memoria. File principali: playback/{PlaybackConnection,PlaybackSnapshot,PlaybackService,QueueShuffle,ServiceShuffle}, UI/{QueueSheet,PlaybackControls,LibraryScreen,LibraryViewModel}, LibraryDao e test pertinenti.
+
+Non eseguiti: coda/shuffle/selezione sul Motorola, TalkBack manuale e gesture drag (non esposta), persistenza/riavvio del processo (T04), interruzioni complete/Bluetooth (T05/T07), TLS reale. Checklist telefono privata aggiornata, docs PHONE_TESTS già tracciato non modificato. Prossima azione precisa **W05-T04**: coda/posizione e shuffle per profilo in Room, migrazione esplicita e ripristino sempre in pausa.

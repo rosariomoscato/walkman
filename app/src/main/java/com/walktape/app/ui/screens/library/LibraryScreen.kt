@@ -5,6 +5,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -82,6 +83,8 @@ fun LibraryScreen(
     val sorts by viewModel.sorts.collectAsStateWithLifecycle()
     val items = viewModel.pager.collectAsLazyPagingItems()
     val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val queueBusy by viewModel.queueBusy.collectAsStateWithLifecycle()
+    val queueError by viewModel.queueError.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
@@ -113,10 +116,31 @@ fun LibraryScreen(
                     }
                 }
                 if (selection.isNotEmpty()) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(stringResource(R.string.library_selected, selection.size), modifier = Modifier.weight(1f))
-                        IconButton(onClick = viewModel::clearSelection) {
-                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.library_clear_selection))
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text(stringResource(R.string.library_selected, selection.size), modifier = Modifier.weight(1f))
+                            IconButton(onClick = viewModel::clearSelection) {
+                                Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.library_clear_selection))
+                            }
+                        }
+                        if (tab == LibraryTab.SONGS || tab == LibraryTab.ALBUMS) {
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                TextButton(onClick = { viewModel.enqueueSelection(
+                                    LibraryViewModel.QueueInsert.NOW, items.itemSnapshotList.items) }, enabled = !queueBusy) {
+                                    Text(stringResource(R.string.selection_play_now))
+                                }
+                                TextButton(onClick = { viewModel.enqueueSelection(
+                                    LibraryViewModel.QueueInsert.NEXT, items.itemSnapshotList.items) }, enabled = !queueBusy) {
+                                    Text(stringResource(R.string.selection_play_next))
+                                }
+                                TextButton(onClick = { viewModel.enqueueSelection(
+                                    LibraryViewModel.QueueInsert.APPEND, items.itemSnapshotList.items) }, enabled = !queueBusy) {
+                                    Text(stringResource(R.string.selection_add_to_queue))
+                                }
+                            }
+                            if (queueBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                            if (queueError) Text(stringResource(R.string.selection_queue_unavailable),
+                                color = MaterialTheme.colorScheme.error)
                         }
                     }
                 }
@@ -290,6 +314,7 @@ fun AlbumRow(album: AlbumEntity, selected: Boolean = false, selectionMode: Boole
     Row(
         Modifier
             .fillMaxWidth()
+            .testTag("library-album-${album.id}")
             .combinedClickable(onClick = { if (selectionMode) onSelect?.invoke() else onClick() }, onLongClick = onSelect)
             .padding(horizontal = 16.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -349,6 +374,7 @@ private fun SongItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel) 
 fun SongRow(song: SongEntity, selected: Boolean = false, selectionMode: Boolean = false, onSelect: (() -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth()
+            .testTag("library-song-${song.id}")
             .then(if (onSelect != null) Modifier.combinedClickable(onClick = onSelect, onLongClick = onSelect) else Modifier)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)

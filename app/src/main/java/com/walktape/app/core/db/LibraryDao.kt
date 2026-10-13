@@ -110,6 +110,9 @@ interface LibraryDao {
     @Query("SELECT * FROM song WHERE profileId = :profileId AND albumId IN (:albumIds) ORDER BY albumId, discNumber, track")
     suspend fun songsInAlbums(profileId: Long, albumIds: List<String>): List<SongEntity>
 
+    @Query("SELECT * FROM song WHERE profileId = :profileId AND id IN (:ids)")
+    suspend fun songsByIds(profileId: Long, ids: List<String>): List<SongEntity>
+
     @Query("SELECT * FROM artist WHERE profileId = :profileId AND id = :id LIMIT 1")
     suspend fun artist(profileId: Long, id: String): ArtistEntity?
 

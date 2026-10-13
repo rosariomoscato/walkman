@@ -22,9 +22,23 @@ data class PlaybackSnapshot(
     val volume: Int = 0,
     val maxVolume: Int = 1,
     val volumeFixed: Boolean = false,
+    val queue: List<PlaybackQueueEntry> = emptyList(),
+    val shuffleOn: Boolean = false,
+    val canEditQueue: Boolean = false,
+    val canShuffle: Boolean = false,
     val failure: PlaybackFailure? = null,
 ) {
     val hasMedia: Boolean get() = itemKey != null
 }
+
+/** One queue row as shown in the app: no URIs, no credentials. */
+data class PlaybackQueueEntry(
+    val entryId: String,
+    val mediaId: String,
+    val title: String,
+    val artist: String,
+    val durationMs: Long? = null,
+    val isCurrent: Boolean = false,
+)
 
 enum class PlaybackFailure { CONNECTION, PLAYBACK, REQUEST, VOLUME }

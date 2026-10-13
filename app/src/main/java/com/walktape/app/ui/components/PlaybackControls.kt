@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.RepeatOne
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
@@ -70,7 +71,8 @@ import java.util.Locale
 fun PlaybackControls() {
     val state by Graph.playback.state.collectAsStateWithLifecycle()
     var expanded by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(state.hasMedia) { if (!state.hasMedia) expanded = false }
+    var queueOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(state.hasMedia) { if (!state.hasMedia) { expanded = false; queueOpen = false } }
     if (!state.hasMedia) {
         if (state.failure != null) Surface {
             Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -153,8 +155,13 @@ fun PlaybackControls() {
                     enabled = !state.volumeFixed, modifier = Modifier.fillMaxWidth())
             }
             if (state.volumeFixed) Text(stringResource(R.string.playback_volume_fixed))
+            TextButton(onClick = { expanded = false; queueOpen = true }, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
+                Text(stringResource(R.string.queue_open, state.queue.size), Modifier.padding(start = 8.dp))
+            }
         }
     }
+    if (queueOpen) QueueSheet(onDismiss = { queueOpen = false })
 }
 
 @Composable

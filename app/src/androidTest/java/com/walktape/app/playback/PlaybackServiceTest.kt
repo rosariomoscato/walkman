@@ -287,8 +287,186 @@ class PlaybackServiceTest {
         }
     }
 
-    private suspend fun awaitPlayback(message: String, condition: () -> Boolean) {
-        val deadline = System.currentTimeMillis() + 40_000
+    /** Queue sheet: entries, remove, move via accessibility action, play-from-row, shuffle+restore. */
+    @Test fun realQueueOperationsPreserveOccurrencesAndShuffle() = runBlocking {
+        val env = File("/data/local/tmp/walktape-test-server.env")
+        assumeTrue("Opt-in server configuration required", env.exists())
+        val config = env.readLines().filter { it.isNotBlank() && !it.startsWith('#') }
+            .associate { it.substringBefore('=') to it.substringAfter('=') }
+        val previous = Graph.profiles.profiles.first().firstOrNull { it.isActive }?.id
+        val added = Graph.profiles.addVerified("Queue test ${System.currentTimeMillis()}",
+            config.getValue("ND_URL").replace("localhost", "10.0.2.2"), config.getValue("ND_USER"), config.getValue("ND_PASS"), true)
+        assertTrue("Real connection must succeed (details suppressed)", added is ApiResult.Success)
+        val id = (added as ApiResult.Success).value
+        var connected: MediaController? = null
+        var activity: android.app.Activity? = null
+        try {
+            Graph.profiles.activate(id)
+            ParcelFileDescriptor.AutoCloseInputStream(instrumentation.uiAutomation
+                .executeShellCommand("input keyevent KEYCODE_WAKEUP")).use { it.readBytes() }
+            val launched = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            activity = launched
+            withContext(Dispatchers.Main) { launched.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            val future = withContext(Dispatchers.Main) {
+                MediaController.Builder(context, SessionToken(context, ComponentName(context, PlaybackService::class.java))).buildAsync()
+            }
+            val controller = future.get(20, TimeUnit.SECONDS)
+            connected = controller
+            verifyQueueEditing(controller, Graph.playback, playbackCandidates(Graph.profiles.clientFor(id)!!), id)
+        } finally {
+            withContext(Dispatchers.Main) { connected?.pause(); connected?.release(); activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            if (previous != null) Graph.profiles.activate(previous)
+            Graph.profiles.remove(id)
+        }
+    }
+
+    private suspend fun verifyQueueEditing(controller: MediaController, bridge: PlaybackConnection,
+        songs: List<SongDto>, profileId: Long) {
+        val queue = listOf(songs[0], songs[1], songs[0], songs[1], songs[0])
+        withContext(Dispatchers.Main) {
+            controller.pause()
+            controller.setMediaItems(queue.map { it.toQueueItem(profileId) }, 3, 10_000)
+            controller.prepare()
+        }
+        awaitPlayback("Queue ready with unique occurrences") {
+            bridge.state.value.canEditQueue && bridge.state.value.queue.size == 5 && controller.playbackState == Player.STATE_READY
+        }
+        val original = bridge.state.value.queue.map { it.entryId }
+        assertEquals(5, original.toSet().size)
+        val selected = original[3]
+        val opener = awaitUi { it.contentDescription?.toString() == "Apri controlli di riproduzione" ||
+            it.text?.toString()?.startsWith("Apri la coda") == true }
+        if (opener.contentDescription?.toString() == "Apri controlli di riproduzione") performClick(opener)
+        clickQueueButton()
+        awaitUi { it.text?.toString() == "Coda" }
+        clickUi { it.contentDescription?.toString() == "Mescola la coda" }
+        awaitPlayback("Shuffle anchors exact current duplicate without seeking") {
+            bridge.state.value.shuffleOn && bridge.state.value.queue.first().entryId == selected &&
+                controller.currentMediaItemIndex == 3 && kotlin.math.abs(controller.currentPosition - 10_000) < 200 && !controller.playWhenReady
+        }
+        val traversal = bridge.state.value.queue.map { it.entryId }
+        assertEquals(original.toSet(), traversal.toSet())
+        // Rebind while the service is held by the second controller: shuffle/order must survive.
+        withContext(Dispatchers.Main) { bridge.disconnect(); bridge.connect() }
+        awaitPlayback("Shuffle survives release/rebind") {
+            bridge.state.value.connected && bridge.state.value.shuffleOn && bridge.state.value.queue.map { it.entryId } == traversal
+        }
+        for (id in traversal.drop(1)) {
+            withContext(Dispatchers.Main) { controller.seekToNextMediaItem() }
+            awaitPlayback("Native next follows the displayed shuffle permutation") { controller.currentMediaItem?.mediaId == id }
+        }
+        val last = traversal.last()
+        withContext(Dispatchers.Main) { bridge.toggleShuffle() }
+        awaitPlayback("Disable restores original order and exact duplicate identity") {
+            !bridge.state.value.shuffleOn && bridge.state.value.queue.map { it.entryId } == original &&
+                controller.currentMediaItem?.mediaId == last
+        }
+        // The transient disconnect may dismiss the sheet; reopen through the bar if necessary.
+        val root = instrumentation.uiAutomation.rootInActiveWindow
+        if (findNode(root ?: throw AssertionError("No UI root")) { it.text?.toString() == "Coda" } == null) {
+            clickUi { it.contentDescription?.toString() == "Apri controlli di riproduzione" }
+            clickQueueButton()
+        }
+        val removed = original.first { it != last }
+        performQueueAction(removed, "Rimuovi dalla coda")
+        awaitPlayback("Remove one occurrence only") { bridge.state.value.queue.map { it.entryId } == original.filter { it != removed } }
+        val remaining = bridge.state.value.queue.map { it.entryId }
+        performClick(queueNode(remaining[0]))
+        awaitPlayback("Queue row tap plays that occurrence") { controller.isPlaying && controller.currentMediaItem?.mediaId == remaining[0] }
+        withContext(Dispatchers.Main) { controller.pause(); controller.seekTo(11_000) }
+        performQueueAction(remaining[0], "Sposta giù")
+        awaitPlayback("Move current preserves source, paused position and identity") {
+            bridge.state.value.queue[1].entryId == remaining[0] && controller.currentMediaItem?.mediaId == remaining[0] &&
+                kotlin.math.abs(controller.currentPosition - 11_000) < 200 && !controller.playWhenReady
+        }
+        val beforeMenu = bridge.state.value.queue.map { it.entryId }
+        val row = queueNode(beforeMenu[0])
+        val actions = findNode(row) { it.contentDescription?.toString() == "Azioni del brano in coda" }!!
+        performClick(actions)
+        clickUi { it.text?.toString() == "Sposta giù" }
+        awaitPlayback("Visible row menu reorders the exact occurrence") { bridge.state.value.queue[1].entryId == beforeMenu[0] }
+        withContext(Dispatchers.Main) { bridge.removeQueueItem(beforeMenu[0]) }
+        awaitPlayback("Queue remains editable after menu reordering") { bridge.state.value.queue.size == 3 }
+        // Replacing the queue externally while shuffled must not resurrect old entries.
+        withContext(Dispatchers.Main) { controller.shuffleModeEnabled = true; controller.setMediaItem(songs[0].toQueueItem(profileId)); controller.prepare() }
+        awaitPlayback("External replacement contains no old entries") { bridge.state.value.queue.size == 1 && bridge.state.value.canEditQueue }
+        withContext(Dispatchers.Main) { controller.shuffleModeEnabled = false; controller.pause() }
+        instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+    }
+
+    private fun queueNode(id: String) = awaitUi {
+        it.viewIdResourceName?.endsWith("queue-row-${id.replace('/', '_')}") == true
+    }
+
+    private fun performQueueAction(id: String, label: String) {
+        val row = queueNode(id)
+        val action = row.actionList.firstOrNull { it.label?.toString() == label }
+            ?: throw AssertionError("Queue action unavailable: $label")
+        assertTrue(row.performAction(action.id))
+    }
+
+    private fun clickQueueButton() {
+        repeat(8) {
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            if (root != null) {
+                findNode(root) { it.text?.toString()?.startsWith("Apri la coda") == true && it.isVisibleToUser }?.let { performClick(it); return }
+                findNode(root) { it.isScrollable && it.className?.toString() == "android.widget.ScrollView" }
+                    ?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            }
+            Thread.sleep(300)
+        }
+        clickUi { it.text?.toString()?.startsWith("Apri la coda") == true }
+    }
+
+    private fun dragHandle(x: Float, y: Float, distance: Float) {
+        val start = SystemClock.uptimeMillis()
+        fun send(action: Int, at: Float) {
+            val event = MotionEvent.obtain(start, SystemClock.uptimeMillis(), action, x, at, 0)
+            event.source = android.view.InputDevice.SOURCE_TOUCHSCREEN
+            try { assertTrue(instrumentation.uiAutomation.injectInputEvent(event, true)) } finally { event.recycle() }
+        }
+        send(MotionEvent.ACTION_DOWN, y); Thread.sleep(650)
+        for (step in 1..8) { send(MotionEvent.ACTION_MOVE, y + distance * step / 8); Thread.sleep(40) }
+        send(MotionEvent.ACTION_UP, y + distance)
+    }
+
+    /** Runs a queue-row custom action on the row carrying [title] (by occurrence order). */
+    private fun performCustomAction(title: String, occurrence: Int, label: String) {
+        val node = awaitNthTitle(title, occurrence) { candidate ->
+            candidate.actionList.any { it.label?.toString() == label }
+        }
+        val action = node.actionList.first { it.label?.toString() == label }
+        assertTrue("Queue custom action must run: $label",
+            node.performAction(action.id))
+    }
+
+    /** Clicks the n-th (0-based) visible node showing [title], in screen order. */
+    private fun clickNthTitle(title: String, occurrence: Int) {
+        performClick(awaitNthTitle(title, occurrence) { true })
+    }
+
+    private fun awaitNthTitle(title: String, occurrence: Int,
+        extra: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
+        val deadline = System.currentTimeMillis() + 30_000
+        while (System.currentTimeMillis() < deadline) {
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            if (root != null) {
+                val matches = mutableListOf<AccessibilityNodeInfo>()
+                collectNodes(root, { it.text?.toString() == title && extra(it) }, matches)
+                if (matches.size > occurrence) return matches[occurrence]
+            }
+            Thread.sleep(300)
+        }
+        throw AssertionError("Queue row not found: title occurrence $occurrence")
+    }
+
+    private fun collectNodes(node: AccessibilityNodeInfo, predicate: (AccessibilityNodeInfo) -> Boolean,
+        output: MutableList<AccessibilityNodeInfo>) {
+        if (predicate(node)) output.add(node)
+        for (i in 0 until node.childCount) node.getChild(i)?.let { collectNodes(it, predicate, output) }
+    }
+
+    private suspend fun awaitPlayback(message: String, condition: () -> Boolean) {        val deadline = System.currentTimeMillis() + 40_000
         while (System.currentTimeMillis() < deadline) {
             if (withContext(Dispatchers.Main) { condition() }) return
             delay(250)
@@ -318,7 +496,9 @@ class PlaybackServiceTest {
             for (i in 0 until node.childCount) node.getChild(i)?.let(::inspect)
         }
         instrumentation.uiAutomation.rootInActiveWindow?.let(::inspect)
-        instrumentation.sendStatus(0, Bundle().apply { putString("stream", "\nPlayback slider diagnostics: ${diagnostic.joinToString("; ")}\n") })
+        val rootPackage = instrumentation.uiAutomation.rootInActiveWindow?.packageName?.toString().orEmpty()
+        instrumentation.sendStatus(0, Bundle().apply { putString("stream", "\nPlayback slider diagnostics: ${diagnostic.joinToString("; ")}\n" +
+            "rootPackage=$rootPackage\n") })
         throw AssertionError("Playback UI control not found")
     }
 
