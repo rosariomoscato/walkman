@@ -2,19 +2,29 @@ package com.walktape.app.ui.nav
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import android.net.Uri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.walktape.app.ui.screens.diagnostics.DiagnosticsScreen
-import com.walktape.app.ui.screens.home.HomeScreen
-import com.walktape.app.ui.screens.settings.SettingsScreen
+import com.walktape.app.ui.screens.library.AlbumDetailScreen
+import com.walktape.app.ui.screens.library.ArtistDetailScreen
+import com.walktape.app.ui.screens.library.GenreDetailScreen
+import com.walktape.app.ui.screens.library.LibraryScreen
 import com.walktape.app.ui.screens.profiles.ProfilesScreen
+import com.walktape.app.ui.screens.settings.SettingsScreen
 
 object Routes {
     const val HOME = "home"
     const val SETTINGS = "settings"
     const val DIAGNOSTICS = "diagnostics"
     const val PROFILES = "profiles"
+    const val ALBUM = "album/{id}"
+    const val ARTIST = "artist/{id}"
+    const val GENRE = "genre/{name}"
+    fun album(id: String) = "album/${Uri.encode(id)}"
+    fun artist(id: String) = "artist/${Uri.encode(id)}"
+    fun genre(name: String) = "genre/${Uri.encode(name)}"
 }
 
 @Composable
@@ -28,7 +38,12 @@ fun WalkTapeNavHost(
         modifier = modifier
     ) {
         composable(Routes.HOME) {
-            HomeScreen(onOpenProfiles = { navController.navigate(Routes.PROFILES) })
+            LibraryScreen(
+                onOpenProfiles = { navController.navigate(Routes.PROFILES) },
+                onOpenAlbum = { navController.navigate(Routes.album(it)) },
+                onOpenArtist = { navController.navigate(Routes.artist(it)) },
+                onOpenGenre = { navController.navigate(Routes.genre(it)) }
+            )
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(
@@ -40,5 +55,22 @@ fun WalkTapeNavHost(
             DiagnosticsScreen()
         }
         composable(Routes.PROFILES) { ProfilesScreen() }
+        composable(Routes.ALBUM) { entry ->
+            AlbumDetailScreen(
+                albumId = entry.arguments?.getString("id") ?: "",
+                onBack = { navController.popBackStack() }
+            )
+        }
+        composable(Routes.ARTIST) { entry ->
+            ArtistDetailScreen(
+                artistId = entry.arguments?.getString("id") ?: "",
+                onBack = { navController.popBackStack() },
+                onOpenAlbum = { navController.navigate(Routes.album(it)) }
+            )
+        }
+        composable(Routes.GENRE) { entry ->
+            val name = entry.arguments?.getString("name") ?: ""
+            GenreDetailScreen(genre = name, onBack = { navController.popBackStack() })
+        }
     }
 }

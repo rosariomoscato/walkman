@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="library_clear_search">Clear search</string>
+    <string name="library_selected">Selected: %1$d</string>
+    <string name="library_clear_selection">Clear selection</string>
+    <string name="library_tab_albums">Albums</string>
+    <string name="library_tab_artists">Artists</string>
+    <string name="library_tab_songs">Songs</string>
+    <string name="library_tab_genres">Genres</string>
+    <string name="library_search_hint">Search the library</string>
+    <string name="library_never_synced">Library not indexed yet.</string>
+    <string name="library_sync_running">Indexing… %1$d/%2$d</string>
+    <string name="library_sync_failed">Indexing stopped. Retry when the server is reachable.</string>
+    <string name="library_sync_done">%1$d artists • %2$d songs stored locally</string>
+    <string name="library_sync_update">Update library</string>
+    <string name="library_artist_albums">%1$d albums</string>
+    <string name="library_genre_counts">%1$d albums • %2$d songs</string>
+    <string name="library_album_songs">%1$d songs</string>
+    <string name="library_compilation">Compilation</string>
+    <string name="library_disc">Disc %1$d</string>
+    <string name="sort_album_name">Title</string>
+    <string name="sort_album_artist">Artist</string>
+    <string name="sort_album_year">Year</string>
+    <string name="sort_album_recent">Added</string>
+    <string name="sort_song_title">Title</string>
+    <string name="sort_song_artist">Artist</string>
+    <string name="sort_song_album">Album</string>
+    <string name="sort_song_duration">Duration</string>
+    <string name="action_retry">Retry</string>
+    <string name="action_back">Back</string>
+</resources>

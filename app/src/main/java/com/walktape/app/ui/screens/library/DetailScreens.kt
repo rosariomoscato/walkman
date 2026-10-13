@@ -1,0 +1,212 @@
+package com.walktape.app.ui.screens.library
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
+import androidx.paging.compose.collectAsLazyPagingItems
+import androidx.paging.compose.itemKey
+import com.walktape.app.Graph
+import com.walktape.app.R
+import com.walktape.app.core.db.SongEntity
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.stateIn
+
+class DetailViewModel(profileId: Long, key: String) : ViewModel() {
+    private val dao = Graph.database.libraryDao()
+
+    val albumDetail = dao.observeAlbum(profileId, key)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    val albumSongs = dao.observeAlbumSongs(profileId, key)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val artistAlbums = dao.observeArtistAlbums(profileId, key)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val genreSongs = Pager(PagingConfig(pageSize = 80, enablePlaceholders = false)) {
+        dao.genreSongsPaging(profileId, key)
+    }.flow.cachedIn(viewModelScope)
+
+    companion object {
+        fun factory(profileId: Long, key: String) = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                DetailViewModel(profileId, key) as T
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AlbumDetailScreen(
+    albumId: String,
+    onBack: () -> Unit,
+    libraryModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory),
+) {
+    val profile by libraryModel.activeProfile.collectAsStateWithLifecycle()
+    if (profile == null) return
+    val model: DetailViewModel = viewModel(
+        key = "album/$albumId/${profile!!.id}",
+        factory = DetailViewModel.factory(profile!!.id, albumId)
+    )
+    val album by model.albumDetail.collectAsStateWithLifecycle()
+    val songs by model.albumSongs.collectAsStateWithLifecycle()
+
+    Column(Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(album?.name ?: "", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+            }
+        )
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            item {
+                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        CoverArt(libraryModel, album?.coverArt, 96.dp)
+                        Column(Modifier.weight(1f)) {
+                            Text(album?.name ?: "", style = MaterialTheme.typography.titleLarge)
+                            Text(album?.artist ?: "", style = MaterialTheme.typography.titleMedium)
+                            Text(
+                                listOfNotNull(
+                                    album?.year?.toString(),
+                                    album?.genre,
+                                    album?.songCount?.let { stringResource(R.string.library_album_songs, it) },
+                                    album?.let { durationLabel(it.duration) },
+                                    album?.takeIf { it.isCompilation }?.let { stringResource(R.string.library_compilation) }
+                                ).joinToString(" • "),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+            }
+            val discs = songs.map { it.discNumber }.distinct()
+            items(songs, key = { it.id }) { song ->
+                SongDetailRow(song, discs.size > 1)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SongDetailRow(song: SongEntity, multiDisc: Boolean) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(
+            if (song.track > 0) song.track.toString() else "-",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Column(Modifier.weight(1f)) {
+            Text(song.title, style = MaterialTheme.typography.titleMedium,
+                maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val artistLabel = song.displayArtist ?: song.artist
+            if (!artistLabel.isNullOrBlank()) {
+                Text(artistLabel, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        if (multiDisc) {
+            Text(stringResource(R.string.library_disc, song.discNumber),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(durationLabel(song.duration), style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ArtistDetailScreen(
+    artistId: String,
+    onBack: () -> Unit,
+    onOpenAlbum: (String) -> Unit,
+    libraryModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory),
+) {
+    val profile by libraryModel.activeProfile.collectAsStateWithLifecycle()
+    if (profile == null) return
+    val model: DetailViewModel = viewModel(
+        key = "artist/$artistId/${profile!!.id}",
+        factory = DetailViewModel.factory(profile!!.id, artistId)
+    )
+    val albums by model.artistAlbums.collectAsStateWithLifecycle()
+
+    Column(Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(stringResource(R.string.library_tab_artists)) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+            }
+        )
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            items(albums, key = { it.id }) { album -> AlbumRow(album) { onOpenAlbum(album.id) } }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun GenreDetailScreen(
+    genre: String,
+    onBack: () -> Unit,
+    libraryModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory),
+) {
+    val profile by libraryModel.activeProfile.collectAsStateWithLifecycle()
+    if (profile == null) return
+    val model: DetailViewModel = viewModel(
+        key = "genre/$genre/${profile!!.id}",
+        factory = DetailViewModel.factory(profile!!.id, genre)
+    )
+    val songs = model.genreSongs.collectAsLazyPagingItems()
+
+    Column(Modifier.fillMaxSize()) {
+        TopAppBar(
+            title = { Text(genre, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+            }
+        )
+        LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            items(count = songs.itemCount, key = songs.itemKey { it.id }) { index ->
+                songs[index]?.let { SongRow(it) }
+            }
+        }
+    }
+}

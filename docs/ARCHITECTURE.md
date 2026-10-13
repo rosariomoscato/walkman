@@ -28,6 +28,14 @@ Librerie sussidiarie (Room, DataStore, security-crypto, rete HTTP/serializzazion
 
 ## Architettura applicativa proposta
 
+### Incremento wave 04 (in verifica)
+
+- Room v3 aggiunge `artist`, `album`, `song`, `genre`, `library_state`, tutti con `profileId` nelle chiavi. Migrazione 2→3 esplicita; schema esportato insieme ai precedenti.
+- L'indice viene popolato progressivamente da `getArtists`, `getGenres`, pagine `getAlbumList2` (500 album) e `getAlbum`. Quattro richieste dettaglio simultanee al massimo; sostituzione atomica dei brani di ciascun album. L'aggiornamento completo resta manuale.
+- Liste locali tramite Room Paging e Paging 3.5.3 (runtime + Compose); anche il dettaglio genere usa Paging. Consultazione e ricerca dell'indice non dipendono da richieste al server.
+- Copertine in directory privata del profilo, LRU su disco 250 MiB e memoria bitmap 16 MiB per store. Nessun servizio immagini esterno. Risposte binarie limitate a 8 MiB; errori JSON non sono salvati come immagini.
+- Verifica reale iniziale su AOSP: 459 album, 6.403 brani, 196 artisti in circa 52 secondi. Le prove successive e i task aperti sono riportati in WORKLOG e PLAN.
+
 - App mono-modulo nella radice del repository, pacchetti separati per responsabilità: `core/net` (client OpenSubsonic), `core/db` (Room + migrazioni), `core/files` (cache/download), `playback` (servizio Media3), `ui` (Compose, feature per schermata), `sync` (code offline e risoluzione conflitti). Modularizzazione Gradle rinviata a necessità concrete di build time.
 - Riproduzione: `MediaSessionService` Media3 con ExoPlayer; coda persistita localmente per profilo.
 - Isolamento profili: database Room con chiave/nome per profilo o tabelle filtrate per `profileId`; credenziali in storage cifrato. Dettagli allo scaffold (wave 02/03).

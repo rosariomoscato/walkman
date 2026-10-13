@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 private val Context.settingsStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -38,4 +39,15 @@ class SettingsRepository(private val context: Context) {
             prefs[appLockKey] = enabled
         }
     }
+
+    suspend fun setLibrarySort(key: String, sort: String) {
+        require(key.startsWith("sort_"))
+        context.settingsStore.edit { prefs -> prefs[stringPreferencesKey(key)] = sort }
+    }
+
+    suspend fun librarySorts(): Map<String, String> =
+        context.settingsStore.data.first().let { prefs ->
+            prefs.asMap().filterKeys { it.name.startsWith("sort_") }
+                .mapKeys { it.key.name }.mapValues { it.value as String }
+        }
 }

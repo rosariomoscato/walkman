@@ -54,6 +54,108 @@ class OpenSubsonicClient(
             } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
         }
 
+    suspend fun artists(): ApiResult<List<ArtistDto>> = when (val result = request("getArtists")) {
+        is ApiResult.Failure -> result
+        is ApiResult.Success -> try {
+            val list = mutableListOf<ArtistDto>()
+            val artists = result.value.obj("artists") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+            val indexes = artists.getAsJsonArray("index") ?: emptyList()
+            indexes.forEach { index ->
+                index.asJsonObject.getAsJsonArray("artist")?.forEach { artist ->
+                    list.add(parseArtist(artist.asJsonObject))
+                }
+            }
+            ApiResult.Success(list)
+        } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+    }
+
+    suspend fun albumList(type: String, size: Int, offset: Int): ApiResult<List<AlbumDto>> =
+        when (val result = request("getAlbumList2", listOf(
+            "type" to type, "size" to size.toString(), "offset" to offset.toString()))) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> try {
+                val container = result.value.obj("albumList2") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+                val albums = container.getAsJsonArray("album") ?: emptyList()
+                ApiResult.Success(albums.map { parseAlbum(it.asJsonObject) })
+            } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+        }
+
+    suspend fun album(id: String): ApiResult<AlbumWithSongsDto> =
+        when (val result = request("getAlbum", listOf("id" to id))) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> try {
+                val albumJson = result.value.obj("album") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+                val songs = albumJson.getAsJsonArray("song")?.map { parseSong(it.asJsonObject) } ?: emptyList()
+                val album = parseAlbum(albumJson)
+                if (album.id != id || album.songCount != songs.size) return ApiResult.Failure(ApiError.InvalidResponse)
+                ApiResult.Success(AlbumWithSongsDto(album, songs))
+            } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+        }
+
+    suspend fun genres(): ApiResult<List<GenreDto>> = when (val result = request("getGenres")) {
+        is ApiResult.Failure -> result
+        is ApiResult.Success -> try {
+            val container = result.value.obj("genres") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+            val genres = container.getAsJsonArray("genre") ?: emptyList()
+            ApiResult.Success(genres.mapNotNull {
+                val genre = it.asJsonObject
+                val name = genre.optString("value") ?: return@mapNotNull null
+                GenreDto(name, genre.optInt("songCount"), genre.optInt("albumCount"))
+            })
+        } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+    }
+
+    /** Binary cover art; a JSON error envelope on HTTP 200 is treated as a protocol failure. */
+    suspend fun coverArt(coverArtId: String, sizePx: Int?): ApiResult<ByteArray> {
+        if (coverArtId.isEmpty()) return ApiResult.Failure(ApiError.InvalidRequest)
+        val saltValue = salt()
+        val url = address.url.newBuilder().addPathSegment("rest").addPathSegment("getCoverArt.view")
+            .addQueryParameter("u", credentials.username)
+            .addQueryParameter("t", credentials.token(saltValue))
+            .addQueryParameter("s", saltValue)
+            .addQueryParameter("v", "1.16.1").addQueryParameter("c", "WalkTape")
+            .addQueryParameter("f", "json")
+            .addQueryParameter("id", coverArtId)
+        sizePx?.let { url.addQueryParameter("size", it.toString()) }
+        val call = http.newCall(Request.Builder().url(url.build()).build())
+        return suspendCancellableCoroutine { continuation ->
+            continuation.invokeOnCancellation { call.cancel() }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    continuation.resume(ApiResult.Failure(networkError(e)))
+                }
+                override fun onResponse(call: Call, response: Response) {
+                    val result = response.use {
+                        when {
+                            !it.isSuccessful -> ApiResult.Failure(ApiError.Http(it.code))
+                            else -> try {
+                                val contentType = (it.header("Content-Type") ?: "").substringBefore(';').trim()
+                                val body = it.body
+                                if (body == null || body.contentLength() > MAX_BODY) {
+                                    ApiResult.Failure(ApiError.InvalidResponse)
+                                } else {
+                                    val source = body.source()
+                                    source.request(MAX_BODY + 1)
+                                    if (source.buffer.size > MAX_BODY || source.buffer.size == 0L) {
+                                        ApiResult.Failure(ApiError.InvalidResponse)
+                                    } else if (contentType.contains("json")) {
+                                        when (val envelope = decode(source.readUtf8())) {
+                                            is ApiResult.Failure -> envelope
+                                            else -> ApiResult.Failure(ApiError.InvalidResponse)
+                                        }
+                                    } else if (contentType.startsWith("image/")) {
+                                        ApiResult.Success(source.readByteArray())
+                                    } else ApiResult.Failure(ApiError.InvalidResponse)
+                                }
+                            } catch (e: IOException) { ApiResult.Failure(networkError(e)) }
+                        }
+                    }
+                    continuation.resume(result)
+                }
+            })
+        }
+    }
+
     /** Repeated parameters are preserved for playlist endpoints in later waves. */
     internal suspend fun request(
         endpoint: String,

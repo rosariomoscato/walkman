@@ -208,3 +208,44 @@ File: `app/src/main/java/com/walktape/app/core/profiles/**`, `core/db/**` (v2+mi
 Stato: T01, T02, T03, T05 completati e verificati; T04 implementato con verifiche parziali (codec e UI), resta verifica camera/biometria su telefono; T06 aperto (login reale e isolamento già verificati su computer+emulatore; VPN assente e doppio profilo richiedono telefono). Wave 03 non completata.
 
 Prossimo passo: verifica T04/T06 su telefono (LAN/Tailscale, scansione QR, blocco biometria, due profili) con la collaborazione dell'utente; parallelamente avviabile wave 04 (indicizzazione libreria).
+
+## 2026-10-12 — Commit e push wave 03 su richiesta dell'utente
+
+Task: operazione git richiesta esplicitamente (fuori dalle wave).
+
+- Verificati `git status`, file in stage (35) e assenza di `local/`, `NEXT_PROMPT.md`, file `.env`/keystore nello stage.
+- Commit `c97fe7d` "Wave 03: profili e connessione reale (T01-T03, T05)" con identità per-commit Rosario Moscato <53149348+rosariomoscato@users.noreply.github.com>; push riuscito `62b5630..c97fe7d main -> main`.
+- Working tree pulita dopo il push; questa voce resta locale (non committata).
+
+Stato: wave 03 pubblicata. Prossimo passo invariato: verifiche telefoniche T04/T06 e/o avvio wave 04.
+
+## 2026-10-13 — Wave 04: indice reale, navigazione e consultazione locale
+
+Task: W04-T01, W04-T04, W04-T05 completati; W04-T02, W04-T03, W04-T06 parziali.
+
+- Schema Room v3 con artisti, album, brani, generi e stato dell'indice, chiavi composte per profilo e indici SQL; migrazione 2→3 e schema esportato. Rimozione profilo estesa alla pulizia dell'indice relativo.
+- Client libreria: `getArtists`, `getGenres`, `getAlbumList2`, `getAlbum`, `getCoverArt`. Parser senza reflection; mancati envelope e dettagli inconsistenti non vengono interpretati come libreria vuota. Copertine binarie limitate a 8 MiB, errori JSON tipizzati, niente log di autenticazione.
+- Indicizzatore: pagine album di 500, quattro dettagli simultanei al massimo, cancellazione coroutine/rete effettiva, refresh dei brani di ogni album in transazione (rimuove quelli obsoleti). Eliminazione degli album assenti soltanto dopo lettura riuscita; indice parziale consultabile durante il caricamento.
+- Room Paging + Paging runtime/Compose 3.5.3, Room Paging 2.8.5: liste e dettaglio genere a caricamento progressivo; ricerca testuale locale e ordinamenti persistenti. UI album/artisti/brani/generi, dettaglio album/artista/genere, copertine e selezione multipla con conteggio/annullamento; azioni audio/playlist/download da collegare nelle wave previste.
+- Cache copertine per profilo: 250 MiB disco LRU, 16 MiB bitmap per store, scrittura temporanea e rename; validazione immagini prima del salvataggio. Test di limite, isolamento e riapertura offline su disco.
+- Artista traccia distinto dall'artista album, `displayAlbumArtist` quando disponibile con fallback ai metadati album; flag compilation; ordine disco/numero traccia verificato in Room.
+
+Verifiche finali:
+
+- Build app e androidTest, `lintDebug`: BUILD SUCCESSFUL (log locale wt-wave04-navigation.log); `testDebugUnitTest -PrealServerTest=true`: **36/36**, nessuno skip. Comprende 7 test sync (aggiornamento, album scomparsi, brani obsoleti, cancellazione e risposta malformata), 6 API libreria, regressione chiavi tra tab/profili, login reale dal computer e suite wave 02/03.
+- AOSP `walktape_aosp`: **7/7** test core (migrazioni, profili/Keystore, indice reale e isolamento, cache copertine), poi **2/2** regressioni UI e ordine multidisco. UI: passaggio fra tutte le tab, dettaglio album, ricerca, cancellazione ricerca, selezione/annullamento e ordinamento. Cleanup del profilo di ispezione: **1/1**.
+- Server reale via 10.0.2.2:4533: **196 artisti, 459 album, 6.403 brani**, prima indicizzazione misurata **52,062 s**. Sono dati letti dal server; la precedente cifra di circa 10.000 era una stima iniziale. Copertina reale decodificata. Nessuna mutazione sul server.
+- Offline emulatore: disattivati temporaneamente Wi-Fi/dati e modalità aereo; `dumpsys connectivity` confermava **Active default network: none**. Regressione UI **1/1** superata in tale stato; rete ripristinata nel finally. Non è una prova di ascolto/download offline, servizi ancora da implementare.
+- File segreto di test trasferito solo nel percorso temporaneo dell'emulatore e rimosso dopo le prove. Profilo UI temporaneo e marker rimossi; nessun segreto in app/test APK o documenti.
+
+Correzioni e limiti:
+
+- Rettifica delle precedenti ipotesi nella chat: il ritorno al launcher durante il cambio tab aveva anche una **ClassCastException applicativa** (album ancora presenti nel vecchio snapshot Paging, chiavi già convertite ad artista), identificata da logcat. Corretto con chiavi tipizzate per tipo/profilo; non attribuire quel crash ai soli ANR di sistema. Restano distinti gli ANR di System UI/launcher osservati sull'emulatore.
+- Corretto il dettaglio creato prematuramente con profileId=0 e il pager che manteneva l'id del profilo precedente. Corretto anche il ripristino della posizione quando cambia il risultato di ricerca/ordinamento; pulsante accessibile Cancella ricerca.
+- Fixture MockWebServer resa indipendente dall'ordine delle richieste concorrenti: ciascun dettaglio è risposto per id. Test di navigazione fallito inizialmente, poi corretto e ripetuto fino all'esito positivo completo (compresa la prova offline).
+- W04-T02 resta aperto: sezioni home approvate e playlist in lettura. W04-T03 resta aperto: filtri anno/genere/offline e ricerca unificata completa. W04-T06 resta aperto per misure mirate e verifica delle parti ancora mancanti. Nessuna prova telefono fisico eseguita.
+- Aggiunta `docs/PHONE_TESTS.md` con checklist W03-T04/T06 e controlli libreria; aggiornati architettura e design con l'incremento effettivo. Nessun commit/push della wave 04.
+
+Prossima azione precisa: W04-T02 — completare le sezioni home con metadati reali e playlist in lettura, poi filtri W04-T03 e misure W04-T06. La wave 04 resta aperta.
+
+Chiusura incremento: `git diff --check` senza errori (solo avvisi LF/CRLF); `NEXT_PROMPT.md` e `local/test-server.env` confermati ignorati. Emulatore chiuso e ADB senza dispositivi. Modifiche wave 04 e documenti preservati localmente; nessun commit/push.

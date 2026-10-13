@@ -96,7 +96,15 @@ class ProfileRepository(
             val folder = directory(id)
             if (folder.exists() && !folder.deleteRecursively()) return@withLock false
             vault.delete(profile.credentialId)
-            dao.delete(id)
+            database.withTransaction {
+                val library = database.libraryDao()
+                library.deleteSongsFor(id)
+                library.deleteAlbumsFor(id)
+                library.deleteArtistsFor(id)
+                library.deleteGenresFor(id)
+                library.deleteStateFor(id)
+                dao.delete(id)
+            }
             true
         }
     }

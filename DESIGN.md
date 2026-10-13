@@ -64,6 +64,13 @@ Regole:
 
 ## Localizzazione
 
+### Schermate libreria (wave 04)
+
+- La mia musica espone il progresso dell'indicizzazione, ricerca locale e tab Album/Artisti/Brani/Generi; righe album con copertina e metadati, senza comandi di riproduzione finti.
+- Dettaglio album con copertina, artista album e tracce nell'ordine disco/numero; artista traccia visibile anche nelle compilation.
+- Selezione con pressione prolungata, checkbox e riepilogo/annullamento. Comandi di coda, playlist e download saranno collegati nelle wave dei rispettivi servizi.
+- Mantiene palette, margini e tipografia della wave 02. Le sezioni home approvate ancora mancanti restano task aperti nel piano.
+
 - Italiano predefinito (`values/`), inglese (`values-en/`), scelta per-app via `AppCompatDelegate.setApplicationLocales` + `locales_config` (it, en); date/numeri con formati di sistema.
 
 ## Icona app (provvisoria)

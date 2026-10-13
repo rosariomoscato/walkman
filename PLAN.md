@@ -66,14 +66,16 @@ Criterio di uscita: collegamento reale al server e gestione dei profili verifica
 
 Dipendenze: wave 03.
 
-- [ ] W04-T01 — Implementare indicizzazione progressiva, aggiornamento e consultazione locale della libreria.
+- [x] W04-T01 — Implementare indicizzazione progressiva, aggiornamento e consultazione locale della libreria.
 - [ ] W04-T02 — Creare “La mia musica”, album, artisti, brani e generi con copertine gestite tramite cache limitata.
 - [ ] W04-T03 — Implementare ricerca, filtri e ordinamenti persistenti concordati.
-- [ ] W04-T04 — Gestire compilation, artisti dell'album, dischi e numeri di traccia correttamente.
-- [ ] W04-T05 — Implementare selezione multipla e predisporre le azioni contestuali; rendere disponibili solo i comandi operativi, integrati nelle wave 05, 07 e 08.
+- [x] W04-T04 — Gestire compilation, artisti dell'album, dischi e numeri di traccia correttamente.
+- [x] W04-T05 — Implementare selezione multipla e predisporre le azioni contestuali; rendere disponibili solo i comandi operativi, integrati nelle wave 05, 07 e 08.
 - [ ] W04-T06 — Verificare navigazione e prestazioni con la raccolta di circa 10.000 brani e comportamento offline.
 
 Criterio di uscita: libreria reale navigabile e ricercabile, senza caricamento indiscriminato della raccolta in memoria; verifiche prestazionali registrate.
+
+Avanzamento 2026-10-13: indice reale (459 album/6.403 brani/196 artisti), liste paginate, ricerca testuale, ordinamenti e cache copertine implementati. W04-T02 resta aperto per sezioni home concordate e playlist in lettura; W04-T03 per filtri genere/anno/disponibilità offline e completamento ricerca unificata; W04-T06 ha già prove di navigazione con/senza rete e tempo di indicizzazione, ma rimangono misure prestazionali mirate e verifica delle funzioni ancora aperte. Wave 04 non completata.
 
 ## Wave 05 — Motore di riproduzione e coda
 

@@ -7,7 +7,6 @@
 
     <string name="home_empty_title">Nessun profilo configurato</string>
     <string name="home_empty_body">Configura un profilo per collegarti al tuo server Navidrome.</string>
-    <string name="home_section_recently_added">Aggiunti di recente</string>
 
     <string name="settings_title">Impostazioni</string>
     <string name="settings_appearance">Aspetto</string>

@@ -1,13 +1,16 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-12 (wave 03: T01–T05 tranne verifiche telefoniche di T04).
+Ultimo aggiornamento: 2026-10-13 (wave 04 in sviluppo).
 
 ## Punto di ripresa
 
 - Fase: wave 03 in corso. Completati e verificati W03-T01, T02, T03, T05; W03-T04 implementato (codec QR 6/6 test, UI) ma con verifiche parziali (camera/biometria su telefono); W03-T06 aperto: login reale, credenziali errate e isolamento due profili già verificati su computer ed emulatore (server reale via 10.0.2.2), restano VPN assente e prove su telefono.
-- Prossima azione: verifiche T04/T06 su telefono (LAN/Tailscale, scansione QR, blocco biometrico, due profili) con l'utente; in parallelo si può avviare la wave 04 (indicizzazione libreria).
+- Wave 04: **W04-T01, W04-T04, W04-T05 completati e verificati**. Task corrente/prossimo **W04-T02**: completare home (sezioni concordate) e playlist in lettura. Schema Room v3, API libreria, UI paginata, ricerca testuale/ordinamenti, cache copertine e selezione sono nel working tree, non committati.
+- Misurazione già ottenuta su server reale dall'emulatore: 196 artisti, 459 album, 6.403 brani, indicizzazione in circa 52 secondi. Il totale brani è una lettura effettiva del server, distinto dalla stima iniziale di circa 10.000.
+- Verifiche finali: build/lint riusciti; 36/36 test JVM con login reale; 7/7 test Android core + 2/2 UI/ordine disco; UI ripetuta senza rete (default network none): 1/1. Le prove telefono W03-T04/T06 restano pendenti; checklist in `docs/PHONE_TESTS.md`.
+- Prossima azione precisa: W04-T02 (home e playlist in lettura), poi W04-T03 (filtri anno/genere/offline e ricerca unificata), W04-T06 (misure mirate). Non dichiarare completata la wave 04.
 - Prima di continuare: leggere `docs/ARCHITECTURE.md` (con emendamenti wave 02) e `DESIGN.md` (token vincolanti).
-- Wave 02 committata e pubblicata su `origin/main`: commit `62b5630`. Il codice wave 03 NON è committato (commit/push solo su richiesta esplicita).
+- Wave 02 pubblicata su `origin/main` nel commit `62b5630`; **wave 03 pubblicata nel commit `c97fe7d`** su richiesta dell'utente (working tree pulita al push; voci successive del log restano locali). Commit/push successivi solo su richiesta esplicita.
 - Per le build usare `.\gradlew.bat` con `JAVA_HOME` impostato al JBR nel comando; `local.properties` fornisce l'SDK path. Emulatore di riferimento `walktape_aosp`, spento al termine di questo incremento.
 
 ## Documenti di riferimento
@@ -50,6 +53,7 @@ Ultimo aggiornamento: 2026-10-12 (wave 03: T01–T05 tranne verifiche telefonich
 - D23 — QR configurazione: JSON v1 `{v,n,u,un}` senza password (fallback URL nudo; nome vuoto ammesso); zxing core 3.5.4 per generazione locale, zxing-android-embedded 4.3.0 per scansione; la password si inserisce sempre a mano sul dispositivo che scansiona.
 - D24 — Blocco app opzionale (default off): interruttore visibile solo se `canAuthenticate(BIOMETRIC_WEAK|DEVICE_CREDENTIAL)`; gate BiometricPrompt all'avvio dopo la prima emissione DataStore (mai su default).
 - D25 — Verifica su emulatore sotto carico host: precompilare gli APK con `pm compile -m speed -f` prima di `am instrument` (evita ANR "failed to complete startup"); build Gradle lunghi via processo detached con log su file + `-Dkotlin.compiler.execution.strategy=in-process` (il daemon Kotlin separato fallisce sotto pressione memoria).
+- D26 — Room v3: indice per profilo, Paging 3.5.3, refresh progressivo con quattro dettagli album simultanei e sostituzione atomica dei brani. Cache copertine privata 250 MiB disco/16 MiB bitmap per store. Il cambio tab richiede chiavi dipendenti dal tipo effettivo dello snapshot, oltre che dal profilo (regressione verificata).
 
 ## Ambiente noto e dati di riferimento
 
@@ -76,8 +80,8 @@ Ultimo aggiornamento: 2026-10-12 (wave 03: T01–T05 tranne verifiche telefonich
 
 ## Stato dei file e del lavoro
 
-- Progetto Android completo nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schema Room 1+2, test unit e androidTest). APK debug verificato su emulatore (v0.1.0).
-- Wave 03 implementata nel working tree (client OpenSubsonic, profili, vault Keystore, QR, blocco opzionale): NON committata; commit/push solo su richiesta esplicita.
+- Progetto Android nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schemi Room 1/2/3, test JVM e androidTest). APK debug verificato su emulatore (v0.1.0).
+- Incremento wave 03 pubblicato in `c97fe7d`. Wave 04 e documentazione successiva nel working tree, NON committate; commit/push solo su richiesta esplicita.
 - `local/` e `.playwright-mcp/` esclusi da Git. `local.properties` escluso da Git. `NEXT_PROMPT.md` è un documento locale, escluso da Git su richiesta dell'utente (non pubblicato).
 - Consultare `git status` alla ripresa: non assumere che file non tracciati siano eliminabili.
 

@@ -8,9 +8,13 @@ import com.walktape.app.core.net.ServerAddress
 import com.walktape.app.core.net.Credentials
 import com.walktape.app.core.profiles.CredentialVault
 import com.walktape.app.core.profiles.ProfileRepository
+import com.walktape.app.core.library.CoverArtStore
+import com.walktape.app.core.library.LibrarySync
+import java.io.File
 
 @Suppress("StaticFieldLeak")
 object Graph {
+    private val coverStores = mutableMapOf<Long, CoverArtStore>()
     private lateinit var appContext: Context
     lateinit var database: WalkTapeDatabase
         private set
@@ -29,4 +33,11 @@ object Graph {
     fun app(): Context = appContext
 
     fun client(address: ServerAddress, credentials: Credentials) = OpenSubsonicClient(address, credentials)
+
+    fun librarySync() = LibrarySync(database.libraryDao(), clientProvider = { id -> profiles.clientFor(id) })
+
+    @Synchronized
+    fun coverArtStore(profileId: Long): CoverArtStore = coverStores.getOrPut(profileId) {
+        CoverArtStore(File(profiles.directory(profileId), "covers"), { profiles.clientFor(profileId) })
+    }
 }
