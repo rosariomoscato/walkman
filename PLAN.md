@@ -67,15 +67,15 @@ Criterio di uscita: collegamento reale al server e gestione dei profili verifica
 Dipendenze: wave 03.
 
 - [x] W04-T01 — Implementare indicizzazione progressiva, aggiornamento e consultazione locale della libreria.
-- [ ] W04-T02 — Creare “La mia musica”, album, artisti, brani e generi con copertine gestite tramite cache limitata.
-- [ ] W04-T03 — Implementare ricerca, filtri e ordinamenti persistenti concordati.
+- [x] W04-T02 — Creare “La mia musica”, album, artisti, brani e generi con copertine gestite tramite cache limitata.
+- [x] W04-T03 — Implementare ricerca, filtri e ordinamenti persistenti concordati.
 - [x] W04-T04 — Gestire compilation, artisti dell'album, dischi e numeri di traccia correttamente.
 - [x] W04-T05 — Implementare selezione multipla e predisporre le azioni contestuali; rendere disponibili solo i comandi operativi, integrati nelle wave 05, 07 e 08.
-- [ ] W04-T06 — Verificare navigazione e prestazioni con la raccolta di circa 10.000 brani e comportamento offline.
+- [x] W04-T06 — Verificare navigazione e prestazioni con la raccolta di circa 10.000 brani e comportamento offline.
 
 Criterio di uscita: libreria reale navigabile e ricercabile, senza caricamento indiscriminato della raccolta in memoria; verifiche prestazionali registrate.
 
-Avanzamento 2026-10-13: indice reale (459 album/6.403 brani/196 artisti), liste paginate, ricerca testuale, ordinamenti e cache copertine implementati. W04-T02 resta aperto per sezioni home concordate e playlist in lettura; W04-T03 per filtri genere/anno/disponibilità offline e completamento ricerca unificata; W04-T06 ha già prove di navigazione con/senza rete e tempo di indicizzazione, ma rimangono misure prestazionali mirate e verifica delle funzioni ancora aperte. Wave 04 non completata.
+Completamento 2026-10-13 (secondo incremento): Panoramica con sezioni concordate (continua ascolto/aggiunti/ascoltati/preferiti/download/playlist, stati vuoti onesti per i servizi delle wave successive), playlist in lettura per profilo con ordine e ripetizioni preservati, ricerca unificata su tutti i tipi, filtri genere/anno/disponibilità offline su query parametrizzate, ordinamenti persistenti incl. playlist. Verifiche: 39/39 test JVM (login reale incluso), 12/12 + 4/4 + 1/1 test Android, regressione UI completa su libreria reale (tab, dettagli, ricerca, selezione, ordinamenti, playlist, filtri), fixture 10.000 brani: pagina filtrata di 80 in ~487 ms a freddo / ~205 ms in media a caldo (emulatore AOSP sotto carico). Account di test senza playlist sul server: pipeline playlist verificata con fixture locale e API reali di lista; dettaglio playlist reale da ripetere quando esisterà una playlist di prova (wave 07). Consultazione offline già verificata nel primo incremento; le liste restano locali. **Wave 04 completata.**
 
 ## Wave 05 — Motore di riproduzione e coda
 

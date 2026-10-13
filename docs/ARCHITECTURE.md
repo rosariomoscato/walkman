@@ -30,6 +30,8 @@ Librerie sussidiarie (Room, DataStore, security-crypto, rete HTTP/serializzazion
 
 ### Incremento wave 04 (in verifica)
 
+Aggiornamento W04-T02/T03 (in verifica): Room v4 conserva l'indice v3 e aggiunge playlist/posizioni, metadati `played` degli album e `starred` degli artisti, catalogo di disponibilità audio locale. Le playlist sono lette tramite `getPlaylists`/`getPlaylist` senza parametro amministrativo username, salvate per profilo in transazione con chiave posizione (brani duplicati preservati), rimosse dal cache solo dopo una lettura riuscita della lista. Dettaglio e liste sono paginati e consultabili offline. Ricerca unificata e filtri usano query SQL con parametri bindati e ordinamenti in whitelist. Il catalogo audio viene registrato solo per file non vuoti all'interno della directory privata del profilo; la popolazione da download/cache audio sarà integrata in wave 08. Nessun download reale dichiarato implementato in questa fase.
+
 - Room v3 aggiunge `artist`, `album`, `song`, `genre`, `library_state`, tutti con `profileId` nelle chiavi. Migrazione 2→3 esplicita; schema esportato insieme ai precedenti.
 - L'indice viene popolato progressivamente da `getArtists`, `getGenres`, pagine `getAlbumList2` (500 album) e `getAlbum`. Quattro richieste dettaglio simultanee al massimo; sostituzione atomica dei brani di ciascun album. L'aggiornamento completo resta manuale.
 - Liste locali tramite Room Paging e Paging 3.5.3 (runtime + Compose); anche il dettaglio genere usa Paging. Consultazione e ricerca dell'indice non dipendono da richieste al server.

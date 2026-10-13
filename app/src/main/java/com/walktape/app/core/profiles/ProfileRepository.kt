@@ -103,6 +103,8 @@ class ProfileRepository(
                 library.deleteArtistsFor(id)
                 library.deleteGenresFor(id)
                 library.deleteStateFor(id)
+                database.browseDao().deletePlaylists(id)
+                database.browseDao().deleteLocalAudio(id)
                 dao.delete(id)
             }
             true

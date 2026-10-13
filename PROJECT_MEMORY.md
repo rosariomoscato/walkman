@@ -1,17 +1,14 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-13 (wave 04 in sviluppo).
+Ultimo aggiornamento: 2026-10-13 (wave 04 completata).
 
 ## Punto di ripresa
 
-- Fase: wave 03 in corso. Completati e verificati W03-T01, T02, T03, T05; W03-T04 implementato (codec QR 6/6 test, UI) ma con verifiche parziali (camera/biometria su telefono); W03-T06 aperto: login reale, credenziali errate e isolamento due profili già verificati su computer ed emulatore (server reale via 10.0.2.2), restano VPN assente e prove su telefono.
-- Wave 04: **W04-T01, W04-T04, W04-T05 completati e verificati**. Task corrente/prossimo **W04-T02**: completare home (sezioni concordate) e playlist in lettura. Schema Room v3, API libreria, UI paginata, ricerca testuale/ordinamenti, cache copertine e selezione sono nel working tree, non committati.
-- Misurazione già ottenuta su server reale dall'emulatore: 196 artisti, 459 album, 6.403 brani, indicizzazione in circa 52 secondi. Il totale brani è una lettura effettiva del server, distinto dalla stima iniziale di circa 10.000.
-- Verifiche finali: build/lint riusciti; 36/36 test JVM con login reale; 7/7 test Android core + 2/2 UI/ordine disco; UI ripetuta senza rete (default network none): 1/1. Le prove telefono W03-T04/T06 restano pendenti; checklist in `docs/PHONE_TESTS.md`.
-- Prossima azione precisa: W04-T02 (home e playlist in lettura), poi W04-T03 (filtri anno/genere/offline e ricerca unificata), W04-T06 (misure mirate). Non dichiarare completata la wave 04.
-- Prima di continuare: leggere `docs/ARCHITECTURE.md` (con emendamenti wave 02) e `DESIGN.md` (token vincolanti).
-- Wave 02 pubblicata su `origin/main` nel commit `62b5630`; **wave 03 pubblicata nel commit `c97fe7d`** su richiesta dell'utente (working tree pulita al push; voci successive del log restano locali). Commit/push successivi solo su richiesta esplicita.
-- Per le build usare `.\gradlew.bat` con `JAVA_HOME` impostato al JBR nel comando; `local.properties` fornisce l'SDK path. Emulatore di riferimento `walktape_aosp`, spento al termine di questo incremento.
+- Fase: **wave 04 completata e verificata** (T01–T06). Prossima azione precisa: **W05-T01** — servizio `MediaSessionService` Media3 + ExoPlayer con streaming MP3/FLAC e DataSource autenticato (token+salt per richiesta) dal client OpenSubsonic esistente.
+- Wave 03: T01–T03/T05 pubblicati (`c97fe7d`); incremento wave 04 pubblicato (`fa17b0e`); **le modifiche che completano la wave 04 (secondo incremento) sono nel working tree, non committate** — commit/push solo su richiesta esplicita.
+- W03-T04/T06 restano aperti sulle prove telefono (checklist in `docs/PHONE_TESTS.md`).
+- Verifiche wave 04 (secondo incremento): 39/39 test JVM con login reale; Android 12/12 + 4/4 + regressione UI 1/1 su libreria reale (206 s, tutte le tab, dettagli, ricerca unificata, selezione, ordinamenti, playlist, filtri genere/anno/offline). Prestazioni fixture 10.000 brani: pagina filtrata 80 → 487 ms freddo / 205 ms caldo. Server reale: 459 album, 6.403 brani, 196 artisti; **l'account di test non ha playlist** (pipeline verificata con fixture + API reali di lista; dettaglio reale da ripetere in wave 07).
+- Prima di continuare: leggere `docs/ARCHITECTURE.md` e `DESIGN.md`. Per le build `.\gradlew.bat` con `JAVA_HOME` al JBR; emulatore `walktape_aosp` spento al termine dell'incremento.
 
 ## Documenti di riferimento
 
@@ -54,10 +51,12 @@ Ultimo aggiornamento: 2026-10-13 (wave 04 in sviluppo).
 - D24 — Blocco app opzionale (default off): interruttore visibile solo se `canAuthenticate(BIOMETRIC_WEAK|DEVICE_CREDENTIAL)`; gate BiometricPrompt all'avvio dopo la prima emissione DataStore (mai su default).
 - D25 — Verifica su emulatore sotto carico host: precompilare gli APK con `pm compile -m speed -f` prima di `am instrument` (evita ANR "failed to complete startup"); build Gradle lunghi via processo detached con log su file + `-Dkotlin.compiler.execution.strategy=in-process` (il daemon Kotlin separato fallisce sotto pressione memoria).
 - D26 — Room v3: indice per profilo, Paging 3.5.3, refresh progressivo con quattro dettagli album simultanei e sostituzione atomica dei brani. Cache copertine privata 250 MiB disco/16 MiB bitmap per store. Il cambio tab richiede chiavi dipendenti dal tipo effettivo dello snapshot, oltre che dal profilo (regressione verificata).
+- D27 — Room v4: playlist/posizioni per profilo con CASCADE, `local_audio` come catalogo disponibilità offline, `played`/`starred` per le sezioni home. Liste via `RawQuery` parametrizzate (`BrowseQueries`): ordinamenti in whitelist, LIKE con escape, filtro offline album/playlist = tutti i brani presenti nel catalogo. `LocalAudioCatalog` accetta solo path relativi canonici dentro la directory profilo e file non vuoti; popolamento reale in wave 08. Playlist lette senza username admin; cache non svuotata da errori di rete.
+- D28 — Verifica UI automatica su emulatore: la striscia tab scrollabile richiede ricerca per testTag (`library-tabs`, `testTagsAsResourceId`) + swipe alternati; i dialog ANR di sistema vanno chiusi via accessibilità ("Wait") e possono richiedere il riavvio dell'emulatore se il launcher resta bloccato. Registrare gli ANR come ambiente, non come difetti dell'app, salvo prova contraria.
 
 ## Ambiente noto e dati di riferimento
 
-- Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman`, repository Git con remote `origin` = https://github.com/rosariomoscato/walkman, branch `main` tracciato. Identità per-commit: `Rosario Moscato <53149348+rosariomoscato@users.noreply.github.com>` (config non persistita).
+- Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman` (nome cartella locale invariato); repository GitHub rinominato dall'utente in `rosariomoscato/walktape`, remote `origin` = https://github.com/rosariomoscato/walktape.git, branch `main` tracciato. Remote aggiornato e accesso verificato il 2026-10-13. Identità per-commit: `Rosario Moscato <53149348+rosariomoscato@users.noreply.github.com>` (config non persistita).
 - Shell: Windows PowerShell 5.1. Usare `npx.cmd`; `Range` header via `[System.Net.HttpWebRequest]::AddRange`; redirect `>` di binari corrompe i file (usare `adb pull`).
 - Node 22.23.1 disponibile; `rg` non nel PATH: usare gli strumenti dedicati di ricerca.
 - Playwright MCP attivo su **Edge**; usarlo per verifiche web/browser, mai come prova Android.
@@ -80,8 +79,8 @@ Ultimo aggiornamento: 2026-10-13 (wave 04 in sviluppo).
 
 ## Stato dei file e del lavoro
 
-- Progetto Android nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schemi Room 1/2/3, test JVM e androidTest). APK debug verificato su emulatore (v0.1.0).
-- Incremento wave 03 pubblicato in `c97fe7d`. Wave 04 e documentazione successiva nel working tree, NON committate; commit/push solo su richiesta esplicita.
+- Progetto Android nella radice: `settings.gradle.kts`, `build.gradle.kts`, `gradle/`, `gradlew(.bat)`, `app/` (sorgenti, risorse, schemi Room 1/2/3/4, test JVM e androidTest). APK debug verificato su emulatore (v0.1.0).
+- Pubblicati: wave 03 in `c97fe7d`, primo incremento wave 04 in `fa17b0e`. **Completamento wave 04 (secondo incremento) nel working tree, NON committato**; commit/push solo su richiesta esplicita.
 - `local/` e `.playwright-mcp/` esclusi da Git. `local.properties` escluso da Git. `NEXT_PROMPT.md` è un documento locale, escluso da Git su richiesta dell'utente (non pubblicato).
 - Consultare `git status` alla ripresa: non assumere che file non tracciati siano eliminabili.
 

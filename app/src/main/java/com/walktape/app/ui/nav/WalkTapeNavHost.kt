@@ -11,6 +11,7 @@ import com.walktape.app.ui.screens.library.AlbumDetailScreen
 import com.walktape.app.ui.screens.library.ArtistDetailScreen
 import com.walktape.app.ui.screens.library.GenreDetailScreen
 import com.walktape.app.ui.screens.library.LibraryScreen
+import com.walktape.app.ui.screens.library.PlaylistDetailScreen
 import com.walktape.app.ui.screens.profiles.ProfilesScreen
 import com.walktape.app.ui.screens.settings.SettingsScreen
 
@@ -22,9 +23,11 @@ object Routes {
     const val ALBUM = "album/{id}"
     const val ARTIST = "artist/{id}"
     const val GENRE = "genre/{name}"
+    const val PLAYLIST = "playlist/{id}"
     fun album(id: String) = "album/${Uri.encode(id)}"
     fun artist(id: String) = "artist/${Uri.encode(id)}"
     fun genre(name: String) = "genre/${Uri.encode(name)}"
+    fun playlist(id: String) = "playlist/${Uri.encode(id)}"
 }
 
 @Composable
@@ -42,7 +45,8 @@ fun WalkTapeNavHost(
                 onOpenProfiles = { navController.navigate(Routes.PROFILES) },
                 onOpenAlbum = { navController.navigate(Routes.album(it)) },
                 onOpenArtist = { navController.navigate(Routes.artist(it)) },
-                onOpenGenre = { navController.navigate(Routes.genre(it)) }
+                onOpenGenre = { navController.navigate(Routes.genre(it)) },
+                onOpenPlaylist = { navController.navigate(Routes.playlist(it)) }
             )
         }
         composable(Routes.SETTINGS) {
@@ -71,6 +75,9 @@ fun WalkTapeNavHost(
         composable(Routes.GENRE) { entry ->
             val name = entry.arguments?.getString("name") ?: ""
             GenreDetailScreen(genre = name, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.PLAYLIST) { entry ->
+            PlaylistDetailScreen(entry.arguments?.getString("id") ?: "", onBack = { navController.popBackStack() })
         }
     }
 }

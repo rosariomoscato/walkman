@@ -65,10 +65,11 @@ class LibraryInstrumentedTest {
         val root = File(context.cacheDir, "library-real-${UUID.randomUUID()}").apply { mkdirs() }
         val repo = ProfileRepository(db, CredentialVault(), root)
         var id: Long? = null
+        var otherProfile: Long? = null
         try {
             id = (repo.addVerified("Library real", url, config.getValue("ND_USER"), config.getValue("ND_PASS"), true)
                 as com.walktape.app.core.net.ApiResult.Success).value
-            val sync = LibrarySync(db.libraryDao()) { repo.clientFor(id) }
+            val sync = LibrarySync(db.libraryDao(), playlistIndex = PlaylistIndex(db.browseDao())) { repo.clientFor(id) }
             val started = System.currentTimeMillis()
             val ok = sync.sync(id)
             val elapsedSeconds = (System.currentTimeMillis() - started) / 1000.0
@@ -86,7 +87,6 @@ class LibraryInstrumentedTest {
             }
             val albumSongs = db.libraryDao().songsInAlbums(id, listOf(firstAlbum.id))
             assertEquals(firstAlbum.songCount, albumSongs.size)
-            var otherProfile: Long? = null
             otherProfile = (repo.addVerified("Isolation empty", url, config.getValue("ND_USER"), config.getValue("ND_PASS"), true)
                 as com.walktape.app.core.net.ApiResult.Success).value
             assertEquals(0, db.libraryDao().songCount(otherProfile))
@@ -100,6 +100,7 @@ class LibraryInstrumentedTest {
             repo.remove(otherProfile)
             otherProfile = null
         } finally {
+            otherProfile?.let { repo.remove(it) }
             id?.let { repo.remove(it) }
             db.close()
             root.deleteRecursively()

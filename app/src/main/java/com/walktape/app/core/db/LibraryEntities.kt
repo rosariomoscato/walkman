@@ -2,6 +2,7 @@ package com.walktape.app.core.db
 
 import androidx.room.Entity
 import androidx.room.Index
+import androidx.room.ColumnInfo
 
 @Entity(tableName = "artist", primaryKeys = ["profileId", "id"])
 data class ArtistEntity(
@@ -10,6 +11,7 @@ data class ArtistEntity(
     val name: String,
     val coverArt: String?,
     val albumCount: Int,
+    @ColumnInfo(defaultValue = "NULL") val starred: String? = null,
 )
 
 @Entity(
@@ -34,6 +36,7 @@ data class AlbumEntity(
     val created: String?,
     val isCompilation: Boolean,
     val starred: String?,
+    @ColumnInfo(defaultValue = "NULL") val played: String? = null,
 )
 
 @Entity(

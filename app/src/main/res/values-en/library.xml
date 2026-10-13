@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="library_tab_home">Overview</string>
+    <string name="library_tab_playlists">Playlists</string>
+    <string name="library_tab_all">All</string>
+    <string name="home_continue">Continue listening</string>
+    <string name="home_continue_empty">No queue to resume. Playback controls will be available with the audio engine.</string>
+    <string name="home_recent_added">Recently added</string>
+    <string name="home_recent_played">Recently played</string>
+    <string name="home_favorites">Favorites</string>
+    <string name="home_downloads">Downloads</string>
+    <string name="home_downloads_empty">No downloaded songs. Downloads will be available in their dedicated phase.</string>
+    <string name="home_section_empty">No stored items in this section.</string>
+    <string name="filter_genre">Genre</string>
+    <string name="filter_year">Year</string>
+    <string name="filter_all">All</string>
+    <string name="filter_offline">Available offline</string>
+    <string name="sort_playlist_name">Name</string>
+    <string name="sort_playlist_changed">Updated</string>
+    <string name="playlist_owner">Owner: %1$s</string>
+    <string name="playlist_read_only">Read-only playlist. Editing will be available in its dedicated phase.</string>
+    <string name="library_no_results">No results for this search or these filters.</string>
     <string name="library_clear_search">Clear search</string>
     <string name="library_selected">Selected: %1$d</string>
     <string name="library_clear_selection">Clear selection</string>

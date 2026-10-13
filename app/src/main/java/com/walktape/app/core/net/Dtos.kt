@@ -2,7 +2,7 @@ package com.walktape.app.core.net
 
 import com.google.gson.JsonObject
 
-data class ArtistDto(val id: String, val name: String, val coverArt: String?, val albumCount: Int)
+data class ArtistDto(val id: String, val name: String, val coverArt: String?, val albumCount: Int, val starred: String? = null)
 data class AlbumDto(
     val id: String,
     val name: String,
@@ -16,6 +16,7 @@ data class AlbumDto(
     val created: String?,
     val isCompilation: Boolean,
     val starred: String?,
+    val played: String? = null,
 )
 data class SongDto(
     val id: String,
@@ -44,6 +45,18 @@ data class SongDto(
 )
 data class GenreDto(val name: String, val songCount: Int, val albumCount: Int)
 data class AlbumWithSongsDto(val album: AlbumDto, val songs: List<SongDto>)
+data class PlaylistDto(val id: String, val name: String, val owner: String?, val isPublic: Boolean,
+                       val comment: String?, val coverArt: String?, val songCount: Int,
+                       val duration: Int, val created: String?, val changed: String?)
+data class PlaylistDetailDto(val playlist: PlaylistDto, val entries: List<SongDto>)
+
+internal fun parsePlaylist(json: JsonObject) = PlaylistDto(
+    id = json.optString("id") ?: throw IllegalArgumentException(),
+    name = json.optString("name") ?: throw IllegalArgumentException(),
+    owner = json.optString("owner"), isPublic = json.optBool("public"),
+    comment = json.optString("comment"), coverArt = json.optString("coverArt"),
+    songCount = json.get("songCount")?.asInt ?: throw IllegalArgumentException(),
+    duration = json.optInt("duration"), created = json.optString("created"), changed = json.optString("changed"))
 
 internal fun JsonObject?.optString(name: String): String? =
     this?.get(name)?.takeIf { it.isJsonPrimitive }?.asString
@@ -64,6 +77,7 @@ internal fun parseArtist(json: JsonObject): ArtistDto = ArtistDto(
     name = json.optString("name") ?: throw IllegalArgumentException(),
     coverArt = json.optString("coverArt"),
     albumCount = json.optInt("albumCount"),
+    starred = json.optString("starred"),
 )
 
 internal fun parseAlbum(json: JsonObject): AlbumDto = AlbumDto(
@@ -79,6 +93,7 @@ internal fun parseAlbum(json: JsonObject): AlbumDto = AlbumDto(
     created = json.optString("created"),
     isCompilation = json.optBool("isCompilation"),
     starred = json.optString("starred"),
+    played = json.optString("played"),
 )
 
 internal fun parseSong(json: JsonObject): SongDto {

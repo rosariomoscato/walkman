@@ -1,5 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="library_tab_home">Panoramica</string>
+    <string name="library_tab_playlists">Playlist</string>
+    <string name="library_tab_all">Tutti</string>
+    <string name="home_continue">Continua ascolto</string>
+    <string name="home_continue_empty">Nessuna coda da riprendere. I controlli di riproduzione saranno disponibili con il motore audio.</string>
+    <string name="home_recent_added">Aggiunti di recente</string>
+    <string name="home_recent_played">Ascoltati di recente</string>
+    <string name="home_favorites">Preferiti</string>
+    <string name="home_downloads">Download</string>
+    <string name="home_downloads_empty">Nessun brano scaricato. I download saranno disponibili nella fase dedicata.</string>
+    <string name="home_section_empty">Nessun elemento memorizzato in questa sezione.</string>
+    <string name="filter_genre">Genere</string>
+    <string name="filter_year">Anno</string>
+    <string name="filter_all">Tutti</string>
+    <string name="filter_offline">Disponibili offline</string>
+    <string name="sort_playlist_name">Nome</string>
+    <string name="sort_playlist_changed">Aggiornamento</string>
+    <string name="playlist_owner">Proprietario: %1$s</string>
+    <string name="playlist_read_only">Playlist in lettura. Le modifiche saranno disponibili nella fase dedicata.</string>
+    <string name="library_no_results">Nessun risultato per questa ricerca o questi filtri.</string>
     <string name="library_clear_search">Cancella ricerca</string>
     <string name="library_selected">Selezionati: %1$d</string>
     <string name="library_clear_selection">Annulla selezione</string>

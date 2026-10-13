@@ -9,14 +9,16 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [ProfileEntity::class, ArtistEntity::class, AlbumEntity::class,
-        SongEntity::class, GenreEntity::class, LibraryStateEntity::class],
-    version = 3,
+        SongEntity::class, GenreEntity::class, LibraryStateEntity::class,
+        PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class],
+    version = 4,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
 
     abstract fun profileDao(): ProfileDao
     abstract fun libraryDao(): LibraryDao
+    abstract fun browseDao(): BrowseDao
 
     companion object {
         val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
@@ -38,6 +40,15 @@ abstract class WalkTapeDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_song_profileId_title` ON `song` (`profileId`, `title`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_album_profileId_artistId` ON `album` (`profileId`, `artistId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_album_profileId_created` ON `album` (`profileId`, `created`)")
+            }
+        }, object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE album ADD COLUMN played TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE artist ADD COLUMN starred TEXT DEFAULT NULL")
+                db.execSQL("CREATE TABLE IF NOT EXISTS playlist (profileId INTEGER NOT NULL, id TEXT NOT NULL, name TEXT NOT NULL, owner TEXT, isPublic INTEGER NOT NULL, comment TEXT, coverArt TEXT, songCount INTEGER NOT NULL, duration INTEGER NOT NULL, created TEXT, changed TEXT, fetchedAt INTEGER NOT NULL, PRIMARY KEY(profileId,id))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS playlist_entry (profileId INTEGER NOT NULL, playlistId TEXT NOT NULL, position INTEGER NOT NULL, songId TEXT NOT NULL, title TEXT NOT NULL, artist TEXT, album TEXT, duration INTEGER NOT NULL, year INTEGER, genre TEXT, PRIMARY KEY(profileId,playlistId,position), FOREIGN KEY(profileId,playlistId) REFERENCES playlist(profileId,id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_playlist_entry_profileId_playlistId ON playlist_entry(profileId,playlistId)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS local_audio (profileId INTEGER NOT NULL, songId TEXT NOT NULL, relativePath TEXT NOT NULL, bytes INTEGER NOT NULL, PRIMARY KEY(profileId,songId))")
             }
         })
 

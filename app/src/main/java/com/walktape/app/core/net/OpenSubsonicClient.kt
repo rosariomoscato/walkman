@@ -69,6 +69,25 @@ class OpenSubsonicClient(
         } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
     }
 
+    suspend fun playlists(): ApiResult<List<PlaylistDto>> = when (val result = request("getPlaylists")) {
+        is ApiResult.Failure -> result
+        is ApiResult.Success -> try {
+            val root = result.value.obj("playlists") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+            ApiResult.Success(root.getAsJsonArray("playlist")?.map { parsePlaylist(it.asJsonObject) } ?: emptyList())
+        } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+    }
+
+    suspend fun playlist(id: String): ApiResult<PlaylistDetailDto> = when (val result = request("getPlaylist", listOf("id" to id))) {
+        is ApiResult.Failure -> result
+        is ApiResult.Success -> try {
+            val root = result.value.obj("playlist") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+            val playlist = parsePlaylist(root)
+            val entries = root.getAsJsonArray("entry")?.map { parseSong(it.asJsonObject) } ?: emptyList()
+            if (playlist.id != id || playlist.songCount != entries.size) return ApiResult.Failure(ApiError.InvalidResponse)
+            ApiResult.Success(PlaylistDetailDto(playlist, entries))
+        } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+    }
+
     suspend fun albumList(type: String, size: Int, offset: Int): ApiResult<List<AlbumDto>> =
         when (val result = request("getAlbumList2", listOf(
             "type" to type, "size" to size.toString(), "offset" to offset.toString()))) {

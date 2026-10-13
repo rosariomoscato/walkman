@@ -249,3 +249,61 @@ Correzioni e limiti:
 Prossima azione precisa: W04-T02 — completare le sezioni home con metadati reali e playlist in lettura, poi filtri W04-T03 e misure W04-T06. La wave 04 resta aperta.
 
 Chiusura incremento: `git diff --check` senza errori (solo avvisi LF/CRLF); `NEXT_PROMPT.md` e `local/test-server.env` confermati ignorati. Emulatore chiuso e ADB senza dispositivi. Modifiche wave 04 e documenti preservati localmente; nessun commit/push.
+
+## 2026-10-13 — Commit e push dell'incremento wave 04
+
+Task: operazione Git richiesta e confermata esplicitamente dall'utente.
+
+- Ispezionati status, diff, ultimi commit, remote e tracking; controllati i 38 file in stage e il diff dei nuovi test. Nessun file locale riservato, credenziale reale, APK o artefatto di build nello stage; NEXT_PROMPT.md resta ignorato.
+- Commit `fa17b0e` — "Wave 04: indice reale, navigazione e ricerca locale" (38 file, 2.988 inserimenti/77 rimozioni). Il messaggio dichiara l'incremento parziale e i task ancora aperti.
+- Push ordinario riuscito: `c97fe7d..fa17b0e main -> main`, senza riscritture della cronologia.
+- Verifica: HEAD e origin/main entrambi `fa17b0e330f42a3eb0353129df1fd974e2a422b4`; working tree pulita immediatamente dopo il push. Queste note successive e l'aggiornamento della memoria restano locali, non committati.
+
+Prossima azione invariata: W04-T02. W04-T03/T06 e le prove telefono W03-T04/T06 restano aperti.
+
+## 2026-10-13 — Anteprima visibile dell'app su richiesta dell'utente
+
+- Avviato `walktape_aosp` in finestra visibile; atteso completamento del boot Android.
+- Installati APK debug app/test già costruiti, precompilati con filtro speed. Helper opt-in `UiSeedTest#seedRealLibraryForManualInspection`: 1/1 superato con server reale via 10.0.2.2, credenziali lette solo dalla configurazione temporanea esclusa da Git.
+- Preparato il profilo di test `UI check` con libreria reale (459 album, 6.403 brani, 196 artisti) per consentire all'utente l'esplorazione. Profilo cifrato e indice conservati nell'app dell'emulatore; file segreto temporaneo e marker rimossi nel finally.
+- Avvio MainActivity riuscito: `am start -W` Status ok; `mCurrentFocus` e `mFocusedApp` riferiti a WalkTape. Emulatore lasciato aperto per l'utente.
+- Nessuna nuova funzione dichiarata completata, nessun commit/push; punto di ripresa sempre W04-T02. Non è una verifica sul telefono fisico e la riproduzione audio resta da implementare.
+
+## 2026-10-13 — Fine anteprima e chiusura emulatore
+
+- L'utente ha visto l'app e dato riscontro positivo («per adesso mi sembra ok»), poi richiesto la chiusura dell'emulatore.
+- Eseguito `adb -s emulator-5554 emu kill`; dopo l'arresto verificato `adb devices` senza dispositivi.
+- Profilo di test e indice locale conservati. Aggiornati memoria e prompt locale; punto di ripresa W04-T02 invariato. Nessun commit/push.
+
+## 2026-10-13 — Aggiornamento remote dopo rinomina GitHub
+
+- L'utente ha rinominato il repository GitHub in `rosariomoscato/walktape` e chiesto l'aggiornamento locale.
+- Eseguito `git remote set-url origin https://github.com/rosariomoscato/walktape.git`; nome e percorso della cartella locale `walkman` invariati.
+- Verificati URL fetch/push con `git remote -v` e accesso con `git ls-remote --heads origin main`: branch remoto `main` al commit `fa17b0e330f42a3eb0353129df1fd974e2a422b4`.
+- Preservate le modifiche documentali preesistenti. Aggiornati memoria e prompt locale; nessun commit/push. I riferimenti al vecchio URL nel log storico restano come registrazione delle operazioni precedenti.
+
+## 2026-10-13 — Wave 04 completata: home, playlist in lettura, filtri e ricerca unificata
+
+Task: W04-T02, W04-T03, W04-T06 (completano la wave 04).
+
+Attività:
+
+- Room v4 (migrazione 3→4 esplicita, indice conservato): tabelle `playlist`/`playlist_entry` per profilo con chiave posizione (brani ripetuti preservati) e foreign key CASCADE, catalogo `local_audio` per la disponibilità offline, metadati `played` (album) e `starred` (artisti) per le sezioni home. Pulizia estesa alla rimozione profilo.
+- API playlist: `getPlaylists`/`getPlaylist` senza parametro amministrativo username; il dettaglio rifiuta id o conteggio incoerenti e gli errori di protocollo non svuotano la cache. `PlaylistIndex` sostituisce ogni playlist in transazione e rimuove solo dopo una lettura riuscita della lista.
+- Home "Panoramica": sezioni Continua ascolto (stato vuoto onesto fino alla wave 05), Aggiunti/Ascoltati di recente, Preferiti, Download (stato vuoto fino alla wave 08) e Playlist, tutte da Room osservata per profilo con schermatura anti-profilo-stallo durante i cambi profilo.
+- Liste riscritte su `BrowseQueries`/`RawQuery`: parametri bindati (LIKE con escape, tentativi SQL injection neutralizzati), ordinamenti in whitelist, filtri genere/anno/offline per brani, album (offline = intero album scaricato), artisti, generi e playlist; tab Playlist (nome/aggiornamento) e tab "Tutti" con ricerca unificata UNION su tutti i tipi; chip "Disponibili offline" e stato "Nessun risultato". `LocalAudioCatalog` registra solo file non vuoti dentro la directory privata del profilo (path traversal rifiutato); popolamento reale previsto in wave 08.
+- UI: navigazione playlist con dettaglio paginato nell'ordine server (badge "Playlist in lettura"), testTag `library-tabs` per l'automazione, righe filtrate per profilo attivo.
+
+Verifiche:
+
+- JVM `testDebugUnitTest -PrealServerTest=true`: **39/39** (nuovi: 3 PlaylistApi con ripetizioni/ownership/404-formali). Il RealServerTest era fallito alle 09:09 per indisponibilità temporanea del server (ping HTTP fuori test confermato lento), poi superato a regime: nessun cambiamento di codice tra i due esiti.
+- Android `walktape_aosp`: suite core **12/12** (migrazioni, profili, indice reale e isolamento, cache copertine, ordine multidisco), **BrowseInstrumentedTest 4/4** (migrazione da schema v3 esportato con indice e credenziali conservati; 10.000 brani di fixture con paging/filtri/escape/offline/isolamento; playlist con ordine, ripetuti e cache non cancellata da errori; lista playlist reale → 0 playlist per l'account di test), **LibraryNavigationTest 1/1** in 206 s su libreria reale: tutte le tab con scorrimento della striscia, dettaglio album, ricerca "adele", cancellazione, selezione multipla, ordinamento persistito (attesa scrittura DataStore), Panoramica, playlist fixture (brani ripetuti visibili) con cleanup, filtro offline (vuoto onesto), ricerca unificata, filtri genere+anno validati contro SQL diretto.
+- Prestazioni registrate (emulatore AOSP, host sotto carico): fixture 10.000 brani, pagina filtrata di 80 → **487 ms a freddo, 205 ms in media a caldo**; indicizzazione reale 6.403 brani ~52-76 s a seconda del carico.
+- Ambiente: durante le prove l'emulatore ha attraversato ANR ripetuti del launcher (Quickstep) fino a bloccare il dialog; risolto riavviando l'emulatore da zero. Il test ora gestisce i dialog "Wait" e alterna le direzioni di scorrimento della striscia tab (il secondo `clickTab("Album")` falliva perché la tab era fuori schermo a sinistra dopo Generi: correzione nel test, non nell'app). Registrazione onesta: ANR di sistema osservati anche su emulatore appena riavviato sotto carico host.
+- Cleanup: marker ed env temporanei rimossi da `/data/local/tmp`; emulatore spento; nessun segreto in output, APK o documenti.
+
+File principali: `core/db/Browse*`, `core/library/{BrowseQueries,PlaylistIndex,LocalAudioCatalog}.kt`, `LibrarySync` (+pipeline playlist), `core/net` (Dtos/OpenSubsonicClient playlist), `ui/screens/library/*` (Panoramica, filtri, playlist, ricerca unificata), `ui/nav`, stringhe it/en, schema 4.json, test JVM/Android aggiunti.
+
+Stato: **wave 04 completata** (T01–T06 verificati; criterio di uscita soddisfatto). Modifiche non committate. Prossima azione precisa: **W05-T01** — servizio di riproduzione Media3 (`MediaSessionService` + ExoPlayer) con streaming MP3/FLAC e DataSource autenticato dal client OpenSubsonic.
+
+Nota: dettaglio playlist reale sul server da ripetere in wave 07 quando esisterà una playlist di prova (l'account di test non ne ha); il percorso è coperto da fixture e API reali di lista.

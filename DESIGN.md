@@ -71,6 +71,8 @@ Regole:
 - Selezione con pressione prolungata, checkbox e riepilogo/annullamento. Comandi di coda, playlist e download saranno collegati nelle wave dei rispettivi servizi.
 - Mantiene palette, margini e tipografia della wave 02. Le sezioni home approvate ancora mancanti restano task aperti nel piano.
 
+Incremento W04-T02/T03: apertura sulla tab Panoramica con sezioni Continua ascolto, Aggiunti/Ascoltati di recente, Preferiti, Download e Playlist. Le sezioni senza dati usano testo vuoto esplicito; riproduzione e download sono collegati nelle wave dedicate. Tab Playlist con dettaglio nell'ordine server e tab Tutti per ricerca unificata; filtri genere/anno e chip disponibilità offline. Sono comandi di consultazione, senza azioni di modifica playlist premature; token visivi invariati.
+
 - Italiano predefinito (`values/`), inglese (`values-en/`), scelta per-app via `AppCompatDelegate.setApplicationLocales` + `locales_config` (it, en); date/numeri con formati di sistema.
 
 ## Icona app (provvisoria)

@@ -41,6 +41,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,22 +52,26 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.collectAsLazyPagingItems
 import androidx.paging.compose.itemKey
+import androidx.paging.LoadState
 import com.walktape.app.R
 import com.walktape.app.core.db.AlbumEntity
 import com.walktape.app.core.db.ArtistEntity
 import com.walktape.app.core.db.GenreEntity
 import com.walktape.app.core.db.SongEntity
+import com.walktape.app.core.db.PlaylistEntity
+import com.walktape.app.core.db.BrowseResult
 import com.walktape.app.core.library.SyncProgress
 import com.walktape.app.ui.components.EmptyState
 import java.util.Locale
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
 fun LibraryScreen(
     onOpenProfiles: () -> Unit,
     onOpenAlbum: (String) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenGenre: (String) -> Unit,
+    onOpenPlaylist: (String) -> Unit,
     viewModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory),
 ) {
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
@@ -75,8 +82,9 @@ fun LibraryScreen(
     val sorts by viewModel.sorts.collectAsStateWithLifecycle()
     val items = viewModel.pager.collectAsLazyPagingItems()
     val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val filter by viewModel.filter.collectAsStateWithLifecycle()
 
-    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
         Text(
             text = stringResource(R.string.nav_home),
             style = MaterialTheme.typography.headlineMedium,
@@ -85,7 +93,7 @@ fun LibraryScreen(
         when {
             profile == null -> NoProfileState(onOpenProfiles)
             else -> {
-                SyncBanner(progress, state?.let { it.artistCount to it.songCount }, viewModel::sync, viewModel::cancelSync)
+                SyncBanner(progress, state?.takeIf { it.profileId == profile?.id }?.let { it.artistCount to it.songCount }, viewModel::sync, viewModel::cancelSync)
                 SearchAndSort(
                     query = query,
                     onQuery = viewModel::setQuery,
@@ -93,7 +101,9 @@ fun LibraryScreen(
                     sort = sorts[tab] ?: tab.defaultSort,
                     onSort = { viewModel.setSort(tab, it) },
                 )
-                ScrollableTabRow(selectedTabIndex = LibraryTab.entries.indexOf(tab), edgePadding = 16.dp) {
+                if (tab != LibraryTab.HOME) LibraryFilters(viewModel)
+                ScrollableTabRow(selectedTabIndex = LibraryTab.entries.indexOf(tab), edgePadding = 16.dp,
+                    modifier = Modifier.testTag("library-tabs")) {
                     LibraryTab.entries.forEach { entry ->
                         Tab(
                             selected = tab == entry,
@@ -110,12 +120,18 @@ fun LibraryScreen(
                         }
                     }
                 }
-                key(profile?.id, tab, query, sorts[tab]) {
+                if (tab != LibraryTab.HOME && items.itemCount == 0 && items.loadState.refresh is LoadState.NotLoading) {
+                    Text(stringResource(R.string.library_no_results), modifier = Modifier.padding(16.dp))
+                }
+                key(profile?.id, tab, query, sorts[tab], filter) {
                     when (tab) {
+                        LibraryTab.HOME -> HomeSections(viewModel, onOpenAlbum, onOpenArtist, onOpenPlaylist)
                         LibraryTab.ALBUMS -> AlbumItems(items, viewModel, onOpenAlbum)
                         LibraryTab.ARTISTS -> ArtistItems(items, viewModel, onOpenArtist)
                         LibraryTab.SONGS -> SongItems(items, viewModel)
-                        LibraryTab.GENRES -> GenreItems(items, onOpenGenre)
+                        LibraryTab.GENRES -> GenreItems(items, profile!!.id, onOpenGenre)
+                        LibraryTab.PLAYLISTS -> PlaylistItems(items, profile!!.id, onOpenPlaylist)
+                        LibraryTab.SEARCH -> SearchItems(items, profile!!.id, onOpenAlbum, onOpenArtist, onOpenGenre, onOpenPlaylist)
                     }
                 }
             }
@@ -202,7 +218,7 @@ private fun SearchAndSort(
             placeholder = { Text(stringResource(R.string.library_search_hint)) },
             modifier = Modifier.weight(1f)
         )
-        if (tab != LibraryTab.GENRES && tab != LibraryTab.ARTISTS) {
+        if (tab == LibraryTab.ALBUMS || tab == LibraryTab.SONGS || tab == LibraryTab.PLAYLISTS) {
             TextButton(onClick = { sortMenu = true }) { Text(stringResource(sortLabel(tab, sort))) }
             DropdownMenu(expanded = sortMenu, onDismissRequest = { sortMenu = false }) {
                 sortOptions(tab).forEach { option ->
@@ -219,6 +235,7 @@ private fun SearchAndSort(
 private fun sortOptions(tab: LibraryTab): List<String> = when (tab) {
     LibraryTab.ALBUMS -> listOf("name", "artist", "year", "recent")
     LibraryTab.SONGS -> listOf("title", "artist", "album", "duration")
+    LibraryTab.PLAYLISTS -> listOf("name", "changed")
     else -> listOf("name")
 }
 
@@ -235,22 +252,27 @@ private fun sortLabel(tab: LibraryTab, sort: String): Int = when (tab) {
         "duration" -> R.string.sort_song_duration
         else -> R.string.sort_song_title
     }
+    LibraryTab.PLAYLISTS -> if (sort == "changed") R.string.sort_playlist_changed else R.string.sort_playlist_name
     else -> R.string.sort_album_name
 }
 
 private fun LibraryTab.label(): Int = when (this) {
+    LibraryTab.HOME -> R.string.library_tab_home
     LibraryTab.ALBUMS -> R.string.library_tab_albums
     LibraryTab.ARTISTS -> R.string.library_tab_artists
     LibraryTab.SONGS -> R.string.library_tab_songs
     LibraryTab.GENRES -> R.string.library_tab_genres
+    LibraryTab.PLAYLISTS -> R.string.library_tab_playlists
+    LibraryTab.SEARCH -> R.string.library_tab_all
 }
 
 @Composable
 private fun AlbumItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel, onOpen: (String) -> Unit) {
     val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize(), state = libraryListState(items)) {
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
-            (items[index] as? AlbumEntity)?.let { album ->
+            (items[index] as? AlbumEntity)?.takeIf { it.profileId == profile?.id }?.let { album ->
                 AlbumRow(album,
                     selected = album.id in selection,
                     selectionMode = selection.isNotEmpty(),
@@ -292,9 +314,10 @@ fun AlbumRow(album: AlbumEntity, selected: Boolean = false, selectionMode: Boole
 
 @Composable
 private fun ArtistItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel, onOpen: (String) -> Unit) {
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize(), state = libraryListState(items)) {
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
-            (items[index] as? ArtistEntity)?.let { artist ->
+            (items[index] as? ArtistEntity)?.takeIf { it.profileId == profile?.id }?.let { artist ->
                 TextButton(onClick = { onOpen(artist.id) }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Text(artist.name, style = MaterialTheme.typography.titleMedium)
@@ -311,9 +334,10 @@ private fun ArtistItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel
 @Composable
 private fun SongItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel) {
     val selection by viewModel.selection.collectAsStateWithLifecycle()
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     LazyColumn(Modifier.fillMaxSize(), state = libraryListState(items)) {
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
-            (items[index] as? SongEntity)?.let { song ->
+            (items[index] as? SongEntity)?.takeIf { it.profileId == profile?.id }?.let { song ->
                 SongRow(song, song.id in selection, selection.isNotEmpty(), { viewModel.toggleSelection(song.id) })
             }
         }
@@ -345,10 +369,10 @@ fun SongRow(song: SongEntity, selected: Boolean = false, selectionMode: Boolean 
 }
 
 @Composable
-private fun GenreItems(items: LazyPagingItems<Any>, onOpen: (String) -> Unit) {
+private fun GenreItems(items: LazyPagingItems<Any>, profileId: Long, onOpen: (String) -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), state = libraryListState(items)) {
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
-            (items[index] as? GenreEntity)?.let { genre ->
+            (items[index] as? GenreEntity)?.takeIf { it.profileId == profileId }?.let { genre ->
                 TextButton(onClick = { onOpen(genre.name) }, modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         Text(genre.name, style = MaterialTheme.typography.titleMedium)
@@ -367,6 +391,8 @@ internal fun libraryItemKey(item: Any): String = when (item) {
     is ArtistEntity -> "artist:${item.profileId}:${item.id}"
     is SongEntity -> "song:${item.profileId}:${item.id}"
     is GenreEntity -> "genre:${item.profileId}:${item.id}"
+    is PlaylistEntity -> "playlist:${item.profileId}:${item.id}"
+    is BrowseResult -> "${item.kind}:${item.profileId}:${item.id}"
     else -> error("Unsupported library item")
 }
 

@@ -38,6 +38,7 @@ data class SyncProgress(
 /** Full progressive index of one profile's library into Room (never a server mutation). */
 class LibrarySync(
     private val libraryDao: LibraryDao,
+    private val playlistIndex: PlaylistIndex? = null,
     private val clientProvider: suspend (Long) -> OpenSubsonicClient?,
 ) {
     private val mutableProgress = MutableStateFlow(SyncProgress())
@@ -115,7 +116,7 @@ class LibrarySync(
                 async {
                         when (val detail = client.album(album.id)) {
                             is ApiResult.Success -> {
-                                libraryDao.replaceAlbum(profileId, detail.value.album.toEntity(profileId),
+                                libraryDao.replaceAlbum(profileId, detail.value.album.toEntity(profileId).copy(played = detail.value.album.played ?: album.played),
                                     detail.value.songs.map { song ->
                                         song.toEntity(profileId).copy(
                                             albumId = song.albumId ?: album.id,
@@ -147,6 +148,10 @@ class LibrarySync(
         val songs = libraryDao.songCount(profileId)
         val albums = libraryDao.albumCount(profileId)
         libraryDao.replaceArtistsAndGenres(profileId, artistRows, genreRows)
+        playlistIndex?.refresh(profileId, client)?.let { error ->
+            mutableProgress.value = SyncProgress(processed = done.get(), total = total, error = error)
+            return false
+        }
         libraryDao.upsertState(LibraryStateEntity(
             profileId = profileId,
             lastSyncAt = System.currentTimeMillis(),
@@ -161,12 +166,12 @@ class LibrarySync(
 
     fun cancel() { activeJob?.cancel() }
 
-    private fun ArtistDto.toEntity(profileId: Long) = ArtistEntity(profileId, id, name, coverArt, albumCount)
+    private fun ArtistDto.toEntity(profileId: Long) = ArtistEntity(profileId, id, name, coverArt, albumCount, starred)
 
     private fun AlbumDto.toEntity(profileId: Long) = AlbumEntity(
         profileId = profileId, id = id, name = name, artist = artist, artistId = artistId,
         coverArt = coverArt, songCount = songCount, duration = duration, year = year,
-        genre = genre, created = created, isCompilation = isCompilation, starred = starred,
+        genre = genre, created = created, isCompilation = isCompilation, starred = starred, played = played,
     )
 
     private fun SongDto.toEntity(profileId: Long) = SongEntity(

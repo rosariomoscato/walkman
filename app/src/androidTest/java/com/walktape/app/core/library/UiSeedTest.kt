@@ -38,7 +38,7 @@ class UiSeedTest {
             seedName, url, config.getValue("ND_USER"), config.getValue("ND_PASS"), true
         ) as ApiResult.Success).value
         assertTrue(repository.activate(id))
-        val sync = LibrarySync(Graph.database.libraryDao()) { repository.clientFor(it) }
+        val sync = LibrarySync(Graph.database.libraryDao(), playlistIndex = PlaylistIndex(Graph.database.browseDao())) { repository.clientFor(it) }
         assertTrue(sync.sync(id))
         println("wave04-seed ok profileId=$id")
     }
