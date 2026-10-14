@@ -12,16 +12,26 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.walktape.app.R
+import com.walktape.app.Graph
 import com.walktape.app.ui.components.SectionHeader
 
 @Composable
 fun HomeSections(model: LibraryViewModel, onAlbum: (String) -> Unit, onArtist: (String) -> Unit, onPlaylist: (String) -> Unit) {
     val cached by model.home.collectAsStateWithLifecycle()
     val profile by model.activeProfile.collectAsStateWithLifecycle()
+    val playback by Graph.playback.state.collectAsStateWithLifecycle()
     val home = if (cached.profileId == profile?.id) cached else HomeContent()
     LazyColumn(Modifier.fillMaxSize()) {
         item { SectionHeader(stringResource(R.string.home_continue)) }
-        item { HomeEmpty(R.string.home_continue_empty) }
+        item {
+            if (playback.hasMedia) Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+                Text(playback.title)
+                if (playback.artist.isNotBlank()) Text(playback.artist)
+                TextButton(onClick = Graph.playback::togglePlayPause, enabled = playback.canPlayPause) {
+                    Text(stringResource(if (playback.playWhenReady && !playback.ended) R.string.playback_pause else R.string.playback_resume))
+                }
+            } else HomeEmpty(R.string.home_continue_empty)
+        }
         item { SectionHeader(stringResource(R.string.home_recent_added)) }
         if (home.recent.isEmpty()) item { HomeEmpty(R.string.home_section_empty) }
         items(home.recent, key = { "recent:${it.id}" }) { album ->

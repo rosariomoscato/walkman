@@ -4,6 +4,8 @@
     <string name="playback_open_controls">Open playback controls</string>
     <string name="playback_unknown_title">Current track</string>
     <string name="playback_play">Play</string>
+    <string name="playback_resume">Resume listening</string>
+    <string name="queue_storage_error">Unable to save or restore the queue. Check available storage and reopen the app.</string>
     <string name="playback_pause">Pause</string>
     <string name="playback_previous">Previous or restart track</string>
     <string name="playback_next">Next</string>

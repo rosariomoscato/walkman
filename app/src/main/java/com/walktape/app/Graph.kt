@@ -12,6 +12,8 @@ import com.walktape.app.core.library.CoverArtStore
 import com.walktape.app.core.library.LibrarySync
 import com.walktape.app.core.library.PlaylistIndex
 import com.walktape.app.playback.PlaybackConnection
+import com.walktape.app.playback.QueueStore
+import com.walktape.app.playback.AudioOutputMonitor
 import java.io.File
 
 @Suppress("StaticFieldLeak")
@@ -24,17 +26,21 @@ object Graph {
         private set
     lateinit var profiles: ProfileRepository
         private set
+    lateinit var queues: QueueStore
+        private set
 
     fun init(context: Context) {
         appContext = context.applicationContext
         database = WalkTapeDatabase.build(appContext)
         settingsRepository = SettingsRepository(appContext)
         profiles = ProfileRepository(database, CredentialVault(), appContext.filesDir)
+        queues = QueueStore(database.queueDao())
     }
 
     fun app(): Context = appContext
 
     val playback: PlaybackConnection by lazy { PlaybackConnection(appContext) }
+    val audioOutput = AudioOutputMonitor()
 
     fun client(address: ServerAddress, credentials: Credentials) = OpenSubsonicClient(address, credentials)
 

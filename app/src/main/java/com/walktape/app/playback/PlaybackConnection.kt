@@ -149,7 +149,9 @@ class PlaybackConnection(private val context: Context) {
     fun togglePlayPause() = command(Player.COMMAND_PLAY_PAUSE) { player ->
         if (player.playWhenReady && player.playerError == null && player.playbackState != Player.STATE_ENDED) player.pause()
         else {
-            if (player.playbackState == Player.STATE_ENDED &&
+            val knownDuration = player.duration.takeIf { it > 0 && it != C.TIME_UNSET } ?: player.mediaMetadata.durationMs
+            val atSavedEnd = player.playbackState == Player.STATE_IDLE && knownDuration != null && player.currentPosition >= knownDuration
+            if ((player.playbackState == Player.STATE_ENDED || atSavedEnd) &&
                 player.isCommandAvailable(Player.COMMAND_SEEK_TO_MEDIA_ITEM)) player.seekTo(0, 0)
             if (player.playbackState == Player.STATE_IDLE &&
                 player.isCommandAvailable(Player.COMMAND_PREPARE)) player.prepare()

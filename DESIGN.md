@@ -79,6 +79,8 @@ Incremento W05-T02: barra Material3 sopra la navigazione, visibile solo con una 
 
 Incremento W05-T03: dal pannello si apre **Coda**, elenco LazyColumn nell'ordine effettivo d'ascolto. Brano corrente evidenziato, tap per ascoltare un'occorrenza, X per rimuoverla, menu per **Sposta su/Sposta giù/Rimuovi** e corrispondenti azioni accessibili. ID distinti anche per copie dello stesso brano, chiavi UI stabili e touch target 48dp. Nessun gesto drag dichiarato operativo: il prototipo non ha superato il test touch e il riordino è disponibile dal menu. Shuffle visibile con indicatore attivo e azione per tornare all'ordine originale, senza spostare o ricaricare il corrente; riordinare manualmente disattiva shuffle (avviso nel pannello). Nelle tab Album/Brani, selezione multipla con Riproduci ora/Dopo il corrente/Aggiungi in coda, FlowRow adattivo, caricamento e stato di indisponibilità esplicito. Aggiunta a coda vuota rimane in pausa; solo Riproduci ora avvia l'ascolto. Palette e tipografia invariate.
 
+Incremento W05-T04: la sezione **Continua ascolto** della Panoramica mostra il brano in pausa del profilo attivo (titolo/artista) con **Riprendi ascolto**; nessuna ripartenza automatica alla riapertura dell'app né notifica finché il player resta idle. Banner inline in `errorContainer` solo quando il salvataggio/ripristino della coda fallisce per il profilo attivo, con testo di recupero esplicito. Nessun nuovo token, animazione o componente della scocca; la sezione vuota precedente resta per i profili senza coda.
+
 - Italiano predefinito (`values/`), inglese (`values-en/`), scelta per-app via `AppCompatDelegate.setApplicationLocales` + `locales_config` (it, en); date/numeri con formati di sistema.
 
 ## Icona app (provvisoria)

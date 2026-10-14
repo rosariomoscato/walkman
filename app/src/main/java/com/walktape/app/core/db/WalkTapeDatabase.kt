@@ -10,8 +10,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 @Database(
     entities = [ProfileEntity::class, ArtistEntity::class, AlbumEntity::class,
         SongEntity::class, GenreEntity::class, LibraryStateEntity::class,
-        PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class],
-    version = 4,
+        PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class,
+        QueueStateEntity::class, QueueEntryEntity::class],
+    version = 5,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -19,6 +20,7 @@ abstract class WalkTapeDatabase : RoomDatabase() {
     abstract fun profileDao(): ProfileDao
     abstract fun libraryDao(): LibraryDao
     abstract fun browseDao(): BrowseDao
+    abstract fun queueDao(): QueueDao
 
     companion object {
         val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
@@ -49,6 +51,12 @@ abstract class WalkTapeDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS playlist_entry (profileId INTEGER NOT NULL, playlistId TEXT NOT NULL, position INTEGER NOT NULL, songId TEXT NOT NULL, title TEXT NOT NULL, artist TEXT, album TEXT, duration INTEGER NOT NULL, year INTEGER, genre TEXT, PRIMARY KEY(profileId,playlistId,position), FOREIGN KEY(profileId,playlistId) REFERENCES playlist(profileId,id) ON UPDATE NO ACTION ON DELETE CASCADE)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS index_playlist_entry_profileId_playlistId ON playlist_entry(profileId,playlistId)")
                 db.execSQL("CREATE TABLE IF NOT EXISTS local_audio (profileId INTEGER NOT NULL, songId TEXT NOT NULL, relativePath TEXT NOT NULL, bytes INTEGER NOT NULL, PRIMARY KEY(profileId,songId))")
+            }
+        }, object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS queue_state (profileId INTEGER NOT NULL, currentId TEXT, positionMs INTEGER NOT NULL, repeatMode INTEGER NOT NULL, shuffle INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(profileId), FOREIGN KEY(profileId) REFERENCES profile(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS queue_entry (profileId INTEGER NOT NULL, position INTEGER NOT NULL, shufflePosition INTEGER NOT NULL, entryId TEXT NOT NULL, songId TEXT NOT NULL, title TEXT NOT NULL, artist TEXT, album TEXT, durationMs INTEGER, PRIMARY KEY(profileId,position), FOREIGN KEY(profileId) REFERENCES queue_state(profileId) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_queue_entry_profileId_entryId ON queue_entry(profileId,entryId)")
             }
         })
 

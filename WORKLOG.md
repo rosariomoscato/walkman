@@ -426,3 +426,74 @@ Verifiche concluse:
 Fonti ufficiali: AndroidX Media3 **tag 1.11.1**, Timeline con `FIELD_SHUFFLED_WINDOW_INDICES`, Player/ShuffleOrder. Link e scelte in ARCHITECTURE; decisione D31 in memoria. File principali: playback/{PlaybackConnection,PlaybackSnapshot,PlaybackService,QueueShuffle,ServiceShuffle}, UI/{QueueSheet,PlaybackControls,LibraryScreen,LibraryViewModel}, LibraryDao e test pertinenti.
 
 Non eseguiti: coda/shuffle/selezione sul Motorola, TalkBack manuale e gesture drag (non esposta), persistenza/riavvio del processo (T04), interruzioni complete/Bluetooth (T05/T07), TLS reale. Checklist telefono privata aggiornata, docs PHONE_TESTS già tracciato non modificato. Prossima azione precisa **W05-T04**: coda/posizione e shuffle per profilo in Room, migrazione esplicita e ripristino sempre in pausa.
+
+## 2026-10-13 — Commit W05-T03
+
+Operazione Git richiesta esplicitamente dall'utente.
+
+- Ispezionati status, diff, log recente e stage; staged diff --check riuscito. 21 file intenzionali, nessun APK/artefatto, configurazione privata o valore segreto incluso. Verificato ignore di local/test-server.env, checklist telefono e NEXT_PROMPT.
+- Commit **afe7f9f** — “Wave 05: coda modificabile, selezione multipla e shuffle (T03)”: 21 file, 1.148 inserimenti/16 rimozioni. Messaggio con risultati già verificati (53/53 JVM, 9/9 Android, lint 0 errori/22 warning), limite hardware e punto di ripresa T04.
+- Commit riuscito senza hook falliti; working tree pulita subito dopo. Nessun push: main avanti di 2 commit su origin/main (74be2d0 e afe7f9f). Note post-commit di log/memoria restano locali.
+
+Prossimo task **W05-T04**; i controlli telefono T03 restano aperti. Nessuna nuova build/test necessaria per l'operazione Git; codice invariato rispetto alle verifiche dell'incremento.
+
+## 2026-10-13 — W05-T04: persistenza coda e posizione per profilo
+
+Task: **W05-T04 completato**, incremento locale dopo `afe7f9f`, su richiesta di prosecuzione autonoma dell'utente (nota di prosecuzione in memoria). Nessun commit/push.
+
+Implementazione:
+
+- **Room v5**: `queue_state` + `queue_entry` con doppio CASCADE su profilo e indice unico entryId per profilo; migrazione esplicita 4→5 e schema 5.json esportato (glob verificato). `QueueDao` con transazioni `replace`/`load` e invarianti in `require`.
+- `SavedQueue`/`SavedQueueItem`: solo stato musicale (mai URL autenticati/credenziali/token); `isValid()` copre duplicati, traversal come permutazione esatta, range posizione/profilo/ripetizione, durate non positive, coda vuota coerente. Test JVM dedicati.
+- `QueueStore` (Graph.queues): scrittore unico su canale illimitato; `load`/`flush` barriere FIFO; update-only a layout invariato; failure per profilo con ultimo stato valido conservato; write post-rimozione scartati da FK; `failedProfiles` osservabile dalla UI.
+- `PlaybackPersistence` nel servizio: cattura su main looper, tick 1 s solo in riproduzione; cambio profilo con save finale prima dello stop; restore senza prepare/play (STATE_IDLE: zero HTTP/audio, offline-safe); `ServiceShuffle.restore` installa la permutazione esatta senza generarne una nuova; profilo con load fallito resta senza owner per non sovrascrivere una coda corrotta; `onDestroy` salva lo stato finale. Play dopo restore riparte dall'inizio se la posizione salvata è a fine traccia (durata salvata nota).
+- UI: “Continua ascolto” con brano in pausa e **Riprendi ascolto**; banner errore storage per profilo attivo; stringhe IT/EN. Regressione T01/T02 aggiornata: il cambio profilo ora **ripristina** la coda del profilo precedente anziché lasciare la sessione vuota.
+
+Verifiche:
+
+- Build `assembleDebug assembleDebugAndroidTest testDebugUnitTest -PrealServerTest=true` → BUILD SUCCESSFUL (4m10s dopo correzione `positionMs == 0L`). Corretto in corsa: caching di traversal/shuffle fuori dallo snapshot caldo.
+- **JVM 58/58** (report HTML: 58 test, 0 fallimenti, 0 skipped, 1m07s): 5 nuovi `SavedQueueTest` (duplicati esatti, traversal non permutazione rifiutato, range, coda vuota coerente, durata ignota non scarta la posizione) + regressione con login reale.
+- **Android `QueueStorageTest` 4/4** (16 s): migrazione 4→5 da schema 4.json reale con profilo/album/playlist preservati e code vuote; round-trip su disco tra due aperture del DB con isolamento due profili e coda vuota esplicita; ordering dello scrittore (25 salvataggi, load barriera), CASCADE alla rimozione profilo, write tardivo non resuscita; snapshot invalido non sovrascrive l'ultimo valido e riporta failure, con ripresa dopo salvataggio valido.
+- **Android `QueueRestoreTest#profileSwitchAndServiceRestartRestoreWithoutHttpOrAutoplay` 1/1** (15 s, MockWebServer con soli 2 login fixture): restore di occorrenza corrente esatta con duplicati, posizione, ripetizione, shuffle e permutazione, `STATE_IDLE` e nessun autoplay; A→B→A con stato modificato salvato e ripristinato; `stopService` con distruzione verificata e riconnessione che ripristina l'ultimo stato (save finale di onDestroy); svuotamento esplicito conservato; **zero richieste di streaming** durante tutti i restore.
+- **Processo separato**: fase seed (salva coda fixture e attiva profilo) → `am force-stop` dell'app → riapertura MainActivity (dumpsys: sessione assente/`NONE`, nessuna attività di riproduzione avviata dall'UI) → fase verify 1/1: il servizio ripristina coda/posizione/shuffle in pausa senza autoplay; marker nella cache privata dell'app cancellato.
+- **Android regressione motore 8/8** (258 s): 5 DataSource + 3 del servizio, incluso il nuovo `realSavedFlacResumesAtPositionOnlyAfterExplicitPlay` con **FLAC reale** via 10.0.2.2: ascolto da 10 s, pausa+ripetizione coda+shuffle, cambio profilo, stato salvato con posizione >10 s verificato da `QueueStore`, ritorno al profilo con restore idle/in pausa sull'occorrenza salvata con shuffle, nessun autoplay dopo 1 s, **play esplicito in-app che riprende lo streaming dalla posizione salvata**. La regressione cambio profilo ora verifica il ripristino del profilo precedente.
+- **Android `QueueSelectionTest` 2/2** (88 s) come regressione post-T04.
+- **Lint: 0 errori / 22 warning** (report txt, invariati rispetto a T03). Nessuna baseline aggiunta.
+- Env `/data/local/tmp/walktape-test-server.env` e marker `wt-seed` rimossi dopo l'uso (assenza verificata); profili fixture eliminati e profilo precedente riattivato in ogni test; emulatore spento, ADB senza dispositivi. Schema 5.json generato. Nessuna mutazione playlist/preferiti sul server.
+
+Non eseguiti: prove telefono di T04 (riavvio app, cambio profilo, ripresa senza autoplay), T03 su telefono, interruzioni/cuffie/Bluetooth (T05), timer/fine coda come comportamento dedicato (T06), TLS reale, TalkBack. Nessun commit/push.
+
+File principali: `core/db/{QueueEntities,QueueDao,WalkTapeDatabase}.kt`, `playback/{SavedQueue,QueueStore,PlaybackPersistence,ServiceShuffle,PlaybackConnection}.kt`, `Graph`, `HomeSections`, `PlaybackControls`, `values{,-en}/playback.xml`, test `SavedQueueTest` (JVM), `QueueStorageTest`, `QueueRestoreTest`, `PlaybackServiceTest`. Documenti: PLAN, ARCHITECTURE, DESIGN, memoria, prompt locale, checklist telefono locale.
+
+Prossima azione precisa: **W05-T05** — audio focus/chiamate, scollegamento cuffie, comandi Bluetooth/notifica/lockscreen; gran parte della configurazione Media3 è già attiva (focus automatico, becoming-noisy), il task riguarda i comportamenti residui e le verifiche dedicate.
+
+## 2026-10-14 — W05-T05: focus, noisy e comandi sessione su emulatore
+
+Task: **W05-T05 parziale** (verifiche automatiche concluse, hardware aperto); l'utente ha autorizzato prosecuzione mentre prova T04. T04 e note locali preservati, nessun commit/push.
+
+Implementazione/verifiche:
+
+- Focus automatico e becoming-noisy Media3 già attivi da T01, mantenuti. Aggiunto `AudioOutputMonitor` in Graph/PlaybackService: `ForwardingAudioSink` delega tutte le operazioni al sink predefinito e conserva soltanto l'ultima scrittura gain in StateFlow volatile, reset al ciclo vita servizio. Nessuna elaborazione/campione audio, rete, log o persistenza. Nessuna nuova dipendenza/schema/permesso, nessun cambio UI/design.
+- `FocusInterruptionsTest` opt-in su AOSP e Navidrome reale: richiedente focus distinto nello **stesso processo/UID**, concessione GRANTED verificata e notifiche reali del framework. Ducking → sink gain **0,2**, playback continua, `Player.volume=1` e STREAM_MUSIC invariati; regain → sink gain **1**. Perdita transitoria → playWhenReady mantenuto, output soppresso con reason focus transient, regain riprende; pausa manuale durante la seconda interruzione impedisce la ripresa. Perdita permanente → pausa e nessun autoplay, play manuale riacquisisce focus.
+- Broadcast protetto `AUDIO_BECOMING_NOISY` sintetico via `su 0 am broadcast` **solo nel test AOSP**, esito di consegna controllato: pausa senza ripartenze, play manuale funziona. Non è uno scollegamento cuffie fisico; nessun root applicativo.
+- Comandi framework `cmd media_session dispatch` play/pausa/next/previous con app in background, precedente vicino all'inizio in pausa, sessione media-button WalkTape verificata via dumpsys. Play/pausa con display **mWakefulness=Asleep** e posizione audio in avanzamento. Nessuna prova dei tasti/route Bluetooth o del widget lockscreen Motorola.
+- Helper reali `playbackCandidates`/`toQueueItem` estratti in `RealLibrary.kt` per riuso nei test, durata musicale inclusa nei metadata. `PlaybackServiceTest.awaitUi` ora svuota cache UiAutomation su API≥33 prima di ricercare i nodi dinamici.
+
+Esiti finali:
+
+- Build app/androidTest riuscita; ultimo `assembleDebug assembleDebugAndroidTest lintDebug` **BUILD SUCCESSFUL (2m47s)**. APK reinstallati/precompilati sull'AVD. **Lint 0 errori/22 warning**, nessuna baseline nuova.
+- **58/58 JVM**, 0 failure/skip, login reale incluso (XML RealServerTest del 2026-10-14 controllato); `testDebugUnitTest lintDebug -PrealServerTest=true` riuscito (7m53s, suite JVM 3m18s).
+- Suite **T05 1/1**, 121,372 s, tutti i controlli descritti sopra superati.
+- Regressioni pertinenti **9/9 su due esecuzioni**: prima suite 9 test (364,819 s) → 8 passati (coda reale/shuffle, FLAC salvato e ripreso solo su play, 5 DataSource e restore switch/restart senza HTTP/autoplay); UI MP3/FLAC/controlli fallita cercando “Ripetizione: brano”. Dopo refresh cache accessibilità, **ripetuto soltanto quel test: 1/1**, confermato da TestRunner `run finished: 1 tests, 0 failed, 0 ignored` (07:34:24–07:38:15). Il comando shell combinato install/precompile/test ha raggiunto timeout 300 s prima di restituire il riepilogo, ma il test si è concluso e l'esito è stato recuperato dal log Android. Nessun nuovo problema audio riscontrato.
+
+Correzioni/limiti durante il lavoro:
+
+- Prima bozza attendeva ducking su `MediaController.volume`: aspettativa errata, è il gain effettivo al sink a cambiare. Prima verifica monitor attendeva anche una scrittura iniziale 1: il sink usa il default implicito, il monitor resta null fino alla prima scrittura; ora controlla volume pubblico iniziale e scritture reali duck/regain, senza inventare osservazioni.
+- `am broadcast` da UID shell rifiutato con SecurityException: corretto usando root AOSP nel test e verificando la consegna. `input keyevent KEYCODE_MEDIA_*` intermittente (una prova fermata sulla pausa background, una sulla pausa a display spento); passaggio al percorso ufficiale `media_session dispatch`, suite finale passata. Non dichiarato risolto/verificato il percorso tasto fisico sull'emulatore.
+- Revisione documentale T04: chiarito che dopo load fallito `PlaybackPersistence` mantiene owner null; un normale evento player non recupera l'owner. Serve nuova lettura riuscita al cambio profilo/ricreazione servizio. Il recovery di QueueStore dopo save valido è un contratto separato; codice T04 invariato.
+- Consultati sorgenti ufficiali Media3 **1.11.1** (AudioFocusManager, DefaultRenderersFactory, ForwardingAudioSink, MediaCodecAudioRenderer, ExoPlayerImpl, MediaSession resumption); link in ARCHITECTURE. Nessun receiver/callback `onPlaybackResumption` aggiunto; media key da processo/servizio freddo non verificato.
+- Cleanup: profili temporanei rimossi e profilo precedente ripristinato nei finally; env e marker in `/data/local/tmp` rimossi con assenza verificata; emulatore spento. Credenziali locali originali conservate e mai stampate.
+
+File/documenti: `playback/AudioOutputMonitor.kt`, Graph, PlaybackService, androidTest/{FocusInterruptionsTest,RealLibrary,PlaybackServiceTest}; PLAN, ARCHITECTURE, memoria, NEXT_PROMPT e checklist locale. DESIGN/SPEC senza nuovi requisiti o modifiche visive.
+
+Non eseguiti: chiamate vere (risposta/rifiuto), cuffie/USB-C e Bluetooth fisici, widget lockscreen Motorola, T03/T04 hardware, cold-start da media key, TLS reale, TalkBack, timer/suggerimenti. **T05/T07 restano `[ ]`** per le prove hardware; checklist aggiornata in `local/PHONE_TESTS_W05.md`. Prossimo sviluppo indipendente: **W05-T06** (timer con breve dissolvenza e continuazione suggerita opzionale; arresto a fine coda default già verificato in T02).

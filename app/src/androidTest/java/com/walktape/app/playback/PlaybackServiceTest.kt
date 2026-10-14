@@ -11,9 +11,6 @@ import android.view.KeyEvent
 import android.view.MotionEvent
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityNodeInfo
-import androidx.core.net.toUri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -22,15 +19,14 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.walktape.app.Graph
 import com.walktape.app.MainActivity
 import com.walktape.app.core.net.ApiResult
-import com.walktape.app.core.net.OpenSubsonicClient
 import com.walktape.app.core.net.SongDto
-import com.walktape.app.core.net.parseSong
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertEquals
 import org.junit.Assume.assumeTrue
 import org.junit.Test
@@ -51,6 +47,7 @@ class PlaybackServiceTest {
             .associate { it.substringBefore('=') to it.substringAfter('=') }
         val url = config.getValue("ND_URL").replace("localhost", "10.0.2.2")
         val previousActive = Graph.profiles.profiles.first().firstOrNull { it.isActive }?.id
+        val previousSaved = previousActive?.let { Graph.queues.load(it) }
         val added = Graph.profiles.addVerified(
             "Playback e2e ${System.currentTimeMillis()}", url,
             config.getValue("ND_USER"), config.getValue("ND_PASS"), true
@@ -116,12 +113,14 @@ class PlaybackServiceTest {
             val deadline = System.currentTimeMillis() + 10_000
             while (System.currentTimeMillis() < deadline) {
                 cleared = withContext(Dispatchers.Main) {
-                    !connected.playWhenReady && connected.mediaItemCount == 0 && connected.repeatMode == Player.REPEAT_MODE_OFF
+                    !connected.playWhenReady && connected.mediaItemCount == (previousSaved?.items?.size ?: 0) &&
+                        connected.repeatMode == (previousSaved?.repeatMode ?: Player.REPEAT_MODE_OFF) &&
+                        connected.currentMediaItem?.mediaId == previousSaved?.currentId
                 }
                 if (cleared) break
                 delay(250)
             }
-            assertTrue("Profile switch/removal must stop and clear playback", cleared)
+            assertTrue("Profile switch/removal must stop and restore the other profile, never autoplay", cleared)
         } finally {
             withContext(Dispatchers.Main) { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
             withContext(Dispatchers.Main) { controller?.pause(); controller?.release() }
@@ -129,27 +128,6 @@ class PlaybackServiceTest {
             Graph.profiles.remove(testId)
         }
     }
-
-    private suspend fun playbackCandidates(client: OpenSubsonicClient): List<SongDto> {
-        val found = mutableMapOf<String, SongDto>()
-        repeat(5) {
-            val result = client.request("getRandomSongs", listOf("size" to "500"))
-            if (result is ApiResult.Success) {
-                result.value.getAsJsonObject("randomSongs")?.getAsJsonArray("song")?.forEach {
-                    val song = parseSong(it.asJsonObject)
-                    if (song.duration > 30 && song.suffix in listOf("mp3", "flac")) found.putIfAbsent(song.suffix!!, song)
-                }
-            }
-            if (found.size == 2) return listOf(found.getValue("mp3"), found.getValue("flac"))
-        }
-        return emptyList()
-    }
-
-    private fun SongDto.toQueueItem(profileId: Long): MediaItem = MediaItem.Builder()
-        .setMediaId(id)
-        .setUri(SubsonicStream.uri(profileId, id).toUri())
-        .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).build())
-        .build()
 
     private suspend fun verifyInAppControlsAndSessionSync(controller: MediaController, songs: List<SongDto>, profileId: Long) {
         val bridge = Graph.playback
@@ -288,6 +266,60 @@ class PlaybackServiceTest {
     }
 
     /** Queue sheet: entries, remove, move via accessibility action, play-from-row, shuffle+restore. */
+    @Test fun realSavedFlacResumesAtPositionOnlyAfterExplicitPlay() = runBlocking {
+        val env = File("/data/local/tmp/walktape-test-server.env")
+        assumeTrue("Opt-in server configuration required", env.exists())
+        val config = env.readLines().filter { it.isNotBlank() && !it.startsWith('#') }
+            .associate { it.substringBefore('=') to it.substringAfter('=') }
+        val previous = Graph.database.profileDao().active()?.id
+        val url = config.getValue("ND_URL").replace("localhost", "10.0.2.2")
+        suspend fun add(name: String): Long {
+            val result = Graph.profiles.addVerified("$name ${System.nanoTime()}", url,
+                config.getValue("ND_USER"), config.getValue("ND_PASS"), true)
+            assertTrue("Real login must succeed (details suppressed)", result is ApiResult.Success)
+            return (result as ApiResult.Success).value
+        }
+        val a = add("Live saved A"); val b = add("Live saved B")
+        var controller: MediaController? = null
+        var activity: android.app.Activity? = null
+        try {
+            Graph.profiles.activate(a)
+            val launched = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            activity = launched
+            withContext(Dispatchers.Main) { launched.window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            val songs = playbackCandidates(Graph.profiles.clientFor(a)!!)
+            val future = withContext(Dispatchers.Main) {
+                MediaController.Builder(context, SessionToken(context, ComponentName(context, PlaybackService::class.java))).buildAsync()
+            }
+            val c = future.get(20, TimeUnit.SECONDS); controller = c
+            withContext(Dispatchers.Main) { c.setMediaItems(songs.map { it.toQueueItem(a) }, 1, 10_000); c.prepare(); c.play() }
+            awaitPlayback("Live FLAC must advance from seek position") { c.isPlaying && c.currentPosition > 10_500 }
+            withContext(Dispatchers.Main) { c.pause(); c.repeatMode = Player.REPEAT_MODE_ALL; c.shuffleModeEnabled = true }
+            awaitPlayback("Pause and shuffle acknowledged") { !c.playWhenReady && c.shuffleModeEnabled }
+            delay(500)
+            Graph.profiles.activate(b)
+            awaitPlayback("Other profile must stay paused") { c.mediaItemCount == 0 && !c.playWhenReady }
+            val saved = Graph.queues.load(a)!!
+            assertTrue("Playing/seek position must have been durably saved", saved.positionMs > 10_000)
+            assertTrue(saved.shuffle)
+            Graph.profiles.activate(a)
+            awaitPlayback("Restored live queue is idle and paused at saved FLAC occurrence") {
+                c.currentMediaItem?.mediaId == saved.currentId && c.currentPosition == saved.positionMs &&
+                    c.playbackState == Player.STATE_IDLE && !c.playWhenReady && c.shuffleModeEnabled
+            }
+            delay(1000)
+            assertFalse(withContext(Dispatchers.Main) { c.isPlaying })
+            withContext(Dispatchers.Main) { Graph.playback.togglePlayPause() }
+            awaitPlayback("Explicit in-app resume must stream at the saved position") {
+                c.isPlaying && c.currentMediaItem?.mediaId == saved.currentId && c.currentPosition > saved.positionMs + 500
+            }
+        } finally {
+            withContext(Dispatchers.Main) { controller?.pause(); controller?.release(); activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+            if (previous != null) Graph.profiles.activate(previous)
+            Graph.profiles.remove(a); Graph.profiles.remove(b); Graph.queues.flush()
+        }
+    }
+
     @Test fun realQueueOperationsPreserveOccurrencesAndShuffle() = runBlocking {
         val env = File("/data/local/tmp/walktape-test-server.env")
         assumeTrue("Opt-in server configuration required", env.exists())
@@ -449,6 +481,7 @@ class PlaybackServiceTest {
         extra: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
+            if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
             val root = instrumentation.uiAutomation.rootInActiveWindow
             if (root != null) {
                 val matches = mutableListOf<AccessibilityNodeInfo>()

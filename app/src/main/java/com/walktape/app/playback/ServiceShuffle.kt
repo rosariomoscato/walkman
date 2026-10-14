@@ -10,9 +10,21 @@ import androidx.media3.exoplayer.source.ShuffleOrder
 class ServiceShuffle(private val player: ExoPlayer) : Player.Listener {
     private var order = emptyList<String>()
     private var enabling = false
+    private var restoring = false
 
     override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+        if (restoring) return
         if (shuffleModeEnabled) prepareEnable() else order = emptyList()
+    }
+
+    /** Install a persisted permutation exactly, without generating another random order. */
+    fun restore(saved: List<String>, enabled: Boolean) {
+        restoring = true
+        try {
+            order = saved
+            player.shuffleModeEnabled = enabled
+            if (enabled) apply((0 until player.mediaItemCount).map { player.getMediaItemAt(it).mediaId })
+        } finally { restoring = false }
     }
 
     fun prepareEnable() {
@@ -24,7 +36,7 @@ class ServiceShuffle(private val player: ExoPlayer) : Player.Listener {
 
     override fun onEvents(player: Player, events: Player.Events) {
         if (events.containsAny(Player.EVENT_TIMELINE_CHANGED, Player.EVENT_SHUFFLE_MODE_ENABLED_CHANGED)) {
-            if (enabling) return
+            if (enabling || restoring) return
             if (!player.shuffleModeEnabled || player.mediaItemCount == 0) { order = emptyList(); return }
             val items = (0 until player.mediaItemCount).map { player.getMediaItemAt(it) }
             val ids = items.map { it.mediaId }

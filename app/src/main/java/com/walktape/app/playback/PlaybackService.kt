@@ -30,14 +30,15 @@ import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Media3 session service: owns the ExoPlayer, feeds it through the authenticated stream data
- * source and follows the active profile — switching profile stops playback and clears the queue
- * (queue restore per profile belongs to W05-T04).
+ * source and follows the active profile — switching profile stops playback before restoring
+ * the profile's saved queue without preparing or starting audio.
  */
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class PlaybackService : MediaSessionService() {
 
     private val connection = MutableStateFlow<StreamProfile?>(null)
     private lateinit var mediaSession: MediaSession
+    private lateinit var persistence: PlaybackPersistence
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
@@ -45,7 +46,8 @@ class PlaybackService : MediaSessionService() {
         val dataSourceFactory = SubsonicStreamDataSourceFactory(
             OpenSubsonicClient.streamingHttpClient(), "WalkTape"
         ) { connection.value }
-        val player = ExoPlayer.Builder(this)
+        Graph.audioOutput.reset()
+        val player = ExoPlayer.Builder(this, Graph.audioOutput.renderers(this))
             .setDeviceVolumeControlEnabled(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
             .setAudioAttributes(
@@ -87,24 +89,8 @@ class PlaybackService : MediaSessionService() {
                 }
             })
             .build()
-        scope.launch {
-            var previous: Long? = null
-            Graph.profiles.profiles.collect { profiles ->
-                val active = profiles.firstOrNull { it.isActive }
-                if (active?.id != previous) {
-                    connection.value = null
-                    previous = active?.id
-                    mediaSession.player.pause()
-                    mediaSession.player.stop()
-                    mediaSession.player.clearMediaItems()
-                    mediaSession.player.repeatMode = Player.REPEAT_MODE_OFF
-                    mediaSession.player.shuffleModeEnabled = false
-                    connection.value = active?.let { profile ->
-                        Graph.profiles.clientFor(profile.id)?.let { StreamProfile(profile.id, it) }
-                    }
-                }
-            }
-        }
+        persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) { connection.value = it }
+        persistence.start()
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -116,11 +102,13 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        persistence.close()
         scope.cancel()
         mediaSession.run {
             player.release()
             release()
         }
+        Graph.audioOutput.reset()
         super.onDestroy()
     }
 }

@@ -70,6 +70,13 @@ import java.util.Locale
 @Composable
 fun PlaybackControls() {
     val state by Graph.playback.state.collectAsStateWithLifecycle()
+    val failedProfiles by Graph.queues.failedProfiles.collectAsStateWithLifecycle()
+    val profiles by Graph.profiles.profiles.collectAsStateWithLifecycle(emptyList())
+    if (profiles.firstOrNull { it.isActive }?.id in failedProfiles) {
+        Surface(color = MaterialTheme.colorScheme.errorContainer) {
+            Text(stringResource(R.string.queue_storage_error), Modifier.fillMaxWidth().padding(12.dp))
+        }
+    }
     var expanded by rememberSaveable { mutableStateOf(false) }
     var queueOpen by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.hasMedia) { if (!state.hasMedia) { expanded = false; queueOpen = false } }

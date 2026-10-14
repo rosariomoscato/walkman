@@ -4,6 +4,8 @@
     <string name="playback_open_controls">Apri controlli di riproduzione</string>
     <string name="playback_unknown_title">Brano in riproduzione</string>
     <string name="playback_play">Riproduci</string>
+    <string name="playback_resume">Riprendi ascolto</string>
+    <string name="queue_storage_error">Impossibile salvare o ripristinare la coda. Controlla lo spazio disponibile e riapri l\'app.</string>
     <string name="playback_pause">Pausa</string>
     <string name="playback_previous">Precedente o inizio brano</string>
     <string name="playback_next">Successivo</string>
