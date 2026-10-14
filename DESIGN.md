@@ -85,6 +85,8 @@ Incremento W05-T04: la sezione **Continua ascolto** della Panoramica mostra il b
 
 ## Icona app (provvisoria)
 
+Bozza W05-T06 (verifiche aperte): nel pannello scrollabile, sezione Timer con preset 15/30/60/90 min, Fine brano/Fine coda e disattivazione; conto alla rovescia testuale. Fine album prevista ma non ancora esposta. Nelle impostazioni interruttore suggerimenti (default off); a fine coda pulsante di continuazione solo con risultati reali del server. Palette invariata; accessibilità/layout dei nuovi controlli da verificare prima del completamento.
+
 - Adaptive icon v1: fondo `#2A4D9B`, foreground vettoriale con due bobine in `#F4F1EA` e dettaglio `#F06A21`. Icona definitiva originale prevista in wave 12 (W12-T04).
 
 ## Fuori perimetro in v1

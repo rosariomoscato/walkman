@@ -28,6 +28,8 @@
     <string name="lock_unlock">Unlock</string>
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_version">Version</string>
+    <string name="settings_suggestions">Continuation suggestions</string>
+    <string name="settings_suggestions_help">At the end of the queue, offers to continue with similar songs when the server can provide them.</string>
 
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_description">Technical report of the device. Sensitive data (URLs with credentials, tokens) are redacted automatically.</string>

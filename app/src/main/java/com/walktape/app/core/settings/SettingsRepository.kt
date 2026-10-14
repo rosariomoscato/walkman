@@ -17,6 +17,7 @@ class SettingsRepository(private val context: Context) {
 
     private val themeKey = stringPreferencesKey("theme_mode")
     private val appLockKey = booleanPreferencesKey("app_lock_enabled")
+    private val suggestionsKey = booleanPreferencesKey("suggestions_enabled")
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { prefs ->
         AppSettings(
@@ -24,6 +25,7 @@ class SettingsRepository(private val context: Context) {
                 ThemeMode.entries.firstOrNull { it.name == stored }
             } ?: ThemeMode.SYSTEM,
             appLockEnabled = prefs[appLockKey] ?: false,
+            suggestionsEnabled = prefs[suggestionsKey] ?: false,
             loaded = true
         )
     }
@@ -37,6 +39,12 @@ class SettingsRepository(private val context: Context) {
     suspend fun setAppLockEnabled(enabled: Boolean) {
         context.settingsStore.edit { prefs ->
             prefs[appLockKey] = enabled
+        }
+    }
+
+    suspend fun setSuggestionsEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs ->
+            prefs[suggestionsKey] = enabled
         }
     }
 

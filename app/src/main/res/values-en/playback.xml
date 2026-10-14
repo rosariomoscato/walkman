@@ -39,4 +39,13 @@
     <string name="selection_play_next">Play next</string>
     <string name="selection_add_to_queue">Add to queue</string>
     <string name="selection_queue_unavailable">Some items are no longer available. Refresh the library and try again.</string>
+    <string name="playback_timer_title">Sleep timer</string>
+    <string name="playback_timer_off">Turn off timer</string>
+    <string name="playback_timer_minutes">%1$d min</string>
+    <string name="playback_timer_track">End of track</string>
+    <string name="playback_timer_queue">End of queue</string>
+    <string name="playback_timer_remaining">Timer active: %1$s</string>
+    <string name="playback_timer_active_track">Timer active: end of track</string>
+    <string name="playback_timer_active_queue">Timer active: end of queue</string>
+    <string name="playback_suggestion_continue">Continue with similar songs (%1$d)</string>
 </resources>

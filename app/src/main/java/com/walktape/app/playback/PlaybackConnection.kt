@@ -229,6 +229,42 @@ class PlaybackConnection(private val context: Context) {
         job.invokeOnCompletion { editJobs.remove(job) }
     }
 
+    /** Append the suggested continuation to the ended queue and start playing it. */
+    fun applyContinuationSuggestion() {
+        val items = (Graph.suggestion.state.value as? ContinuationSuggestion.State.Available)?.items ?: return
+        val job = scope.launch { editMutex.withLock {
+            val player = withTimeoutOrNull(CONNECT_TIMEOUT_MS) { controller.first { it != null } }
+            if (player == null || !player.isCommandAvailable(Player.COMMAND_CHANGE_MEDIA_ITEMS)) {
+                requestFailure = PlaybackFailure.REQUEST
+                refresh()
+                return@withLock
+            }
+            val firstSuggested = player.mediaItemCount
+            player.addMediaItems(items)
+            // Wait for the service to normalize queue identities before anchoring the jump.
+            val ready = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
+                while ((0 until player.mediaItemCount).any {
+                        !player.getMediaItemAt(it).mediaId.startsWith(QueueIdentity.PREFIX)
+                    }) delay(25)
+                true
+            } == true
+            if (!ready) {
+                requestFailure = PlaybackFailure.REQUEST
+                refresh()
+                return@withLock
+            }
+            if (player.isCommandAvailable(Player.COMMAND_SEEK_TO_MEDIA_ITEM)) player.seekTo(firstSuggested, 0)
+            if (player.playbackState == Player.STATE_IDLE &&
+                player.isCommandAvailable(Player.COMMAND_PREPARE)) player.prepare()
+            if (player.isCommandAvailable(Player.COMMAND_PLAY_PAUSE)) player.play()
+            Graph.suggestion.consumed()
+            requestFailure = null
+            refresh()
+        } }
+        editJobs.add(job)
+        job.invokeOnCompletion { editJobs.remove(job) }
+    }
+
     /** Shuffle the queue without repetitions, keeping the current track; off restores the saved order. */
     fun toggleShuffle() {
         val player = _controller.value ?: return

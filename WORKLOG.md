@@ -497,3 +497,21 @@ Correzioni/limiti durante il lavoro:
 File/documenti: `playback/AudioOutputMonitor.kt`, Graph, PlaybackService, androidTest/{FocusInterruptionsTest,RealLibrary,PlaybackServiceTest}; PLAN, ARCHITECTURE, memoria, NEXT_PROMPT e checklist locale. DESIGN/SPEC senza nuovi requisiti o modifiche visive.
 
 Non eseguiti: chiamate vere (risposta/rifiuto), cuffie/USB-C e Bluetooth fisici, widget lockscreen Motorola, T03/T04 hardware, cold-start da media key, TLS reale, TalkBack, timer/suggerimenti. **T05/T07 restano `[ ]`** per le prove hardware; checklist aggiornata in `local/PHONE_TESTS_W05.md`. Prossimo sviluppo indipendente: **W05-T06** (timer con breve dissolvenza e continuazione suggerita opzionale; arresto a fine coda default già verificato in T02).
+
+## 2026-10-14 — Commit W05-T04+T05
+
+Operazione Git richiesta esplicitamente dall'utente.
+
+- Ispezionati status, diff e stage: 27 file intenzionali (codice, test, schema 5.json, documenti); nessun APK/artefatto di build, configurazione privata o valore segreto. Verificato ignore di `local/`, `local.properties` e `NEXT_PROMPT.md`; staged diff --check senza errori.
+- Commit **`1252406`** — “Wave 05: persistenza coda per profilo e interruzioni audio (T04, T05 parziale)” (27 file, 2.039 inserimenti/62 rimozioni), messaggio con verifiche allegate e limiti hardware espliciti. Identità per-commit non persistita.
+- Working tree pulita subito dopo il commit. **Nessun push**: main avanti di 3 su origin/main (74be2d0, afe7f9f, 1252406); push solo su nuova richiesta esplicita.
+
+Prossima azione invariata: **W05-T06**; prove telefono T03/T04/T05 aperte.
+
+## 2026-10-14 — W05-T06: checkpoint parziale su richiesta
+
+- Utente: iniziare T06 e rimandare prove complessive/hardware alla fine di W05; successivamente richiesto commit e prosecuzione. Task resta `[ ]`.
+- Bozza: SleepTimer in Graph agganciato al servizio (tempo/brano/coda, dissolvenza gain player, volume Android invariato); ContinuationSuggestion/SuggestionSelection, getSimilarSongs2, opt-in DataStore default off; controlli IT/EN nel pannello e toggle impostazioni. Fine album distinta dalla fine coda **ancora da implementare**.
+- Build principali e androidTest riusciti dopo correzione import/coroutine; 67/67 JVM, 0 skipped (9 nuovi). Prima esecuzione Android con APK app stantio: NoSuchMethodError, ricompilato/reinstallato. Esecuzione successiva 3 test (178,507 s): fine coda reale/valutazione suggerimenti 1 passato; test timer fallito perché non riprendeva dopo pausa brano; apply fixture fallito perché Graph.playback non connesso. Correzioni nel working tree, inclusa attesa normalizzazione identità: **non ancora ricompilate/verificate**.
+- Lint T06, regressioni, fine album, lifecycle e isolamento suggerimenti/timer restano aperti. Non presentare l'apply con byte fixture non decodificabili come streaming verificato. Test Motorola a fine wave.
+- Commit checkpoint autorizzato; stage solo codice/test/documenti intenzionali, segreti/config locali/APK esclusi. Nessun push. Prossima azione: ricompilare entrambi gli APK e rieseguire i test dedicati, quindi completare gli aspetti mancanti.

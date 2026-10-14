@@ -33,6 +33,12 @@ class SettingsViewModel(
         }
     }
 
+    fun setSuggestionsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setSuggestionsEnabled(enabled)
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

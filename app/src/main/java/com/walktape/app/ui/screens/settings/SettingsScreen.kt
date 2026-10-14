@@ -81,6 +81,11 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setAppLockEnabled
         )
 
+        SuggestionSetting(
+            enabled = settings.suggestionsEnabled,
+            onCheckedChange = viewModel::setSuggestionsEnabled
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -152,6 +157,30 @@ private fun AppLockSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Unit)
         if (capability == BiometricManager.BIOMETRIC_SUCCESS) {
             Switch(checked = enabled, onCheckedChange = onCheckedChange)
         }
+    }
+}
+
+@Composable
+private fun SuggestionSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.settings_suggestions),
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = stringResource(R.string.settings_suggestions_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = onCheckedChange)
     }
 }
 

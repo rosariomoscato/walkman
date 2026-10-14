@@ -39,4 +39,13 @@
     <string name="selection_play_next">Dopo il corrente</string>
     <string name="selection_add_to_queue">Aggiungi in coda</string>
     <string name="selection_queue_unavailable">Alcuni elementi non sono più disponibili. Aggiorna la libreria e riprova.</string>
+    <string name="playback_timer_title">Timer di ascolto</string>
+    <string name="playback_timer_off">Disattiva timer</string>
+    <string name="playback_timer_minutes">%1$d min</string>
+    <string name="playback_timer_track">Fine brano</string>
+    <string name="playback_timer_queue">Fine coda</string>
+    <string name="playback_timer_remaining">Timer attivo: %1$s</string>
+    <string name="playback_timer_active_track">Timer attivo: fine del brano</string>
+    <string name="playback_timer_active_queue">Timer attivo: fine della coda</string>
+    <string name="playback_suggestion_continue">Continua con brani simili (%1$d)</string>
 </resources>

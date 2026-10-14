@@ -24,8 +24,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -62,6 +64,8 @@ class PlaybackService : MediaSessionService() {
             .build()
         val shuffle = ServiceShuffle(player)
         player.addListener(shuffle)
+        Graph.playbackTimer.attach(player)
+        player.addListener(automationListener)
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(PendingIntent.getActivity(this, 0,
                 Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -91,6 +95,30 @@ class PlaybackService : MediaSessionService() {
             .build()
         persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) { connection.value = it }
         persistence.start()
+        scope.launch {
+            // A profile switch stops playback: no timer or suggestion may outlive its queue.
+            Graph.profiles.profiles.map { profiles -> profiles.firstOrNull { it.isActive }?.id }
+                .distinctUntilChanged().collect {
+                    Graph.playbackTimer.cancel()
+                    Graph.suggestion.reset()
+                }
+        }
+    }
+
+    /** Queue-end automation: the suggestion is fetched only for the active profile's server. */
+    private val automationListener = object : Player.Listener {
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            val player = mediaSession.player
+            if (playbackState == Player.STATE_ENDED) {
+                val item = player.currentMediaItem
+                val profile = connection.value
+                Graph.suggestion.evaluate(profile?.client, profile?.id ?: -1L,
+                    item?.mediaMetadata?.extras?.getString(QueueIdentity.SONG),
+                    item?.mediaMetadata?.title?.toString())
+            } else {
+                Graph.suggestion.reset()
+            }
+        }
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
@@ -105,6 +133,9 @@ class PlaybackService : MediaSessionService() {
         persistence.close()
         scope.cancel()
         mediaSession.run {
+            player.removeListener(automationListener)
+            Graph.playbackTimer.detach()
+            Graph.suggestion.reset()
             player.release()
             release()
         }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -60,8 +61,10 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.walktape.app.Graph
 import com.walktape.app.R
+import com.walktape.app.playback.ContinuationSuggestion
 import com.walktape.app.playback.PlaybackFailure
 import com.walktape.app.playback.PlaybackSnapshot
+import com.walktape.app.playback.SleepTimer
 import kotlin.math.roundToInt
 import java.util.Locale
 
@@ -144,6 +147,8 @@ fun PlaybackControls() {
                     contentDescription = null)
                 Text(repeatLabel, Modifier.padding(start = 8.dp))
             }
+            TimerSection()
+            if (state.ended) SuggestionButton()
             Text(stringResource(R.string.playback_volume, state.volume, state.maxVolume))
             val volumeLabel = stringResource(R.string.playback_volume_description)
             Box(Modifier.fillMaxWidth().clearAndSetSemantics {
@@ -169,6 +174,50 @@ fun PlaybackControls() {
         }
     }
     if (queueOpen) QueueSheet(onDismiss = { queueOpen = false })
+}
+
+@Composable
+private fun TimerSection() {
+    val timer by Graph.playbackTimer.state.collectAsStateWithLifecycle()
+    Text(stringResource(R.string.playback_timer_title), style = MaterialTheme.typography.titleSmall)
+    if (timer.armed) {
+        val active = when (timer.mode) {
+            SleepTimer.Mode.DURATION -> stringResource(R.string.playback_timer_remaining,
+                timeLabel(timer.remainingMs ?: 0))
+            SleepTimer.Mode.TRACK -> stringResource(R.string.playback_timer_active_track)
+            SleepTimer.Mode.QUEUE -> stringResource(R.string.playback_timer_active_queue)
+            null -> ""
+        }
+        Text(active, style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        TextButton(onClick = Graph.playbackTimer::cancel, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.playback_timer_off))
+        }
+    }
+    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(15, 30, 60, 90).forEach { minutes ->
+            TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.DURATION, minutes * 60_000L) }) {
+                Text(stringResource(R.string.playback_timer_minutes, minutes))
+            }
+        }
+        TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.TRACK) }) {
+            Text(stringResource(R.string.playback_timer_track))
+        }
+        TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.QUEUE) }) {
+            Text(stringResource(R.string.playback_timer_queue))
+        }
+    }
+}
+
+@Composable
+private fun SuggestionButton() {
+    val suggestion by Graph.suggestion.state.collectAsStateWithLifecycle()
+    val available = suggestion as? ContinuationSuggestion.State.Available ?: return
+    TextButton(onClick = Graph.playback::applyContinuationSuggestion, modifier = Modifier.fillMaxWidth()) {
+        Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
+        Text(stringResource(R.string.playback_suggestion_continue, available.items.size),
+            Modifier.padding(start = 8.dp))
+    }
 }
 
 @Composable

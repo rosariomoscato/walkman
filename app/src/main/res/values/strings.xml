@@ -28,6 +28,8 @@
     <string name="lock_unlock">Sblocca</string>
     <string name="settings_diagnostics">Diagnostica</string>
     <string name="settings_version">Versione</string>
+    <string name="settings_suggestions">Suggerimenti di continuazione</string>
+    <string name="settings_suggestions_help">Alla fine della coda propone di continuare con brani simili, se il server è in grado di fornirli.</string>
 
     <string name="diagnostics_title">Diagnostica</string>
     <string name="diagnostics_description">Rapporto tecnico del dispositivo. I dati sensibili (URL con credenziali, token) vengono oscurati automaticamente.</string>

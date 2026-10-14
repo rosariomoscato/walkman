@@ -103,6 +103,8 @@ Completamento 2026-10-13: **W05-T04 completato**. Room v5 (queue_state/queue_ent
 
 Incremento 2026-10-14: **W05-T05 verificato per la parte emulatore, resta `[ ]` per hardware**. Focus gestito da Media3: ducking con gain effettivo al sink 0,2→1 e volume Android/pubblico invariati; perdita transitoria con suppression e auto-resume, pausa manuale che annulla la ripresa, perdita permanente senza autoplay. Evento protetto AUDIO_BECOMING_NOISY sintetico via root sull'AVD AOSP → pausa e ripresa solo manuale. Comandi Android `media_session dispatch` play/pausa/avanti/indietro in background; play/pausa e avanzamento reale a display Asleep. Nuovo monitor locale volatile delle scritture gain al sink, senza elaborazione audio. Verifiche: suite T05 **1/1** (121 s), regressioni pertinenti **9/9 su due esecuzioni** (8 passati nella prima, test UI ripetuto dopo refresh cache accessibilità: 1/1), **58/58 JVM** con login reale, build e lint 0 errori/22 warning. `input keyevent` multimediali intermittenti sull'AVD: non attestano tasti fisici/Bluetooth. Chiamate, cuffie fisiche, route Bluetooth e lockscreen Motorola ancora da provare (`local/PHONE_TESTS_W05.md`); T07 aperto. Env/marker rimossi, emulatore spento. Prossimo sviluppo indipendente: **W05-T06**.
 
+Checkpoint 2026-10-14 **W05-T06 ancora `[ ]`**: bozza timer tempo/brano/coda e suggerimenti opt-in; fine album distinta ancora mancante. Build e 67/67 JVM riusciti; Android 1/3 passato, due correzioni da ricompilare/verificare. Le prove hardware complessive saranno eseguite alla fine di W05, su richiesta dell'utente; nessuna chiusura anticipata di T05/T07.
+
 ## Wave 06 — Player TPS-L2
 
 

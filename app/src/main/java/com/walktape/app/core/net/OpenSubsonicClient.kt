@@ -112,7 +112,8 @@ class OpenSubsonicClient(
             } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
         }
 
-    suspend fun genres(): ApiResult<List<GenreDto>> = when (val result = request("getGenres")) {
+    suspend fun genres(): ApiResult<List<GenreDto>> =
+        when (val result = request("getGenres")) {
         is ApiResult.Failure -> result
         is ApiResult.Success -> try {
             val container = result.value.obj("genres") ?: return ApiResult.Failure(ApiError.InvalidResponse)
@@ -124,6 +125,18 @@ class OpenSubsonicClient(
             })
         } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
     }
+
+    /**
+     * getSimilarSongs2 depends on server-side integrations (for example Last.fm): any failure
+     * or empty answer means "continuation not available", never an error for the user.
+     */
+    suspend fun similarSongs(id: String, count: Int): ApiResult<List<SongDto>> =
+        when (val result = request("getSimilarSongs2", listOf("id" to id, "count" to count.toString()))) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> try {
+                ApiResult.Success(similarSongsFrom(result.value))
+            } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+        }
 
     /** Binary cover art; a JSON error envelope on HTTP 200 is treated as a protocol failure. */
     suspend fun coverArt(coverArtId: String, sizePx: Int?): ApiResult<ByteArray> {
@@ -269,6 +282,12 @@ class OpenSubsonicClient(
             is SocketTimeoutException -> ApiError.Timeout
             is UnknownHostException, is ConnectException -> ApiError.Unreachable
             else -> if (e is java.io.InterruptedIOException) ApiError.Timeout else ApiError.Network
+        }
+
+        /** Pure parsing of a getSimilarSongs2 response body for unit tests; throws on a missing container. */
+        internal fun similarSongsFrom(root: JsonObject): List<SongDto> {
+            val container = root.obj("similarSongs2") ?: throw IllegalArgumentException()
+            return container.getAsJsonArray("song")?.map { parseSong(it.asJsonObject) } ?: emptyList()
         }
 
         internal fun decode(body: String): ApiResult<JsonObject> = try {

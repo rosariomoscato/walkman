@@ -14,6 +14,8 @@ import com.walktape.app.core.library.PlaylistIndex
 import com.walktape.app.playback.PlaybackConnection
 import com.walktape.app.playback.QueueStore
 import com.walktape.app.playback.AudioOutputMonitor
+import com.walktape.app.playback.ContinuationSuggestion
+import com.walktape.app.playback.SleepTimer
 import java.io.File
 
 @Suppress("StaticFieldLeak")
@@ -41,6 +43,8 @@ object Graph {
 
     val playback: PlaybackConnection by lazy { PlaybackConnection(appContext) }
     val audioOutput = AudioOutputMonitor()
+    val playbackTimer = SleepTimer()
+    val suggestion = ContinuationSuggestion()
 
     fun client(address: ServerAddress, credentials: Credentials) = OpenSubsonicClient(address, credentials)
 
