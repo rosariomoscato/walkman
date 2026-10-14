@@ -107,9 +107,15 @@ class PlaybackPersistence(
         setConnection(client?.let { StreamProfile(id, it) })
     }
 
-    private fun restore(queue: SavedQueue) {
+    private suspend fun restore(queue: SavedQueue) {
+        val albumIds = queue.items.map { it.songId }.distinct().chunked(500).flatMap {
+            Graph.database.libraryDao().songsByIds(queue.profileId, it)
+        }.associate { it.id to it.albumId }
         val items = queue.items.map { item ->
-            val extras = Bundle().apply { putString(QueueIdentity.SONG, item.songId) }
+            val extras = Bundle().apply {
+                putString(QueueIdentity.SONG, item.songId)
+                putString(SleepTimer.ALBUM_ID, albumIds[item.songId])
+            }
             MediaItem.Builder().setMediaId(item.entryId).setUri(SubsonicStream.uri(queue.profileId, item.songId).toUri())
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist)
                     .setAlbumTitle(item.album).setDurationMs(item.durationMs).setExtras(extras).build()).build()

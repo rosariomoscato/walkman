@@ -1,6 +1,7 @@
 package com.walktape.app.playback
 
 import androidx.core.net.toUri
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.walktape.app.Graph
@@ -22,11 +23,13 @@ import kotlinx.coroutines.withContext
  * to the last played one. A disabled setting, a server without the integration or an empty
  * answer simply leaves no suggestion. Items carry logical stream URIs only, never secrets.
  */
+@androidx.annotation.MainThread
 class ContinuationSuggestion {
     sealed interface State {
         data object Idle : State
         data object Unavailable : State
-        data class Available(val items: List<MediaItem>, val sourceTitle: String) : State
+        data class Available(val items: List<MediaItem>, val sourceTitle: String,
+            val profileId: Long, val sourceSongId: String) : State
     }
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -36,6 +39,7 @@ class ContinuationSuggestion {
 
     fun evaluate(client: OpenSubsonicClient?, profileId: Long, lastSongId: String?, lastTitle: String?) {
         fetchJob?.cancel()
+        mutable.value = State.Idle
         if (client == null || lastSongId.isNullOrBlank()) {
             mutable.value = State.Idle
             return
@@ -48,19 +52,20 @@ class ContinuationSuggestion {
             val result = withContext(Dispatchers.IO) {
                 client.similarSongs(lastSongId, SuggestionSelection.REQUEST_COUNT)
             }
+            if (!Graph.settingsRepository.settings.first().suggestionsEnabled) return@launch
             mutable.value = when (result) {
                 is ApiResult.Failure -> State.Unavailable
                 is ApiResult.Success -> {
                     val songs = SuggestionSelection.candidates(result.value, lastSongId)
                     if (songs.isEmpty()) State.Unavailable
-                    else State.Available(songs.map { it.toSuggestionItem(profileId) }, lastTitle.orEmpty())
+                    else State.Available(songs.map { it.toSuggestionItem(profileId) }, lastTitle.orEmpty(), profileId, lastSongId)
                 }
             }
         }
     }
 
     fun consumed() {
-        mutable.value = State.Idle
+        reset()
     }
 
     fun reset() {
@@ -79,6 +84,7 @@ internal fun SongDto.toSuggestionItem(profileId: Long): MediaItem = MediaItem.Bu
             .setArtist(displayArtist ?: artist)
             .setAlbumTitle(album)
             .setDurationMs(duration * 1000L)
+            .setExtras(Bundle().apply { putString(SleepTimer.ALBUM_ID, albumId) })
             .build()
     )
     .build()

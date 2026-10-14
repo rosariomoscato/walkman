@@ -7,6 +7,7 @@ data class PlaybackSnapshot(
     val title: String = "",
     val artist: String = "",
     val album: String = "",
+    val albumId: String? = null,
     val positionMs: Long = 0,
     val durationMs: Long? = null,
     val isPlaying: Boolean = false,

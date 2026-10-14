@@ -515,3 +515,47 @@ Prossima azione invariata: **W05-T06**; prove telefono T03/T04/T05 aperte.
 - Build principali e androidTest riusciti dopo correzione import/coroutine; 67/67 JVM, 0 skipped (9 nuovi). Prima esecuzione Android con APK app stantio: NoSuchMethodError, ricompilato/reinstallato. Esecuzione successiva 3 test (178,507 s): fine coda reale/valutazione suggerimenti 1 passato; test timer fallito perché non riprendeva dopo pausa brano; apply fixture fallito perché Graph.playback non connesso. Correzioni nel working tree, inclusa attesa normalizzazione identità: **non ancora ricompilate/verificate**.
 - Lint T06, regressioni, fine album, lifecycle e isolamento suggerimenti/timer restano aperti. Non presentare l'apply con byte fixture non decodificabili come streaming verificato. Test Motorola a fine wave.
 - Commit checkpoint autorizzato; stage solo codice/test/documenti intenzionali, segreti/config locali/APK esclusi. Nessun push. Prossima azione: ricompilare entrambi gli APK e rieseguire i test dedicati, quindi completare gli aspetti mancanti.
+
+## 2026-10-14 — Commit checkpoint T06 e completamento successivo
+
+- Su richiesta esplicita: ispezionati status/diff/log ultimi 10, stage e diff --check, ignore dei file riservati verificati. Commit **`0a9e844` — “Wave 05: checkpoint timer e suggerimenti (T06 parziale)”**, 25 file (928 inserimenti/5 rimozioni), identità per-commit senza configurazione persistita. Working tree pulita subito dopo, main avanti di 4; nessun push. Il completamento descritto sotto **è successivo al checkpoint e non committato**.
+
+Task **W05-T06 completato** per implementazione e verifiche pertinenti; W05-T05/T07 conservano verifiche hardware finali aperte, su richiesta dell'utente.
+
+Implementazione successiva:
+
+- SleepTimer: tempo monotono elapsedRealtime, pausa alla scadenza con gain temporaneo negli ultimi 3 s (STREAM_MUSIC invariato), cancel mid-fade ripristina 1, detach cancella prima del rilascio player. Nessun riferimento al player rilasciato e nessuna persistenza timer/process-death. Resta operativo senza controller UI.
+- Fine **album distinto dalla coda**, basato su albumId negli extras: gruppo consecutivo dell'album corrente nel traversal reale, stop al cambio album/termine del gruppo. Brani ripetuti dello stesso album non interrompono il timer; albumId ignoto disabilita il comando. songMediaItem/DTO includono ID; PlaybackPersistence.restore arricchisce gli ID dall'indice Room per profilo, query in blocchi da 500, senza HTTP e senza cambio schema.
+- Suggerimenti: DataStore default off, invalidazione su cambio profilo/coda, uscita da ENDED e disattivazione. Proposta con profilo e sorgente; apply ricontrolla opt-in/ENDED/sorgente/profilo e la consuma una sola volta, normalizzazione UUID asincrona attesa tramite conteggio+identità prima di seek/play. Deduplica ranking, no source/ID vuoti/durata non positiva, massimo 15, niente fallback casuale/autoplay.
+- UI: Timer dopo volume/coda nel pannello scrollabile, Fine album e stato IT/EN, campo albumId nello snapshot reattivo; impostazioni scrollabili e toggle unico accessibile. Nessun nuovo token visivo. MainThread/lifecycle espliciti; cambio profilo cancella prima del restore, non tramite collector parallelo tardivo.
+
+Verifiche finali:
+
+- Build app+androidTest **BUILD SUCCESSFUL (2m37s)**; ultima `assembleDebugAndroidTest testDebugUnitTest lintDebug` **BUILD SUCCESSFUL (1m58s)**. Report JVM **67/67, 0 failure/skip**, suite ~57,581 s, login reale incluso; lint **0 errori/22 warning**. Nessuna baseline introdotta.
+- **Android dedicati 3/3 su esecuzioni separate**: prima suite 174,062 s → timer e continuazione reale passati; fixture fallita mentre richiedeva la proposta prima dell'ack di normalizzazione coda. Attesa di UUID servizio aggiunta; ripetuto solo fixture → **1/1 in 10,36 s**. Timer reale: countdown/dissolvenza/pausa e gain ripristinato con bridge scollegato; annullamento senza stop; fine brano; fine coda; album A/A/B con copie duplicate, passa al secondo A continuando e si ferma su B in pausa; annullamento mid-fade ripristina gain e conserva playback.
+- Suggerimenti: fixture verifica zero richieste se off, selezione risultati, failure→Unavailable, rifiuto apply su coda non terminata e clearing disattivando opt-in. Il test reale arriva a ENDED, valuta il server senza ripartenza; poi una **raccomandazione fixture con ID FLAC reale** viene accettata tramite il bridge: coda estesa, nuova identità UUID e **FLAC realmente in riproduzione dal Navidrome** con posizione >500 ms. Doppio tap non duplica la continuazione. Nessun test positivo usa byte audio finti; la raccomandazione positiva del server reale non è attestata da questa fixture.
+- **Regressioni Android pertinenti 5/5 su esecuzioni separate**: suite 438,409 s → 4 passati (MP3/FLAC e controlli UI, FLAC salvato e ripreso manualmente, restore cambio profilo/restart zero HTTP, focus/noisy/media key incluso display spento); test coda fallito su “Shuffle survives release/rebind”. Rinforzata l'attesa dell'ordine shuffle con ack del secondo controller (non solo masking ottimistico del bridge), nessun cambio al motore shuffle; ripetuto solo quel test → **1/1 in 170,906 s**. Coda/menu/rimozione/shuffle/rebind passati. Non attribuita la failure a hardware/kDrive.
+- Lint intermedio aveva rilevato StateFlow.value in composizione per Fine album: corretto usando albumId nello snapshot osservato. APK precedente stantio della bozza già corretto/reinstallato. Nessuna nuova dipendenza. Fonti wave 01/Media3 1.11.1 conservate; fetch pagina OpenSubsonic fallito per errore trasporto, non presentato come consultazione riuscita. Sorgente ufficiale Navidrome v0.62.0 media_retrieval consultato (non contiene getSimilarSongs2); nessuna capacità positiva reale dedotta da esso.
+- Env/marker temporanei rimossi da /data/local/tmp, assenza verificata; profili e impostazioni test ripristinati nei finally; emulatore spento. Segreti originali locali conservati e mai stampati. Nessuna mutazione playlist/preferiti server.
+
+File principali: playback/{SleepTimer,ContinuationSuggestion,SuggestionSelection,PlaybackConnection,PlaybackSnapshot,PlaybackService,PlaybackPersistence,SubsonicStream}, Graph, client/settings/UI/stringhe, test dedicati e regressione. PLAN/DESIGN/ARCHITECTURE/memoria/prompt/checklist aggiornati. SPEC invariata: Fine album è implementata, non sostituita con Fine coda.
+
+Non eseguiti: collaudo Motorola dei nuovi timer/dissolvenza, chiamate/cuffie/Bluetooth/lockscreen completo, TalkBack/font scale manuali, timer preset 15–90 min su hardware, raccomandazioni positive prodotte realmente dal server, cold-start media key e TLS reale. Checklist finale W05 privata pronta. **Prossima azione W05-T07: test complessivi sul Motorola con APK aggiornato; T05/T07 restano aperti.**
+
+## 2026-10-14 — Riscontro utente sulle azioni album e fine coda
+
+Task: W05-T02/T03, avanzamento collaudo W05-T07. L'utente conferma «ha funzionato tutto» dopo le istruzioni specifiche: selezione album con pressione prolungata → Aggiungi in coda/Dopo il corrente/Riproduci ora; ultima traccia con ripetizione off → arresto, Play → primo brano della coda. Registrati questi punti come riusciti; nessuna estensione a persistenza/timer/chiamate/Bluetooth non ancora riferiti.
+
+Checklist locale e memoria aggiornate; nessun cambio codice/APK, nessuna nuova build necessaria per questo riscontro. T05/T07 restano aperti; prossima azione: continuare gli altri punti della checklist finale W05. Nessun commit/push.
+
+## 2026-10-14 — Esiti della checklist numerata finale W05
+
+Fonte: utente in chat; prove hardware riferite, non eseguite dall'agente. **1 OK tutto, 2 OK tutto, 3 OK tutto, 4 OK tutto, 7 OK tutto**: coda/riordino/shuffle/background, repeat brano/coda, volume e tasti fisici, persistenza dopo chiusura/riavvio e ripresa senza autoplay, notifica/lockscreen. **9: solo Bluetooth testato, OK** (nessun dettaglio separato sui singoli passaggi).
+
+Punti ancora aperti: 5 non provato (un solo profilo); 6 «credo OK» con prova completa 15 minuti ancora da effettuare; 8 chiamate da provare alla prossima chiamata, altra app audio non riferita; 9 cuffie cablate/USB-C non provate; 10 richiesta spiegazione, nessun esito. T05/T07 restano `[ ]`. Aggiornati PLAN, memoria e checklist privata; codice/APK invariati, nessuna build richiesta, nessun commit/push. Prossimo passo: spiegare opt-in suggerimenti prima di un nuovo ENDED, quindi raccogliere gli esiti mancanti.
+
+## 2026-10-14 — Suggerimenti di continuazione confermati dall'utente
+
+Task: W05-T06, collaudo finale W05-T07. Dopo la guida sul punto 10, l'utente riferisce «Punto 19 il pulsante compare e funziona»: dal contesto il riferimento è al pulsante Continua con brani simili. Registrati comparsa e funzionamento della continuazione **sul server/account reale dell'utente**, distinto dalla precedente prova positiva fixture dell'agente. Doppio tap/disattivazione non dettagliati separatamente; nessuna estensione a timer/chiamate ancora pendenti.
+
+Aggiornati checklist locale, memoria e PLAN; nessun cambio codice/APK, nessuna build necessaria, nessun commit/push. Prossimo passo: esito timer 15 minuti/schermo spento e prove interruzioni. T05/T07 restano aperti.

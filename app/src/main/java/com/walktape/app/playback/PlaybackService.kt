@@ -93,20 +93,24 @@ class PlaybackService : MediaSessionService() {
                 }
             })
             .build()
-        persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) { connection.value = it }
+        persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) {
+            if (it == null) { Graph.playbackTimer.cancel(); Graph.suggestion.reset() }
+            connection.value = it
+        }
         persistence.start()
         scope.launch {
-            // A profile switch stops playback: no timer or suggestion may outlive its queue.
-            Graph.profiles.profiles.map { profiles -> profiles.firstOrNull { it.isActive }?.id }
+            Graph.settingsRepository.settings.map { it.suggestionsEnabled }
                 .distinctUntilChanged().collect {
-                    Graph.playbackTimer.cancel()
-                    Graph.suggestion.reset()
+                    if (!it) Graph.suggestion.reset()
                 }
         }
     }
 
     /** Queue-end automation: the suggestion is fetched only for the active profile's server. */
     private val automationListener = object : Player.Listener {
+        override fun onTimelineChanged(timeline: androidx.media3.common.Timeline, reason: Int) {
+            if (reason == Player.TIMELINE_CHANGE_REASON_PLAYLIST_CHANGED) Graph.suggestion.reset()
+        }
         override fun onPlaybackStateChanged(playbackState: Int) {
             val player = mediaSession.player
             if (playbackState == Player.STATE_ENDED) {

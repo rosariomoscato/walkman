@@ -43,6 +43,8 @@
     <string name="playback_timer_off">Disattiva timer</string>
     <string name="playback_timer_minutes">%1$d min</string>
     <string name="playback_timer_track">Fine brano</string>
+    <string name="playback_timer_album">Fine album</string>
+    <string name="playback_timer_active_album">Timer attivo: fine dell\'album corrente</string>
     <string name="playback_timer_queue">Fine coda</string>
     <string name="playback_timer_remaining">Timer attivo: %1$s</string>
     <string name="playback_timer_active_track">Timer attivo: fine del brano</string>

@@ -147,8 +147,6 @@ fun PlaybackControls() {
                     contentDescription = null)
                 Text(repeatLabel, Modifier.padding(start = 8.dp))
             }
-            TimerSection()
-            if (state.ended) SuggestionButton()
             Text(stringResource(R.string.playback_volume, state.volume, state.maxVolume))
             val volumeLabel = stringResource(R.string.playback_volume_description)
             Box(Modifier.fillMaxWidth().clearAndSetSemantics {
@@ -171,13 +169,15 @@ fun PlaybackControls() {
                 Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null)
                 Text(stringResource(R.string.queue_open, state.queue.size), Modifier.padding(start = 8.dp))
             }
+            TimerSection(state)
+            if (state.ended) SuggestionButton()
         }
     }
     if (queueOpen) QueueSheet(onDismiss = { queueOpen = false })
 }
 
 @Composable
-private fun TimerSection() {
+private fun TimerSection(playback: PlaybackSnapshot) {
     val timer by Graph.playbackTimer.state.collectAsStateWithLifecycle()
     Text(stringResource(R.string.playback_timer_title), style = MaterialTheme.typography.titleSmall)
     if (timer.armed) {
@@ -185,6 +185,7 @@ private fun TimerSection() {
             SleepTimer.Mode.DURATION -> stringResource(R.string.playback_timer_remaining,
                 timeLabel(timer.remainingMs ?: 0))
             SleepTimer.Mode.TRACK -> stringResource(R.string.playback_timer_active_track)
+            SleepTimer.Mode.ALBUM -> stringResource(R.string.playback_timer_active_album)
             SleepTimer.Mode.QUEUE -> stringResource(R.string.playback_timer_active_queue)
             null -> ""
         }
@@ -202,6 +203,10 @@ private fun TimerSection() {
         }
         TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.TRACK) }) {
             Text(stringResource(R.string.playback_timer_track))
+        }
+        val hasAlbum = !playback.albumId.isNullOrBlank()
+        TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.ALBUM) }, enabled = hasAlbum) {
+            Text(stringResource(R.string.playback_timer_album))
         }
         TextButton(onClick = { Graph.playbackTimer.arm(SleepTimer.Mode.QUEUE) }) {
             Text(stringResource(R.string.playback_timer_queue))

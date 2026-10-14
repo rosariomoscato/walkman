@@ -231,24 +231,31 @@ class PlaybackConnection(private val context: Context) {
 
     /** Append the suggested continuation to the ended queue and start playing it. */
     fun applyContinuationSuggestion() {
-        val items = (Graph.suggestion.state.value as? ContinuationSuggestion.State.Available)?.items ?: return
         val job = scope.launch { editMutex.withLock {
+            val suggestion = Graph.suggestion.state.value as? ContinuationSuggestion.State.Available ?: return@withLock
+            val items = suggestion.items
             val player = withTimeoutOrNull(CONNECT_TIMEOUT_MS) { controller.first { it != null } }
             if (player == null || !player.isCommandAvailable(Player.COMMAND_CHANGE_MEDIA_ITEMS)) {
                 requestFailure = PlaybackFailure.REQUEST
                 refresh()
                 return@withLock
             }
+            if (Graph.database.profileDao().active()?.id != suggestion.profileId ||
+                !Graph.settingsRepository.settings.first().suggestionsEnabled ||
+                player.playbackState != Player.STATE_ENDED ||
+                player.currentMediaItem?.mediaMetadata?.extras?.getString(QueueIdentity.SONG) != suggestion.sourceSongId ||
+                Graph.suggestion.state.value !== suggestion) return@withLock
+            Graph.suggestion.consumed() // one acceptance, including rapid repeated taps
             val firstSuggested = player.mediaItemCount
             player.addMediaItems(items)
             // Wait for the service to normalize queue identities before anchoring the jump.
             val ready = withTimeoutOrNull(CONNECT_TIMEOUT_MS) {
-                while ((0 until player.mediaItemCount).any {
+                while (player.mediaItemCount < firstSuggested + items.size || (0 until player.mediaItemCount).any {
                         !player.getMediaItemAt(it).mediaId.startsWith(QueueIdentity.PREFIX)
                     }) delay(25)
                 true
             } == true
-            if (!ready) {
+            if (!ready || Graph.database.profileDao().active()?.id != suggestion.profileId) {
                 requestFailure = PlaybackFailure.REQUEST
                 refresh()
                 return@withLock
@@ -367,6 +374,7 @@ class PlaybackConnection(private val context: Context) {
             title = player?.mediaMetadata?.title?.toString().orEmpty(),
             artist = player?.mediaMetadata?.artist?.toString().orEmpty(),
             album = player?.mediaMetadata?.albumTitle?.toString().orEmpty(),
+            albumId = player?.currentMediaItem?.mediaMetadata?.extras?.getString(SleepTimer.ALBUM_ID),
             positionMs = player?.currentPosition?.coerceAtLeast(0) ?: 0,
             durationMs = duration,
             isPlaying = player?.isPlaying == true,

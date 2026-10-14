@@ -1,6 +1,7 @@
 package com.walktape.app.playback
 
 import androidx.core.net.toUri
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.walktape.app.core.db.SongEntity
@@ -44,6 +45,7 @@ fun songMediaItem(song: SongEntity): MediaItem = MediaItem.Builder()
             .setArtist((song.displayArtist ?: song.artist)?.takeIf { it.isNotBlank() })
             .setAlbumTitle(song.album?.takeIf { it.isNotBlank() })
             .setDurationMs(song.duration * 1000L)
+            .setExtras(Bundle().apply { putString(SleepTimer.ALBUM_ID, song.albumId) })
             .build()
     )
     .build()

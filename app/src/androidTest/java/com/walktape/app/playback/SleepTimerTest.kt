@@ -62,7 +62,13 @@ class SleepTimerTest {
             await("Real stream must be playing") { c.isPlaying && c.currentPosition > 1_000 }
 
             // 1) Duration countdown: fade the gain, pause, restore the gain.
-            withContext(Dispatchers.Main) { Graph.playbackTimer.arm(SleepTimer.Mode.DURATION, 2_500) }
+            withContext(Dispatchers.Main) {
+                Graph.playback.connect()
+                Graph.playbackTimer.arm(SleepTimer.Mode.DURATION, 4_500)
+            }
+            await("Bridge connected before background timer check") { Graph.playback.controller.value != null }
+            withContext(Dispatchers.Main) { Graph.playback.disconnect() }
+            assertTrue("Disconnecting UI must not cancel service timer", Graph.playbackTimer.state.value.armed)
             var minVolume = 1f
             await("Countdown must fade and pause") {
                 val volume = c.volume
@@ -106,6 +112,32 @@ class SleepTimerTest {
                     !Graph.playbackTimer.state.value.armed
             }
             assertFalse("No playback after queue end", withContext(Dispatchers.Main) { c.isPlaying })
+
+            // 5) Distinct album boundary in a mixed queue, with duplicate occurrences.
+            withContext(Dispatchers.Main) {
+                c.setMediaItems(listOf(songs.first().toQueueItem(id), songs.first().toQueueItem(id), songs.last().toQueueItem(id)))
+                c.prepare(); c.play()
+            }
+            await("Mixed album queue playing") { c.isPlaying && c.duration > 0 }
+            withContext(Dispatchers.Main) {
+                Graph.playbackTimer.arm(SleepTimer.Mode.ALBUM)
+                c.seekTo((c.duration - 5_000).coerceAtLeast(0))
+            }
+            await("Album timer must allow the next occurrence of the SAME album") {
+                c.currentMediaItemIndex == 1 && c.isPlaying && Graph.playbackTimer.state.value.armed && c.duration > 0
+            }
+            withContext(Dispatchers.Main) { c.seekTo((c.duration - 5_000).coerceAtLeast(0)) }
+            await("Album timer must stop before playing another album") {
+                c.currentMediaItemIndex == 2 && !c.playWhenReady && !Graph.playbackTimer.state.value.armed && c.volume == 1f
+            }
+            assertTrue(withContext(Dispatchers.Main) { c.currentPosition < 3_000 })
+            withContext(Dispatchers.Main) {
+                c.play()
+                Graph.playbackTimer.arm(SleepTimer.Mode.DURATION, 1_500)
+            }
+            await("Fade must begin before cancelling") { c.volume < 0.8f }
+            withContext(Dispatchers.Main) { Graph.playbackTimer.cancel() }
+            await("Cancel mid-fade restores unity and keeps playback running") { c.isPlaying && c.volume == 1f }
         } finally {
             withContext(Dispatchers.Main) {
                 Graph.playbackTimer.cancel()

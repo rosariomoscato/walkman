@@ -10,6 +10,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.walktape.app.Graph
 import com.walktape.app.core.net.ApiResult
+import com.walktape.app.core.net.OpenSubsonicClient
+import com.walktape.app.core.net.ServerAddress
+import com.walktape.app.core.net.Credentials
+import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
@@ -97,7 +101,9 @@ class ContinuationSuggestionTest {
                 val c = connect()
                 controller = c
                 withContext(Dispatchers.Main) { c.setMediaItems(listOf(fixtureItem(id, "s0"))) }
-                await("Fixture queue ready") { c.mediaItemCount == 1 }
+                await("Fixture queue normalized before requesting suggestions") {
+                    c.mediaItemCount == 1 && c.getMediaItemAt(0).mediaId.startsWith(QueueIdentity.PREFIX)
+                }
                 server.enqueue(MockResponse.Builder().body(similarBody(
                     """{"id":"s1","title":"Self"},{"id":"s2","title":"Keep","duration":200},{"id":"s4","title":"Also keep","duration":250}"""
                 )).build())
@@ -105,20 +111,17 @@ class ContinuationSuggestionTest {
                 awaitState("Second suggestion ready") {
                     it is ContinuationSuggestion.State.Available && it.items.size == 2
                 }
-                repeat(2) { server.enqueue(MockResponse.Builder().body("fixture-bytes").build()) }
                 // The apply path drives the process-wide UI bridge, exactly like the panel does.
                 withContext(Dispatchers.Main) { Graph.playback.connect() }
                 await("Playback bridge connected") { Graph.playback.controller.value != null }
                 withContext(Dispatchers.Main) { Graph.playback.applyContinuationSuggestion() }
-                await("Suggestion must extend the queue and start it") {
-                    c.mediaItemCount == 3 && c.currentMediaItemIndex == 1 && c.playWhenReady
-                }
-                await("Suggested occurrences get queue identities") {
-                    (0 until c.mediaItemCount).all { c.getMediaItemAt(it).mediaId.startsWith(QueueIdentity.PREFIX) }
-                }
-                assertTrue(Graph.suggestion.state.value is ContinuationSuggestion.State.Idle)
+                delay(700)
+                assertTrue("A suggestion must not apply to a queue that has not ended",
+                    withContext(Dispatchers.Main) { c.mediaItemCount == 1 && !c.playWhenReady })
+                Graph.settingsRepository.setSuggestionsEnabled(false)
+                awaitState("Disabling suggestions clears the offered result") { it is ContinuationSuggestion.State.Idle }
             } finally {
-                withContext(Dispatchers.Main) { controller?.release() }
+                withContext(Dispatchers.Main) { Graph.playback.disconnect(); controller?.pause(); controller?.release() }
                 Graph.suggestion.reset()
                 Graph.settingsRepository.setSuggestionsEnabled(originalSetting)
                 if (previous != null) Graph.profiles.activate(previous)
@@ -162,8 +165,34 @@ class ContinuationSuggestionTest {
                 it is ContinuationSuggestion.State.Unavailable || it is ContinuationSuggestion.State.Available
             }
             assertFalse("No playback restart at queue end", withContext(Dispatchers.Main) { c.isPlaying })
+            // Positive recommendation fixture containing a REAL FLAC id. Audio still comes
+            // from Navidrome, not the fixture; no fake bytes can count as playback proof.
+            MockWebServer().apply { start() }.use { recommendations ->
+                val nextSong = songs.last()
+                recommendations.enqueue(MockResponse.Builder().body(similarBody(Gson().toJson(mapOf(
+                    "id" to nextSong.id, "title" to nextSong.title, "duration" to nextSong.duration,
+                    "albumId" to nextSong.albumId, "album" to nextSong.album, "artist" to nextSong.artist
+                )))).build())
+                val fixtureClient = OpenSubsonicClient(ServerAddress.parse(recommendations.url("/").toString(), true)!!,
+                    Credentials("fixture", "fixture-only"))
+                withContext(Dispatchers.Main) {
+                    Graph.suggestion.evaluate(fixtureClient, id, songs.first().id, "Real source")
+                    Graph.playback.connect()
+                }
+                awaitState("Positive fixture recommendation must be available") { it is ContinuationSuggestion.State.Available }
+                await("UI bridge connected") { Graph.playback.controller.value != null }
+                withContext(Dispatchers.Main) {
+                    Graph.playback.applyContinuationSuggestion()
+                    Graph.playback.applyContinuationSuggestion()
+                }
+                await("Accepted continuation must actually stream the real FLAC once") {
+                    c.mediaItemCount == 2 && c.currentMediaItemIndex == 1 && c.isPlaying && c.currentPosition > 500 &&
+                        c.currentMediaItem?.mediaMetadata?.extras?.getString(QueueIdentity.SONG) == nextSong.id
+                }
+                assertTrue(withContext(Dispatchers.Main) { c.getMediaItemAt(1).mediaId.startsWith(QueueIdentity.PREFIX) })
+            }
         } finally {
-            withContext(Dispatchers.Main) { controller?.pause(); controller?.release() }
+            withContext(Dispatchers.Main) { Graph.playback.disconnect(); controller?.pause(); controller?.release() }
             Graph.suggestion.reset()
             Graph.settingsRepository.setSuggestionsEnabled(originalSetting)
             if (previous != null) Graph.profiles.activate(previous)

@@ -1,6 +1,7 @@
 package com.walktape.app.playback
 
 import androidx.media3.common.C
+import android.os.SystemClock
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import kotlinx.coroutines.CoroutineScope
@@ -19,8 +20,10 @@ import kotlinx.coroutines.launch
  * afterwards and the Android media volume is never touched. Not persisted across process
  * death by design: a restored queue never starts playing on its own.
  */
+@androidx.annotation.MainThread
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 class SleepTimer {
-    enum class Mode { DURATION, TRACK, QUEUE }
+    enum class Mode { DURATION, TRACK, ALBUM, QUEUE }
     data class State(val mode: Mode? = null, val remainingMs: Long? = null) {
         val armed: Boolean get() = mode != null
     }
@@ -31,14 +34,21 @@ class SleepTimer {
     private var player: Player? = null
     private var listener: Player.Listener? = null
     private var job: Job? = null
+    private var albumId: String? = null
+    private var lastBoundary = false
 
     fun attach(attachedPlayer: Player) {
         detach()
         player = attachedPlayer
         val watch = object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-                if (mutable.value.mode == Mode.TRACK && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
-                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT)) pauseAtBoundary()
+                val mode = mutable.value.mode ?: return
+                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT) {
+                    if (mode == Mode.TRACK || (mode == Mode.ALBUM &&
+                            (mediaItem?.mediaMetadata?.extras?.getString(ALBUM_ID) != albumId || lastBoundary)) ||
+                        (mode == Mode.QUEUE && lastBoundary)) pauseAtBoundary()
+                } else if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED ||
+                    (mode != Mode.DURATION && reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) cancel()
             }
 
             override fun onPlaybackStateChanged(playbackState: Int) {
@@ -53,6 +63,7 @@ class SleepTimer {
     }
 
     fun detach() {
+        cancel() // never retain a released player inside an in-flight fade
         listener?.let { player?.removeListener(it) }
         listener = null
         player = null
@@ -60,6 +71,9 @@ class SleepTimer {
 
     fun arm(mode: Mode, durationMs: Long = 0L) {
         cancel()
+        if (player?.currentMediaItem == null || (mode == Mode.DURATION && durationMs !in 1..86_400_000L)) return
+        albumId = player?.currentMediaItem?.mediaMetadata?.extras?.getString(ALBUM_ID)
+        if (mode == Mode.ALBUM && albumId.isNullOrBlank()) return
         mutable.value = State(mode, durationMs.takeIf { mode == Mode.DURATION && it > 0 })
         job = scope.launch {
             when (mode) {
@@ -77,24 +91,15 @@ class SleepTimer {
     }
 
     private suspend fun CoroutineScope.runCountdown(totalMs: Long) {
-        val deadline = System.currentTimeMillis() + totalMs
+        val deadline = SystemClock.elapsedRealtime() + totalMs
         while (isActive) {
-            val remaining = deadline - System.currentTimeMillis()
+            val remaining = deadline - SystemClock.elapsedRealtime()
             mutable.value = mutable.value.copy(remainingMs = remaining.coerceAtLeast(0))
+            player?.let { if (it.isPlaying && remaining <= FADE_MS) it.volume = gainFromRemaining(remaining) }
             if (remaining <= 0) break
-            delay(remaining.coerceAtMost(250))
+            delay(remaining.coerceAtMost(FADE_STEP_MS))
         }
-        val attachedPlayer = player
-        if (attachedPlayer != null && attachedPlayer.playWhenReady) {
-            val start = System.currentTimeMillis()
-            while (isActive) {
-                val elapsed = System.currentTimeMillis() - start
-                if (elapsed >= FADE_MS) break
-                attachedPlayer.volume = gainFromElapsed(elapsed)
-                delay(FADE_STEP_MS)
-            }
-            attachedPlayer.pause()
-        }
+        player?.pause()
         restoreGain()
         mutable.value = State()
     }
@@ -102,6 +107,7 @@ class SleepTimer {
     private suspend fun CoroutineScope.runBoundaryWatch(mode: Mode) {
         while (isActive && mutable.value.mode == mode) {
             val attachedPlayer = player
+            if (attachedPlayer != null && attachedPlayer.mediaItemCount == 0) { cancel(); return }
             val remaining = attachedPlayer?.let { boundaryRemainingMs(it, mode) }
             if (attachedPlayer != null && remaining != null && remaining <= FADE_MS) {
                 attachedPlayer.volume = gainFromRemaining(remaining)
@@ -113,19 +119,23 @@ class SleepTimer {
     }
 
     private fun boundaryRemainingMs(attachedPlayer: Player, mode: Mode): Long? {
-        if (!attachedPlayer.playWhenReady) return null
+        if (!attachedPlayer.isPlaying) return null
         val timeline = attachedPlayer.currentTimeline
-        if (mode == Mode.QUEUE && attachedPlayer.mediaItemCount > 0 &&
-            timeline.getNextWindowIndex(attachedPlayer.currentMediaItemIndex, Player.REPEAT_MODE_OFF,
-                attachedPlayer.shuffleModeEnabled) != C.INDEX_UNSET
-        ) return null
+        val next = if (timeline.isEmpty) C.INDEX_UNSET else timeline.getNextWindowIndex(
+            attachedPlayer.currentMediaItemIndex, Player.REPEAT_MODE_OFF, attachedPlayer.shuffleModeEnabled)
+        lastBoundary = next == C.INDEX_UNSET
+        if (mode == Mode.ALBUM) {
+            if (attachedPlayer.currentMediaItem?.mediaMetadata?.extras?.getString(ALBUM_ID) != albumId) { cancel(); return null }
+            lastBoundary = lastBoundary || attachedPlayer.getMediaItemAt(next).mediaMetadata.extras?.getString(ALBUM_ID) != albumId
+        }
+        if ((mode == Mode.QUEUE || mode == Mode.ALBUM) && !lastBoundary) return null
         val duration = attachedPlayer.duration.takeIf { it > 0 && it != C.TIME_UNSET }
             ?: attachedPlayer.mediaMetadata.durationMs?.takeIf { it > 0 } ?: return null
         return duration - attachedPlayer.currentPosition
     }
 
     private fun pauseAtBoundary() {
-        if (mutable.value.mode != Mode.TRACK) return
+        if (mutable.value.mode == null || mutable.value.mode == Mode.DURATION) return
         job?.cancel()
         job = null
         player?.pause()
@@ -149,6 +159,7 @@ class SleepTimer {
     companion object {
         const val FADE_MS = 3_000L
         const val FADE_STEP_MS = 100L
+        const val ALBUM_ID = "wt.albumId"
 
         /** Gain during a countdown fade: 1 at the deadline-FADE_MS, 0 at the pause. */
         fun gainFromElapsed(elapsedMs: Long): Float = (1f - elapsedMs.toFloat() / FADE_MS).coerceIn(0f, 1f)

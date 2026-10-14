@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.biometric.BiometricManager
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -26,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -50,6 +54,7 @@ fun SettingsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(vertical = 16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -165,6 +170,7 @@ private fun SuggestionSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Un
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .toggleable(value = enabled, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -180,7 +186,7 @@ private fun SuggestionSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Un
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = enabled, onCheckedChange = onCheckedChange)
+        Switch(checked = enabled, onCheckedChange = null)
     }
 }
 

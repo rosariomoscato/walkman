@@ -17,7 +17,7 @@ class SuggestionSelectionTest {
     @Test
     fun dropsTheSourceSongAndUnusableEntriesPreservingServerRanking() {
         val selected = SuggestionSelection.candidates(
-            listOf(song("source"), song("b"), song("zero", duration = 0), song("c"), song("source")),
+            listOf(song("source"), song("b"), song("zero", duration = 0), song("b"), song(""), song("c"), song("source")),
             sourceSongId = "source",
         )
         assertEquals(listOf("b", "c"), selected.map { it.id })

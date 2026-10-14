@@ -112,8 +112,7 @@ class OpenSubsonicClient(
             } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
         }
 
-    suspend fun genres(): ApiResult<List<GenreDto>> =
-        when (val result = request("getGenres")) {
+    suspend fun genres(): ApiResult<List<GenreDto>> = when (val result = request("getGenres")) {
         is ApiResult.Failure -> result
         is ApiResult.Success -> try {
             val container = result.value.obj("genres") ?: return ApiResult.Failure(ApiError.InvalidResponse)

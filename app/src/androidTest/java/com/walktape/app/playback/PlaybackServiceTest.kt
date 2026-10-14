@@ -374,6 +374,7 @@ class PlaybackServiceTest {
         clickUi { it.contentDescription?.toString() == "Mescola la coda" }
         awaitPlayback("Shuffle anchors exact current duplicate without seeking") {
             bridge.state.value.shuffleOn && bridge.state.value.queue.first().entryId == selected &&
+                controller.shuffleModeEnabled && listeningIds(controller) == bridge.state.value.queue.map { it.entryId } &&
                 controller.currentMediaItemIndex == 3 && kotlin.math.abs(controller.currentPosition - 10_000) < 200 && !controller.playWhenReady
         }
         val traversal = bridge.state.value.queue.map { it.entryId }
@@ -424,6 +425,18 @@ class PlaybackServiceTest {
         awaitPlayback("External replacement contains no old entries") { bridge.state.value.queue.size == 1 && bridge.state.value.canEditQueue }
         withContext(Dispatchers.Main) { controller.shuffleModeEnabled = false; controller.pause() }
         instrumentation.sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+    }
+
+    /** The second controller observes the service, unlike the initiating bridge's optimistic mask. */
+    private fun listeningIds(controller: MediaController): List<String> {
+        val ids = mutableListOf<String>()
+        val timeline = controller.currentTimeline
+        var index = timeline.getFirstWindowIndex(true)
+        while (index != androidx.media3.common.C.INDEX_UNSET && ids.size < controller.mediaItemCount) {
+            ids.add(controller.getMediaItemAt(index).mediaId)
+            index = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, true)
+        }
+        return ids
     }
 
     private fun queueNode(id: String) = awaitUi {

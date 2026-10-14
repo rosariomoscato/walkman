@@ -1,6 +1,7 @@
 package com.walktape.app.playback
 
 import androidx.core.net.toUri
+import android.os.Bundle
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.walktape.app.core.net.ApiResult
@@ -29,6 +30,7 @@ internal fun SongDto.toQueueItem(profileId: Long): MediaItem = MediaItem.Builder
     .setMediaId(id)
     .setUri(SubsonicStream.uri(profileId, id).toUri())
     .setMediaMetadata(
-        MediaMetadata.Builder().setTitle(title).setArtist(artist).setDurationMs(duration * 1000L).build()
+        MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).setDurationMs(duration * 1000L)
+            .setExtras(Bundle().apply { putString(SleepTimer.ALBUM_ID, albumId) }).build()
     )
     .build()

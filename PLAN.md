@@ -86,7 +86,7 @@ Dipendenze: wave 04.
 - [x] W05-T03 — Implementare coda modificabile, azioni dalla selezione multipla, shuffle senza ripetizioni nella selezione e ripristino dell'ordine.
 - [x] W05-T04 — Persistire coda e posizione per profilo; ripristinare senza avvio automatico.
 - [ ] W05-T05 — Gestire audio focus, chiamate, scollegamento cuffie e comandi Bluetooth/notifica/lockscreen.
-- [ ] W05-T06 — Implementare arresto a fine coda, continuazione suggerita opzionale e timer con dissolvenza.
+- [x] W05-T06 — Implementare arresto a fine coda, continuazione suggerita opzionale e timer con dissolvenza.
 - [ ] W05-T07 — Verificare riproduzione a schermo spento e interruzioni su emulatore e Motorola, distinguendo gli esiti.
 
 Criterio di uscita: ascolto end-to-end reale e comportamento della sessione/coda verificato, comprese le interruzioni.
@@ -104,6 +104,14 @@ Completamento 2026-10-13: **W05-T04 completato**. Room v5 (queue_state/queue_ent
 Incremento 2026-10-14: **W05-T05 verificato per la parte emulatore, resta `[ ]` per hardware**. Focus gestito da Media3: ducking con gain effettivo al sink 0,2→1 e volume Android/pubblico invariati; perdita transitoria con suppression e auto-resume, pausa manuale che annulla la ripresa, perdita permanente senza autoplay. Evento protetto AUDIO_BECOMING_NOISY sintetico via root sull'AVD AOSP → pausa e ripresa solo manuale. Comandi Android `media_session dispatch` play/pausa/avanti/indietro in background; play/pausa e avanzamento reale a display Asleep. Nuovo monitor locale volatile delle scritture gain al sink, senza elaborazione audio. Verifiche: suite T05 **1/1** (121 s), regressioni pertinenti **9/9 su due esecuzioni** (8 passati nella prima, test UI ripetuto dopo refresh cache accessibilità: 1/1), **58/58 JVM** con login reale, build e lint 0 errori/22 warning. `input keyevent` multimediali intermittenti sull'AVD: non attestano tasti fisici/Bluetooth. Chiamate, cuffie fisiche, route Bluetooth e lockscreen Motorola ancora da provare (`local/PHONE_TESTS_W05.md`); T07 aperto. Env/marker rimossi, emulatore spento. Prossimo sviluppo indipendente: **W05-T06**.
 
 Checkpoint 2026-10-14 **W05-T06 ancora `[ ]`**: bozza timer tempo/brano/coda e suggerimenti opt-in; fine album distinta ancora mancante. Build e 67/67 JVM riusciti; Android 1/3 passato, due correzioni da ricompilare/verificare. Le prove hardware complessive saranno eseguite alla fine di W05, su richiesta dell'utente; nessuna chiusura anticipata di T05/T07.
+
+Completamento successivo 2026-10-14: **W05-T06 verificato** dopo il checkpoint `0a9e844`. Timer a tempo (15/30/60/90 min), fine brano, **fine album distinto** e fine coda, dissolvenza gain negli ultimi 3 s, annullamento e ripristino gain, countdown monotono senza controller UI. Suggerimenti DataStore opt-in default off, risposta getSimilarSongs2 secondo disponibilità server, conferma esplicita per continuare, ranking/deduplica e vincoli profilo/sorgente/coda terminata. Verifiche finali: build app/androidTest, **67/67 JVM**, **3/3 Android dedicati + 5/5 regressioni pertinenti su esecuzioni separate**, lint **0 errori/22 warning**. Raccomandazione positiva fixture con ID reale, accettazione → **FLAC effettivamente riprodotto da Navidrome**, mai byte audio finti. T05/T07 ancora aperti per hardware; prossimo passo **collaudo complessivo finale W05 sul Motorola**, checklist privata aggiornata. Il completamento dopo il checkpoint resta locale non committato.
+
+Riscontro utente 2026-10-14, collaudo W05: azioni selezione album Aggiungi in coda/Dopo il corrente/Riproduci ora e fine coda con ripartenza dal primo brano **OK**. Gli altri punti del collaudo hardware non sono ancora attestati; T05/T07 restano aperti.
+
+Riscontro successivo sulla checklist numerata: **1–4 e 7 OK tutto**, **Bluetooth OK**. Coda/riordino/shuffle, ripetizione, volume/tasti fisici, persistenza chiusura/riavvio e notifica/lockscreen confermati. Un solo profilo (cambio non provato); timer preliminare «credo OK», 15 minuti ancora da provare; chiamate in attesa, altra app audio/cuffie cablate non riferite, suggerimenti da guidare. **T05/T07 restano aperti**.
+
+Riscontro successivo: **punto 10 suggerimenti OK**, l'utente conferma che il pulsante compare e funziona sul proprio server/account dopo la guida. T05/T07 ancora aperti per timer/interruzioni finali; nessun esito nuovo per gli altri punti pendenti.
 
 ## Wave 06 — Player TPS-L2
 

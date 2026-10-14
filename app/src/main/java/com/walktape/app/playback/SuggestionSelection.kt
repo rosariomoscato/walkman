@@ -8,5 +8,6 @@ internal object SuggestionSelection {
 
     /** Drops the source song itself and unusable entries, preserving the server's ranking. */
     fun candidates(songs: List<SongDto>, sourceSongId: String, limit: Int = REQUEST_COUNT): List<SongDto> =
-        songs.filter { it.id != sourceSongId && it.duration > 0 }.take(limit)
+        songs.filter { it.id.isNotBlank() && it.id != sourceSongId && it.duration > 0 }
+            .distinctBy { it.id }.take(limit.coerceAtLeast(0))
 }
