@@ -559,3 +559,14 @@ Punti ancora aperti: 5 non provato (un solo profilo); 6 «credo OK» con prova c
 Task: W05-T06, collaudo finale W05-T07. Dopo la guida sul punto 10, l'utente riferisce «Punto 19 il pulsante compare e funziona»: dal contesto il riferimento è al pulsante Continua con brani simili. Registrati comparsa e funzionamento della continuazione **sul server/account reale dell'utente**, distinto dalla precedente prova positiva fixture dell'agente. Doppio tap/disattivazione non dettagliati separatamente; nessuna estensione a timer/chiamate ancora pendenti.
 
 Aggiornati checklist locale, memoria e PLAN; nessun cambio codice/APK, nessuna build necessaria, nessun commit/push. Prossimo passo: esito timer 15 minuti/schermo spento e prove interruzioni. T05/T07 restano aperti.
+
+## 2026-10-14 — Pubblicazione degli incrementi W05
+
+Operazione richiesta dall'utente («un push sarebbe opportuno»).
+
+- Ispezionati status, diff, log ultimi 10, remote e tracking; fetch origin riuscito, divergenza 0 remoti/4 locali. Rivisti i quattro incrementi pendenti e il diff del completamento T06. Ignore verificato per configurazione server, local.properties, checklist telefono e NEXT_PROMPT.
+- Stage esplicito di **23 file** intenzionali; diff --check senza errori. Commit **`acf6c1a` — “Wave 05: completamento timer e continuazione suggerita (T06)”**, 256 inserimenti/66 rimozioni. Identità per-commit non persistita; nessun segreto, APK o file locale privato incluso. Codice invariato rispetto alle verifiche 67/67 JVM, 3/3 Android dedicati + 5/5 regressioni, lint 0/22: nessuna ripetizione di build per l'operazione Git.
+- **Push ordinario riuscito** su origin/main: `26584bc..acf6c1a`, pubblicati T01/T02 `74be2d0`, T03 `afe7f9f`, T04/T05 parte automatica `1252406`, checkpoint T06 `0a9e844`, completamento `acf6c1a`.
+- Verifica `git ls-remote origin refs/heads/main`: SHA remoto e HEAD locale **`acf6c1a525074fa6fd341299b01e924de18bc982`** identici, working tree pulita subito dopo la pubblicazione del codice. Memoria/log/prompt locale riallineati all'esito; note tracciate pubblicate con l'aggiornamento documentale dell'operazione. Nessuna release/APK pubblicata.
+
+Punto di ripresa invariato: collaudo W05-T07, timer 15 minuti/schermo spento e interruzioni (chiamate/altra app audio); un solo profilo e cuffie cablate non provati. T05/T07 restano aperti, riscontri già riusciti conservati.
