@@ -178,6 +178,8 @@ Verifiche: build app/androidTest; **110/110 JVM** con API reali opt-in; lint **0
 
 **T07 resta aperto**: nessuna nuova prova telefono; passaggio reale Wi-Fi/mobile e perdita rete durante download/ascolto/sync sul dispositivo, esaurimento reale spazio durante scrittura (verificato solo preflight con budget impossibile), collaudo UI/accessibilità/adattività delle nuove superfici e stress concorrenza/rimozione profilo sotto trasferimento. Checklist privata `local/PHONE_TESTS_W08.md`; residui W07-T06 e hardware W05/W06 invariati. Nessuna dichiarazione di completamento dell'intera wave o dell'app; nessun commit/push/release.
 
+Pubblicazione successiva su richiesta esplicita dell'utente: **b90b9f3 — Wave 08: download, cache e sincronizzazione offline (T01-T06)**, 71 file fra codice/test/schemi/documenti. Push ordinario su origin/main riuscito e SHA locale/remoto verificati identici; note nel successivo aggiornamento documentale. Credenziali, checklist private, NEXT_PROMPT e APK esclusi. T07 e residui hardware rimangono aperti; nessuna release.
+
 ## Wave 09 — Qualità ed elaborazione audio
 
 Dipendenze: wave 08; ricerca audio wave 01.
