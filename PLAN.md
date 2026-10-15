@@ -139,6 +139,8 @@ Dipendenze: wave 04 e 05.
 
 Handoff 2026-10-15: l'utente riferisce «mi sembra tutto ok» sul nuovo player e richiede il prompt W07 per un'altra sessione. Riscontro generale positivo W06, non attestazione puntuale dei controlli manuali residui: W06-T06 e W05-T05/T07 restano aperti. Punto di ripresa **W07-T01**, poi T02–T06; nessun codice W07 iniziato nell'handoff. Preservare tutto il working tree W06 locale non committato (Room v6 compresa). Prompt aggiornato in NEXT_PROMPT.md, ignorato da Git.
 
+Pubblicazione successiva richiesta dall'utente: **commit `93187a8`**, W06-T01–T05, test, schema6 e handoff pubblicati su origin/main con push ordinario riuscito; SHA remoto/locale verificati identici. Lo stato locale non committato dell'handoff sopra è quindi superato dalla pubblicazione. Note dell'operazione aggiornate separatamente; prompt e checklist private rimangono ignorati, nessuna release/APK pubblicata. W06-T06 e W05-T05/T07 restano aperti.
+
 - [ ] W07-T01 — Implementare CRUD delle playlist, riordino, azioni dalla selezione multipla e rispetto delle autorizzazioni del server.
 - [ ] W07-T02 — Implementare preferiti per brani/album/artisti e sincronizzazione con Navidrome.
 - [ ] W07-T03 — Salvare la coda come playlist e supportare nome personalizzato della mixtape.

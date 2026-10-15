@@ -618,3 +618,13 @@ Utente: «mi sembra tutto ok, se il W06 è stato completato allora scrivimi il p
 Verificati status Git, memoria, SPEC e task W07: working tree W06 modificato con nuovi sorgenti/test/schema6 non tracciati, da preservare integralmente; nessun commit/push/release. Nessuna build necessaria per questo handoff documentale, APK e verifiche precedenti invariati.
 
 Aggiornati PLAN, PROJECT_MEMORY e prompt locale NEXT_PROMPT.md con ripresa **W07-T01 → T02–T06**, tutte le funzioni approvate (playlist/permesse, preferiti senza stelle, coda→playlist/nome mixtape, testi/dettagli, cronologia/scrobbling con recupero offline e deduplica). Indicati riuso dello stack e servizi W05/W06, Room v6, account/playlist dedicate per mutazioni, verifica API ufficiali, controlli reali distinti dalle fixture, regressioni pertinenti e limiti manuali conservati. Nessuna implementazione W07 avviata in questa sessione.
+
+## 2026-10-15 — Commit e push W06 richiesti dall'utente
+
+Richiesta esplicita «allora falli», riferita a commit e push.
+
+- Ispezionati status, diff, log ultimi 10, remoto/tracking e nuovi file. Fetch origin riuscito, divergenza iniziale 0/0 su ba37529. Stage esplicito di 45 file intenzionali: codice, test, schema Room6 e documenti; diff --check senza errori, controllo pattern di chiavi/token senza riscontri.
+- Ignore verificato per env/credenziali, local.properties, APK, entrambe le checklist e NEXT_PROMPT. Nessun segreto, APK o file privato incluso. Nessuna modifica al codice per la pubblicazione e nessuna nuova build necessaria: conservate le verifiche W06 precedenti e i relativi limiti.
+- Commit **`93187a8` — «Wave 06: player TPS-L2, controlli e layout adattivi (T01-T05)»**, 45 file, 3.063 inserimenti/345 rimozioni. Identità per-commit conforme ai precedenti, nessun cambio persistente alla configurazione Git.
+- Push ordinario riuscito **`ba37529..93187a8`** su origin/main. SHA locale/remoto **`93187a826513b97fd50e00143a9370fc9e1fea6f`** identici, working tree pulita subito dopo. Nessuna release creata.
+- PLAN/memoria e NEXT_PROMPT locale aggiornati all'esito; note tracciate della pubblicazione incluse nel successivo commit documentale. Punto di ripresa **W07-T01**, controlli W06-T06 e W05-T05/T07 ancora aperti.
