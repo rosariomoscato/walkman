@@ -80,6 +80,7 @@ fun LibraryScreen(
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
     val state by viewModel.libraryState.collectAsStateWithLifecycle()
     val progress by viewModel.syncProgress.collectAsStateWithLifecycle()
+    val offlineMode by viewModel.offlineMode.collectAsStateWithLifecycle()
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val query by viewModel.query.collectAsStateWithLifecycle()
     val sorts by viewModel.sorts.collectAsStateWithLifecycle()
@@ -89,9 +90,11 @@ fun LibraryScreen(
     val queueError by viewModel.queueError.collectAsStateWithLifecycle()
     val playlistBusy by viewModel.playlistBusy.collectAsStateWithLifecycle()
     val playlistError by viewModel.playlistError.collectAsStateWithLifecycle()
+    val downloadBusy by viewModel.downloadBusy.collectAsStateWithLifecycle()
     val favoriteError by viewModel.favoriteError.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     var addDialogOpen by remember { mutableStateOf(false) }
+    var pendingOpen by remember(profile?.id) { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
         Text(
@@ -102,7 +105,22 @@ fun LibraryScreen(
         when {
             profile == null -> NoProfileState(onOpenProfiles)
             else -> {
+                if (offlineMode) Text(stringResource(R.string.download_offline_banner),
+                    color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp))
                 SyncBanner(progress, state?.takeIf { it.profileId == profile?.id }?.let { it.artistCount to it.songCount }, viewModel::sync, viewModel::cancelSync)
+                val pendingEdits by viewModel.pendingEdits.collectAsStateWithLifecycle()
+                if (pendingEdits > 0) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically) {
+                        Text(stringResource(R.string.download_pending_edits_count, pendingEdits),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.weight(1f))
+                        TextButton(onClick = { pendingOpen = true }) {
+                            Text(stringResource(R.string.offline_edits_manage))
+                        }
+                    }
+                }
                 if (favoriteError) {
                     Text(stringResource(R.string.favorite_failed),color = MaterialTheme.colorScheme.error,modifier = Modifier.padding(horizontal = 16.dp))
                     TextButton(onClick = viewModel::dismissFavoriteError) { Text(stringResource(R.string.action_cancel)) }
@@ -151,11 +169,19 @@ fun LibraryScreen(
                                 TextButton(onClick = { addDialogOpen = true }, enabled = !queueBusy && !playlistBusy) {
                                     Text(stringResource(R.string.selection_add_to_playlist))
                                 }
+                                TextButton(onClick = { viewModel.downloadSelection(items.itemSnapshotList.items) },
+                                    enabled = !downloadBusy) {
+                                    Text(stringResource(R.string.download_action))
+                                }
                             }
                             if (queueBusy || playlistBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                             if (queueError) Text(stringResource(R.string.selection_queue_unavailable),
                                 color = MaterialTheme.colorScheme.error)
                             if (playlistError) MutationErrorLine(true, viewModel::dismissPlaylistError)
+                        }
+                        if (tab == LibraryTab.PLAYLISTS) {
+                            TextButton(onClick = { viewModel.downloadSelection(items.itemSnapshotList.items) },
+                                enabled = !downloadBusy) { Text(stringResource(R.string.download_action)) }
                         }
                     }
                 }
@@ -175,6 +201,9 @@ fun LibraryScreen(
                 }
             }
         }
+    }
+    if (pendingOpen) profile?.id?.let { id ->
+        com.walktape.app.ui.components.OfflineEditsSheet(id) { pendingOpen = false }
     }
     if (addDialogOpen) {
         AddToPlaylistDialog(

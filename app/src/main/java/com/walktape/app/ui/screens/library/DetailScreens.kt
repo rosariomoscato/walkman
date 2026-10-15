@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
@@ -135,12 +136,21 @@ fun AlbumDetailScreen(
                         }
                     }
                     if (songs.isNotEmpty()) {
-                        FilledTonalButton(
-                            onClick = { Graph.playback.playQueue(songs, 0) },
-                            modifier = Modifier.padding(top = 12.dp)
-                        ) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                            Text(stringResource(R.string.playback_play_album))
+                        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilledTonalButton(
+                                onClick = { Graph.playback.playQueue(songs, 0) },
+                                modifier = Modifier.padding(top = 12.dp)
+                            ) {
+                                Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                                Text(stringResource(R.string.playback_play_album))
+                            }
+                            FilledTonalButton(
+                                onClick = { libraryModel.downloadAlbum(albumId, songs) },
+                                modifier = Modifier.padding(top = 12.dp)
+                            ) {
+                                Icon(Icons.Filled.Download, contentDescription = null)
+                                Text(stringResource(R.string.download_album))
+                            }
                         }
                     }
                 }

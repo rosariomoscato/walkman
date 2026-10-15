@@ -39,6 +39,9 @@ data class SyncProgress(
 class LibrarySync(
     private val libraryDao: LibraryDao,
     private val playlistIndex: PlaylistIndex? = null,
+    private val offlineOnly: (Long) -> Boolean = { false },
+    /** Optional post-sync hook (W08-T05: reconcile downloaded playlists on unmetered networks). */
+    private val afterSync: (suspend (Long) -> Unit)? = null,
     private val clientProvider: suspend (Long) -> OpenSubsonicClient?,
 ) {
     private val mutableProgress = MutableStateFlow(SyncProgress())
@@ -49,6 +52,11 @@ class LibrarySync(
 
     suspend fun sync(profileId: Long): Boolean {
         if (!lock.tryLock()) return false
+        if (offlineOnly(profileId)) {
+            mutableProgress.value = SyncProgress(error = com.walktape.app.core.net.ApiError.Unreachable)
+            lock.unlock()
+            return false
+        }
         return try {
             withContext(Dispatchers.IO) {
                 coroutineScope {
@@ -161,6 +169,7 @@ class LibrarySync(
             songCount = songs,
         ))
         mutableProgress.value = SyncProgress(processed = done.get(), total = total, finishedAt = System.currentTimeMillis())
+        afterSync?.invoke(profileId)
         return true
     }
 

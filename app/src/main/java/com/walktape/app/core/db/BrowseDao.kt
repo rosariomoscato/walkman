@@ -19,10 +19,14 @@ interface BrowseDao {
         insertPlaylist(playlist)
         insertEntries(entries)
     }
-    @Query("DELETE FROM playlist WHERE profileId=:profileId AND id NOT IN (:keep)")
+    @Query("DELETE FROM playlist WHERE profileId=:profileId AND id NOT IN (:keep) AND pendingSync=0 AND pendingConflict=0")
     suspend fun prunePlaylists(profileId: Long, keep: List<String>)
     @Query("SELECT * FROM playlist WHERE profileId=:profileId AND id=:id")
     fun playlist(profileId: Long, id: String): Flow<PlaylistEntity?>
+    @Query("SELECT * FROM playlist WHERE profileId=:profileId AND id=:id")
+    suspend fun playlistOnce(profileId: Long, id: String): PlaylistEntity?
+    @Query("SELECT * FROM playlist WHERE profileId=:profileId AND (pendingSync=1 OR pendingConflict=1)")
+    suspend fun pendingPlaylistsOnce(profileId: Long): List<PlaylistEntity>
     @Query("SELECT * FROM playlist WHERE profileId=:profileId AND owner=:owner AND readOnly=0 ORDER BY name COLLATE NOCASE, id")
     fun editablePlaylists(profileId: Long, owner: String): Flow<List<PlaylistEntity>>
     @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
@@ -70,8 +74,18 @@ interface BrowseDao {
     suspend fun deletePlaylists(profileId: Long)
     @Query("DELETE FROM playlist WHERE profileId=:profileId AND id=:id")
     suspend fun deletePlaylist(profileId: Long, id: String)
+    @Query("UPDATE playlist SET pendingSync=:pendingSync, pendingConflict=:conflict WHERE profileId=:profileId AND id=:id")
+    suspend fun updatePlaylistFlags(profileId: Long, id: String, pendingSync: Boolean, conflict: Boolean)
+    @Query("SELECT * FROM playlist WHERE profileId=:profileId AND pendingConflict=1")
+    fun conflictedPlaylists(profileId: Long): Flow<List<PlaylistEntity>>
+    @Query("SELECT COUNT(*) FROM playlist WHERE profileId=:profileId AND (pendingSync=1 OR pendingConflict=1)")
+    fun observePendingPlaylistCount(profileId: Long): Flow<Int>
     @Query("DELETE FROM local_audio WHERE profileId=:profileId")
     suspend fun deleteLocalAudio(profileId: Long)
+    @Query("DELETE FROM local_audio WHERE profileId=:profileId AND songId=:songId")
+    suspend fun deleteLocalAudioSong(profileId: Long, songId: String)
+    @Query("SELECT * FROM local_audio WHERE profileId=:profileId AND songId=:songId")
+    suspend fun localAudio(profileId: Long, songId: String): LocalAudioEntity?
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertLocalAudio(audio: LocalAudioEntity)
 }

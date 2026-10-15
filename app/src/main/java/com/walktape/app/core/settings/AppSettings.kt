@@ -11,6 +11,15 @@ data class AppSettings(
     val hapticsEnabled: Boolean = true,
     /** Optional key click sounds; off until the user opts in. */
     val keyClicksEnabled: Boolean = false,
+    /** Temporary audio cache ceiling (SPEC default 1 GB), editable in settings. */
+    val audioCacheLimitBytes: Long = DEFAULT_AUDIO_CACHE_BYTES,
+    /** Cover cache ceiling (SPEC default 250 MB), editable in settings. */
+    val coverCacheLimitBytes: Long = DEFAULT_COVER_CACHE_BYTES,
     /** False until DataStore has emitted at least once; gates must not run on defaults. */
     val loaded: Boolean = false
-)
+) {
+    companion object {
+        const val DEFAULT_AUDIO_CACHE_BYTES = 1024L * 1024 * 1024
+        const val DEFAULT_COVER_CACHE_BYTES = 250L * 1024 * 1024
+    }
+}

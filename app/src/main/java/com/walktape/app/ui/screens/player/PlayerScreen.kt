@@ -109,6 +109,18 @@ fun PlayerScreen(onBack: () -> Unit) {
     val rewindTick: (Int) -> Unit = { step -> scrubTick(scrub, step, -1) }
     val forwardTick: (Int) -> Unit = { step -> scrubTick(scrub, step, +1) }
 
+    // Honest notice when an unavailable song is skipped during offline listening.
+    val offlineSkips by Graph.offlineSkips.collectAsStateWithLifecycle()
+    val lastSkipped by Graph.lastSkippedTitle.collectAsStateWithLifecycle()
+    var skipNotice by remember { mutableStateOf(false) }
+    LaunchedEffect(offlineSkips) {
+        if (offlineSkips > 0) {
+            skipNotice = true
+            kotlinx.coroutines.delay(5_000)
+            skipNotice = false
+        }
+    }
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val expanded = maxWidth >= 840.dp
         if (expanded) {
@@ -117,10 +129,11 @@ fun PlayerScreen(onBack: () -> Unit) {
                     Modifier.weight(1f).fillMaxHeight()
                         .verticalScroll(rememberScrollState()).padding(16.dp)
                 ) {
-                    PlayerHeader(onBack)
-                    Spacer(Modifier.height(12.dp))
-                    Chassis(state, profileId, feedback, { coverOpen = true }, onQueue = {}, showQueueKey = false,
-                        rewindTick, forwardTick)
+                PlayerHeader(onBack)
+                Spacer(Modifier.height(12.dp))
+                if (skipNotice) SkipNotice(lastSkipped)
+                Chassis(state, profileId, feedback, { coverOpen = true }, onQueue = {}, showQueueKey = false,
+                    rewindTick, forwardTick)
                     Spacer(Modifier.height(16.dp))
                     PlayerSections(state)
                 }
@@ -138,6 +151,7 @@ fun PlayerScreen(onBack: () -> Unit) {
             ) {
                 PlayerHeader(onBack)
                 Spacer(Modifier.height(12.dp))
+                if (skipNotice) SkipNotice(lastSkipped)
                 Chassis(state, profileId, feedback, { coverOpen = true }, onQueue = { queueOpen = true },
                     showQueueKey = true, rewindTick, forwardTick)
                 Spacer(Modifier.height(16.dp))
@@ -162,6 +176,23 @@ fun PlayerScreen(onBack: () -> Unit) {
 }
 
 internal class ScrubSession(val key: String?, val duration: Long?, var target: Long)
+
+/** Inline notice for songs skipped because unavailable offline; no fake progress. */
+@Composable
+private fun SkipNotice(lastSkipped: String?) {
+    androidx.compose.material3.Surface(
+        tonalElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = stringResource(R.string.download_skipped_notice) +
+                (lastSkipped?.let { ": $it" } ?: ""),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error,
+            modifier = Modifier.padding(vertical = 4.dp)
+        )
+    }
+}
 
 /** Escalating steps: 5s for precision, growing for long traversals. */
 private fun stepMs(step: Int): Long = when {

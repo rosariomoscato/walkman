@@ -32,6 +32,10 @@ class ProfilesViewModel : ViewModel() {
 
     fun add(name: String, url: String, username: String, password: String, http: Boolean, onSaved: () -> Unit) {
         if (mutableAction.value.busy) return
+        if (Graph.networkGate.offlineOnly(-1)) {
+            mutableAction.value = ProfileActionState(error = ApiError.Unreachable)
+            return
+        }
         viewModelScope.launch {
             mutableAction.value = ProfileActionState(busy = true)
             when (val result = repository.addVerified(name, url, username, password, http)) {
@@ -43,6 +47,10 @@ class ProfilesViewModel : ViewModel() {
 
     fun verify(id: Long) {
         if (mutableAction.value.busy) return
+        if (Graph.networkGate.offlineOnly(id)) {
+            mutableAction.value = ProfileActionState(error = ApiError.Unreachable)
+            return
+        }
         viewModelScope.launch {
             mutableAction.value = ProfileActionState(busy = true)
             mutableAction.value = when (val result = repository.verify(id)) {
@@ -67,6 +75,9 @@ class ProfilesViewModel : ViewModel() {
         val profile = mutableRemoval.value?.first ?: return
         viewModelScope.launch {
             mutableAction.value = ProfileActionState(busy = true)
+            // Cancel persistent workers first: a late worker must not resurrect profile data.
+            Graph.downloadEngine.cancelProfile(profile.id)
+            com.walktape.app.sync.OfflineSyncWorker.cancel(Graph.app(), profile.id)
             val removed = repository.remove(profile.id)
             mutableRemoval.value = null
             mutableAction.value = ProfileActionState(error = if (removed) null else ApiError.LocalStorage)

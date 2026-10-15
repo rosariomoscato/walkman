@@ -62,7 +62,10 @@ class ProfileRepository(
         val address = ServerAddress.parse(profile.serverUrl, profile.allowLocalHttp) ?: return@withContext null
         try {
             OpenSubsonicClient(address, Credentials(profile.username,
-                vault.decrypt(profile.credentialId, profile.encryptedPassword)))
+                vault.decrypt(profile.credentialId, profile.encryptedPassword)),
+                networkAllowed = { dao.get(id) != null &&
+                    database.downloadDao().settings(id)?.offlineOnly != true &&
+                    dao.active()?.id?.let { database.downloadDao().settings(it)?.offlineOnly } != true })
         } catch (_: java.security.GeneralSecurityException) { null }
           catch (_: IllegalArgumentException) { null }
     }

@@ -109,6 +109,13 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 - Player: Dettagli brano apre sheet scrollabile con dati reali (artista/album/anno/genere/formato/bitrate/durata), testo statico o righe sincronizzate evidenziate e seguite dalla posizione del player. Cache per profilo, testo assente/errore espliciti e Riprova; nessun testo di esempio in app.
 - Cronologia dalla Panoramica: ultimi 30 eventi locali con titolo/artista/data e stato attesa/ACK server; retry manuale. Palette e tipografia preesistenti. Testi sincronizzati automatizzati con fixture; testo reale non sincronizzato verificato in sheet su emulatore. TalkBack e review sul telefono delle nuove superfici restano nella checklist privata W07.
 
+### Incremento W08 — download, solo offline e sincronizzazione
+
+- Azione **Scarica** da selezione Brani/Album/Playlist (checkbox playlist etichettata), **Scarica album**, **Scarica playlist** anche vuota e **Aggiorna download**. Download nella Panoramica con apertura del foglio **Gestisci download**: stato reale, byte/progresso, pausa/ripresa/rimozione e riproduzione; gruppi playlist conservano ordine e duplicati. Una playlist non più sul server conserva lo snapshot locale con indicazione esplicita.
+- Impostazioni **Download e storage** per il profilo: solo Wi-Fi inizialmente on, mobile opt-in, solo offline e skip indisponibili inizialmente on. Spazio letto dai file, limiti cache con chip adattivi, pulizia distinta dai download. Cache audio in uso protetta: un limite può essere temporaneamente superato finché la sorgente viene chiusa. Palette/materiali/tipografia TPS-L2 invariati.
+- Banner persistente **Solo offline** nella libreria; nel player notice quando si salta un brano indisponibile, senza falso esito di download. Nessun autoplay alla riconnessione.
+- Le modifiche locali sono esplicitamente pendenti: riepilogo nella libreria, foglio **Gestisci sincronizzazione**, stato invio/rifiuto/conflitto e retry. Dettaglio playlist con pending e risoluzione locale/server/nuova copia. Cuori locali pendenti non vengono presentati come ACK server. IT/EN e FlowRow/chip per evitare overflow dei nuovi controlli; TalkBack e collaudo adattivo completo W08 restano nella checklist telefono.
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

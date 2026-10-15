@@ -160,15 +160,23 @@ Riscontro utente W07 successivo: «bene, mi sembra tutto ok», con richiesta esp
 
 Dipendenze: wave 05 e 07.
 
-- [ ] W08-T01 — Implementare download di brani/album/playlist, azioni dalla selezione multipla e metadati di appartenenza ai download.
-- [ ] W08-T02 — Implementare lavoro persistente, avanzamento, pausa/ripresa/annullamento, retry e vincoli Wi-Fi/rete mobile.
-- [ ] W08-T03 — Implementare cache audio da 1 GB, copertine da 250 MB, limiti modificabili e contabilità dello spazio.
-- [ ] W08-T04 — Implementare modalità solo offline, priorità copie locali, gestione dei brani indisponibili e riconnessione.
-- [ ] W08-T05 — Sincronizzare playlist scaricate preservando i brani conservati anche da altre origini e i download singoli rimossi dal server.
-- [ ] W08-T06 — Implementare modifiche offline a playlist/preferiti, coda delle operazioni e risoluzione esplicita dei conflitti.
+Handoff 2026-10-15: richiesto il prompt per sviluppare tutta W08 in un'altra sessione, salvato in NEXT_PROMPT.md ignorato da Git. Ripresa W08-T01 → T07 sulla base funzionale W05/W07 pubblicata (HEAD b18691b; codice W07 043e43c). W07-T06 resta aperto per permessi condivisi sul server reale; se il prerequisito manca, non blocca il lavoro indipendente W08 e non viene segnato superato. Residui hardware W05/W06 e checklist private preservati. Nessun codice W08 avviato, commit/push non richiesti per questo handoff.
+
+- [x] W08-T01 — Implementare download di brani/album/playlist, azioni dalla selezione multipla e metadati di appartenenza ai download.
+- [x] W08-T02 — Implementare lavoro persistente, avanzamento, pausa/ripresa/annullamento, retry e vincoli Wi-Fi/rete mobile.
+- [x] W08-T03 — Implementare cache audio da 1 GB, copertine da 250 MB, limiti modificabili e contabilità dello spazio.
+- [x] W08-T04 — Implementare modalità solo offline, priorità copie locali, gestione dei brani indisponibili e riconnessione.
+- [x] W08-T05 — Sincronizzare playlist scaricate preservando i brani conservati anche da altre origini e i download singoli rimossi dal server.
+- [x] W08-T06 — Implementare modifiche offline a playlist/preferiti, coda delle operazioni e risoluzione esplicita dei conflitti.
 - [ ] W08-T07 — Verificare perdita rete, riavvio, spazio insufficiente, duplicati, cancellazioni e isolamento fra profili.
 
 Criterio di uscita: ascolto e gestione offline verificati con riconnessione, senza perdita silenziosa delle modifiche.
+
+Incremento W08 2026-10-15: **T01–T06 implementati con verifiche mirate; T07 parziale**. Room **v10**, migrazioni esplicite 7→8→9→10 e schemi conservati; WorkManager **2.12.0**. Download originali privati, origini condivise e snapshot playlist (vuote e duplicati inclusi), pausa/ripresa/retry, Range+ETag forte, validazione audio. Cache audio LRU con lease sui file in uso, cache copertine riusata e limiti/spazio modificabili. Stesso servizio/bridge con locale→cache→rete, gate solo offline e ascolti pendenti. Operazioni playlist/preferiti durevoli, baseline pre-invio per creazioni e riconciliazione degli ACK ambigui, conflitti espliciti e scelta locale/server/nuova playlist.
+
+Verifiche: build app/androidTest; **110/110 JVM** con API reali opt-in; lint **0 errori/28 avvisi**. Suite mirata Android **21/21 (48,054 s)**: W08 + regressioni storage W05/W07/copertine. Include originale Navidrome e hash locale identico, CRUD offline/conflitto/risoluzione contro playlist reale dedicata poi rimossa, WorkManager reale con credenziali Keystore, servizio PCM offline con contatore HTTP fermo e ascolto pendente; rimozione profilo durante il trasferimento senza catalogo/parziali resuscitati. Recupero download originale dopo force-stop/nuovo processo **1+1 passati**, poi dopo reboot AVD **1+1 passati**. **Ultima combinata**, con le precedenti prove e regressioni servizio/UI W05/W06/W07 sullo stesso APK finale: **32 passati + 2 saltati opt-in, zero falliti (333,652 s)**. I due skip sono i seed/verify separati W05, non controlli eseguiti. Corretta una race di startup del gate con attesa esplicita; l'esecuzione precedente con un fallimento resta nel log, non è presentata come verde.
+
+**T07 resta aperto**: nessuna nuova prova telefono; passaggio reale Wi-Fi/mobile e perdita rete durante download/ascolto/sync sul dispositivo, esaurimento reale spazio durante scrittura (verificato solo preflight con budget impossibile), collaudo UI/accessibilità/adattività delle nuove superfici e stress concorrenza/rimozione profilo sotto trasferimento. Checklist privata `local/PHONE_TESTS_W08.md`; residui W07-T06 e hardware W05/W06 invariati. Nessuna dichiarazione di completamento dell'intera wave o dell'app; nessun commit/push/release.
 
 ## Wave 09 — Qualità ed elaborazione audio
 

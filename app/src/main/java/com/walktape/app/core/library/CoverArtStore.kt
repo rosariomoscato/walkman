@@ -13,14 +13,17 @@ import java.io.File
 import java.security.MessageDigest
 
 /**
- * Per-profile cover cache: bounded disk LRU (default 250 MB per SPEC) plus a small
- * in-memory bitmap cache. Files never leave the profile directory, so removal of a
- * profile drops its covers.
+ * Per-profile cover cache: bounded disk LRU (default 250 MB per SPEC, limit editable at
+ * runtime) plus a small in-memory bitmap cache. Files never leave the profile directory,
+ * so removal of a profile drops its covers. The offline gate serves disk-only content
+ * when the profile is in offline-only mode.
  */
 class CoverArtStore(
     private val coversDir: File,
     private val clientProvider: suspend () -> OpenSubsonicClient?,
-    private val maxBytes: Long = DEFAULT_MAX_BYTES,
+    maxBytes: Long = DEFAULT_MAX_BYTES,
+    private val maxBytesProvider: () -> Long = { maxBytes },
+    private val allowNetwork: () -> Boolean = { true },
 ) {
     private val memory = object : LruCache<String, Bitmap>(16 * 1024 * 1024) {
         override fun sizeOf(key: String, value: Bitmap) = value.allocationByteCount
@@ -36,12 +39,13 @@ class CoverArtStore(
         val file = fileFor(coverArtId, sizePx)
         val bytes = if (file.exists()) {
             file.setLastModified(System.currentTimeMillis())
-            file.readBytes()
+            runCatching { file.readBytes() }.getOrNull() ?: return@withContext null
         } else {
+            if (!allowNetwork()) return@withContext null
             inFlight.withLock {
                 if (file.exists()) {
                     file.setLastModified(System.currentTimeMillis())
-                    file.readBytes()
+                    runCatching { file.readBytes() }.getOrNull() ?: return@withLock null
                 } else {
                     when (val result = clientProvider()?.coverArt(coverArtId, sizePx)) {
                         is ApiResult.Success -> {
@@ -64,7 +68,29 @@ class CoverArtStore(
         decode(bytes, sizePx)?.also { memory.put(key, it) }
     }
 
-    private fun trim() {
+    /** Best-effort offline prefetch right after a download completes (network is up then). */
+    suspend fun prefetch(coverArtId: String?, sizePx: Int = 512) {
+        if (coverArtId.isNullOrBlank() || !allowNetwork()) return
+        bitmap(coverArtId, sizePx)
+    }
+
+    /** Honest on-disk accounting used by the space settings. */
+    suspend fun diskBytes(): Long = withContext(Dispatchers.IO) {
+        coversDir.listFiles()?.filter { it.isFile }?.sumOf { it.length() } ?: 0
+    }
+
+    /** Clears the disk cache (memory entries simply expire); safe while nothing decodes. */
+    suspend fun clearDisk(): Boolean = withContext(Dispatchers.IO) {
+        memory.evictAll()
+        inFlight.withLock {
+            coversDir.listFiles()?.all { it.delete() } ?: true
+        }
+    }
+
+    suspend fun trimTo(bytes: Long) = withContext(Dispatchers.IO) { inFlight.withLock { trim(bytes) } }
+
+    private fun trim(overrideLimit: Long? = null) {
+        val maxBytes = overrideLimit ?: maxBytesProvider()
         val files = coversDir.listFiles()?.filter { it.isFile } ?: return
         var total = files.sumOf { it.length() }
         if (total <= maxBytes) return

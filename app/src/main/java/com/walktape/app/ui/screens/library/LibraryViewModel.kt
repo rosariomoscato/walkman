@@ -57,6 +57,21 @@ class LibraryViewModel : ViewModel() {
         profile?.let { database.libraryDao().observeState(it.id) } ?: flowOf<LibraryStateEntity?>(null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val syncProgress = syncEngine.progress
+    val offlineMode = activeProfile.flatMapLatest { profile ->
+        profile?.let { database.downloadDao().observeSettings(it.id).map { it?.offlineOnly == true } }
+            ?: flowOf(false)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
+    /** Offline edits waiting for the network (playlist/favorites queue, W08-T06). */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val pendingEdits: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observeUnsyncedCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    fun syncOfflineOps() {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch { Graph.offlineOps.drain(profileId) }
+    }
 
     private val mutableTab = MutableStateFlow(LibraryTab.HOME)
     val tab = mutableTab.asStateFlow()
@@ -78,8 +93,8 @@ class LibraryViewModel : ViewModel() {
                 HomeAlbums(recent, played, favorites)
             }
             combine(albums, dao.favoriteSongs(profile.id), dao.favoriteArtists(profile.id),
-                dao.localSongs(profile.id), dao.homePlaylists(profile.id)) { a, songs, artists, local, playlists ->
-                HomeContent(a.recent, a.played, a.favorites, songs, artists, local, playlists, profile.id)
+                database.downloadDao().completedDownloads(profile.id), dao.homePlaylists(profile.id)) { a, songs, artists, downloads, playlists ->
+                HomeContent(a.recent, a.played, a.favorites, songs, artists, downloads, playlists, profile.id)
             }
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), HomeContent())
@@ -112,6 +127,8 @@ class LibraryViewModel : ViewModel() {
     val playlistError = mutablePlaylistError.asStateFlow()
     private val mutableFavoriteError = MutableStateFlow(false)
     val favoriteError = mutableFavoriteError.asStateFlow()
+    private val mutableDownloadBusy = MutableStateFlow(false)
+    val downloadBusy = mutableDownloadBusy.asStateFlow()
 
     /** Own playlists only: server-side edits are refused for other owners' playlists. */
     val editablePlaylists: StateFlow<List<PlaylistEntity>> = combine(activeProfile, profiles.profiles) { active, _ -> active }
@@ -208,6 +225,67 @@ class LibraryViewModel : ViewModel() {
 
     fun dismissFavoriteError() { mutableFavoriteError.value = false }
     fun dismissPlaylistError() { mutablePlaylistError.value = false }
+
+    /** Downloads the multi-selection (songs or whole albums) as single-song downloads. */
+    fun downloadSelection(visibleItems: List<Any>) {
+        val profileId = activeProfile.value?.id ?: return
+        if (mutableSelection.value.isEmpty() || mutableDownloadBusy.value) return
+        val selectedTab = tab.value
+        val revision = selectionRevision
+        mutableDownloadBusy.value = true
+        viewModelScope.launch {
+            try {
+                if (selectedTab == LibraryTab.PLAYLISTS) {
+                    val ids = mutableSelection.value.toList()
+                    for (id in ids) {
+                        if (revision != selectionRevision || activeProfile.value?.id != profileId) return@launch
+                        Graph.downloadStore.enqueuePlaylist(profileId, id)
+                    }
+                    Graph.downloadEngine.schedule(profileId)
+                    clearSelection()
+                    return@launch
+                }
+                val resolved = resolveSelectionSongs(profileId, selectedTab, visibleItems) ?: return@launch
+                if (revision != selectionRevision || activeProfile.value?.id != profileId) return@launch
+                if (!resolved.complete || resolved.songs.isEmpty()) return@launch
+                if (selectedTab == LibraryTab.ALBUMS) {
+                    resolved.songs.groupBy { it.albumId }.forEach { (albumId, songs) ->
+                        Graph.downloadStore.enqueueSongs(profileId, songs,
+                            com.walktape.app.core.downloads.DownloadStore.albumOrigin(albumId.orEmpty()))
+                    }
+                } else Graph.downloadStore.enqueueSongs(profileId, resolved.songs,
+                    com.walktape.app.core.downloads.DownloadStore.ORIGIN_SINGLE)
+                Graph.downloadEngine.schedule(profileId)
+                clearSelection()
+            } finally { mutableDownloadBusy.value = false }
+        }
+    }
+
+    /** Downloads a whole album with an album origin (one audio file per song). */
+    fun downloadAlbum(albumId: String, songs: List<SongEntity>) {
+        val profileId = activeProfile.value?.id ?: return
+        if (songs.isEmpty() || mutableDownloadBusy.value) return
+        mutableDownloadBusy.value = true
+        viewModelScope.launch {
+            try {
+                Graph.downloadStore.enqueueSongs(profileId, songs,
+                    com.walktape.app.core.downloads.DownloadStore.albumOrigin(albumId))
+                Graph.downloadEngine.schedule(profileId)
+            } finally { mutableDownloadBusy.value = false }
+        }
+    }
+
+    /** Downloads a cached playlist in order (duplicates never duplicate the audio file). */
+    fun downloadPlaylist(profileId: Long, playlistId: String) {
+        if (mutableDownloadBusy.value) return
+        mutableDownloadBusy.value = true
+        viewModelScope.launch {
+            try {
+                Graph.downloadStore.enqueuePlaylist(profileId, playlistId)
+                Graph.downloadEngine.schedule(profileId)
+            } finally { mutableDownloadBusy.value = false }
+        }
+    }
 
     private class ResolvedSelection(val songs: List<SongEntity>, val complete: Boolean)
 
@@ -321,6 +399,6 @@ private data class LibraryRequest(val profileId: Long?, val tab: LibraryTab, val
 
 data class HomeContent(val recent: List<AlbumEntity> = emptyList(), val played: List<AlbumEntity> = emptyList(),
     val favoriteAlbums: List<AlbumEntity> = emptyList(), val favoriteSongs: List<SongEntity> = emptyList(),
-    val favoriteArtists: List<ArtistEntity> = emptyList(), val localSongs: List<SongEntity> = emptyList(),
+    val favoriteArtists: List<ArtistEntity> = emptyList(), val downloads: List<com.walktape.app.core.db.DownloadEntity> = emptyList(),
     val playlists: List<PlaylistEntity> = emptyList(), val profileId: Long? = null)
 private data class HomeAlbums(val recent: List<AlbumEntity>, val played: List<AlbumEntity>, val favorites: List<AlbumEntity>)

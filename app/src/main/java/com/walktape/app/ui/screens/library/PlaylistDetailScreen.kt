@@ -33,6 +33,7 @@ import com.walktape.app.R
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 
 class PlaylistDetailViewModel(
@@ -50,6 +51,70 @@ class PlaylistDetailViewModel(
     val playBusy = MutableStateFlow(false)
     val editBusy = MutableStateFlow(false)
     val editError = MutableStateFlow(false)
+    val downloadBusy = MutableStateFlow(false)
+    val downloadNotice = MutableStateFlow<Int?>(null)
+    val conflictResolutionError = MutableStateFlow(false)
+
+    /** Conflicting queue operations for THIS playlist, for the explicit resolution dialog. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val conflictOps = Graph.offlineOps.ops(profileId).map { ops ->
+        ops.filter { it.state == com.walktape.app.core.db.PendingOpState.CONFLICT.name &&
+            Graph.offlineOps.conflictPlaylistId(it) == id }
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun resolveConflict(opId: String, choice: String) {
+        viewModelScope.launch {
+            val done = when (choice) {
+                "local" -> Graph.offlineOps.resolveConflictKeepLocal(profileId, opId)
+                "new" -> Graph.offlineOps.resolveConflictAsNewPlaylist(profileId, opId)
+                else -> Graph.offlineOps.resolveConflictKeepServer(profileId, opId)
+            }
+            conflictResolutionError.value = !done
+        }
+    }
+
+    /** Downloads the whole playlist (distinct songs, one audio file each, order kept in cache). */
+    fun download() {
+        if (downloadBusy.value) return
+        downloadBusy.value = true
+        viewModelScope.launch {
+            try {
+                Graph.downloadStore.enqueuePlaylist(profileId, id)
+                Graph.downloadEngine.schedule(profileId)
+            } finally { downloadBusy.value = false }
+        }
+    }
+
+    /**
+     * Manual update of a downloaded playlist (W08-T05): refreshes the playlist from the
+     * server first, then mirrors the download set; files kept for other origins are
+     * reported honestly instead of being deleted silently.
+     */
+    fun updateDownload() {
+        if (downloadBusy.value) return
+        if (Graph.networkGate.offlineOnly(profileId)) {
+            downloadNotice.value = com.walktape.app.R.string.download_sync_blocked
+            return
+        }
+        downloadBusy.value = true
+        viewModelScope.launch {
+            try {
+                if (Graph.database.profileDao().active()?.id != profileId) return@launch
+                val client = Graph.profiles.clientFor(profileId) ?: return@launch
+                val error = Graph.playlistIndex().refresh(profileId, client)
+                if (error != null) {
+                    downloadNotice.value = com.walktape.app.R.string.playlist_change_failed
+                    return@launch
+                }
+                val result = Graph.downloadStore.reconcilePlaylistDownload(profileId, id)
+                Graph.downloadEngine.schedule(profileId)
+                downloadNotice.value = when {
+                    result.keptForOtherOrigins.isNotEmpty() -> com.walktape.app.R.string.download_keep_notice
+                    else -> null
+                }
+            } finally { downloadBusy.value = false }
+        }
+    }
 
     /** Server-side write permission: own playlists only, never shared/readonly ones. */
     fun editable(owner: String?, readOnly: Boolean): Boolean =
@@ -138,6 +203,11 @@ fun PlaylistDetailScreen(id: String, onBack: () -> Unit,
     val editBusy by model.editBusy.collectAsStateWithLifecycle()
     val editError by model.editError.collectAsStateWithLifecycle()
     val unavailable by model.playUnavailable.collectAsStateWithLifecycle()
+    val downloadBusy by model.downloadBusy.collectAsStateWithLifecycle()
+    val downloadNotice by model.downloadNotice.collectAsStateWithLifecycle()
+    val conflictOps by model.conflictOps.collectAsStateWithLifecycle()
+    val conflictError by model.conflictResolutionError.collectAsStateWithLifecycle()
+    val pendingSync = playlist?.pendingSync == true
     val entries = model.entries.collectAsLazyPagingItems()
     val editable = playlist?.let { model.editable(it.owner, it.readOnly) } ?: false
     var renameOpen by remember { mutableStateOf(false) }
@@ -158,6 +228,13 @@ fun PlaylistDetailScreen(id: String, onBack: () -> Unit,
                 }
             })
         if (editError) MutationErrorLine(true) { model.editError.value = false }
+        if (conflictError) MutationErrorLine(true) { model.conflictResolutionError.value = false }
+        if (pendingSync) {
+            Text(stringResource(R.string.download_pending_edits),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp))
+        }
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 playlist?.let { p ->
@@ -173,6 +250,16 @@ fun PlaylistDetailScreen(id: String, onBack: () -> Unit,
                         p.comment?.takeIf { it.isNotBlank() }?.let { Text(it) }
                         FilledTonalButton(onClick = { model.play(0) }, enabled = !busy && p.songCount > 0) {
                             Text(stringResource(R.string.player_play_playlist))
+                        }
+                        FilledTonalButton(onClick = { model.download() }, enabled = !downloadBusy) {
+                            Text(stringResource(R.string.download_playlist))
+                        }
+                        FilledTonalButton(onClick = { model.updateDownload() }, enabled = !downloadBusy) {
+                            Text(stringResource(R.string.download_update_playlist))
+                        }
+                        downloadNotice?.let { notice ->
+                            Text(stringResource(notice), style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary)
                         }
                         if (unavailable) Text(stringResource(R.string.selection_queue_unavailable))
                         if (editBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -232,6 +319,32 @@ fun PlaylistDetailScreen(id: String, onBack: () -> Unit,
             },
             dismissButton = {
                 TextButton(onClick = { deleteOpen = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+    conflictOps.firstOrNull()?.let { op ->
+        AlertDialog(
+            onDismissRequest = {},
+            title = { Text(stringResource(R.string.download_sync_conflict)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.download_conflict_body, playlist?.name ?: ""))
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { model.resolveConflict(op.opId, "local") }) {
+                    Text(stringResource(R.string.download_conflict_keep_local))
+                }
+            },
+            dismissButton = {
+                Column {
+                    TextButton(onClick = { model.resolveConflict(op.opId, "new") }) {
+                        Text(stringResource(R.string.download_conflict_new_playlist))
+                    }
+                    TextButton(onClick = { model.resolveConflict(op.opId, "server") }) {
+                        Text(stringResource(R.string.download_conflict_keep_server))
+                    }
+                }
             },
         )
     }

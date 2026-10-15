@@ -14,6 +14,9 @@ interface ProfileDao {
     @Query("SELECT * FROM profile ORDER BY name")
     fun observeAll(): Flow<List<ProfileEntity>>
 
+    @Query("SELECT * FROM profile ORDER BY name")
+    suspend fun all(): List<ProfileEntity>
+
     @Insert
     suspend fun insert(profile: ProfileEntity): Long
 

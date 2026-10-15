@@ -7,6 +7,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.paging.compose.LazyPagingItems
 import androidx.paging.compose.itemKey
@@ -53,6 +55,7 @@ fun LibraryFilters(model: LibraryViewModel) {
 @Composable
 fun PlaylistItems(items: LazyPagingItems<Any>, profileId: Long, model: LibraryViewModel, onOpen: (String) -> Unit) {
     val busy by model.playlistBusy.collectAsStateWithLifecycle()
+    val selected by model.selection.collectAsStateWithLifecycle()
     var newDialogOpen by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize()) {
         item {
@@ -62,7 +65,15 @@ fun PlaylistItems(items: LazyPagingItems<Any>, profileId: Long, model: LibraryVi
             }
         }
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
-            (items[index] as? PlaylistEntity)?.takeIf { it.profileId == profileId }?.let { PlaylistRow(it) { onOpen(it.id) } }
+            (items[index] as? PlaylistEntity)?.takeIf { it.profileId == profileId }?.let { playlist ->
+                val selectionLabel = stringResource(R.string.download_select_playlist, playlist.name)
+                Row(Modifier.fillMaxWidth()) {
+                    Checkbox(checked = playlist.id in selected,
+                        onCheckedChange = { model.toggleSelection(playlist.id) },
+                        modifier = Modifier.semantics { contentDescription = selectionLabel })
+                    Box(Modifier.weight(1f)) { PlaylistRow(playlist) { onOpen(playlist.id) } }
+                }
+            }
         }
     }
     if (newDialogOpen) {

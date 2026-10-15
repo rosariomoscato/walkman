@@ -17,6 +17,7 @@ class ScrobbleSender(
     private val dao: ScrobbleDao,
     private val clientProvider: suspend (Long) -> OpenSubsonicClient?,
     private val scope: CoroutineScope,
+    private val offlineOnly: (Long) -> Boolean = { false },
 ) {
     private val mutex = Mutex()
 
@@ -34,6 +35,7 @@ class ScrobbleSender(
             if (profiles.isEmpty()) return@withLock
             var deliveredAny = false
             for (profileId in profiles) {
+                if (offlineOnly(profileId)) continue // offline-only: listen events stay pending
                 val batch = dao.pending(profileId, BATCH)
                 if (batch.isEmpty()) continue
                 val client = clientProvider(profileId)

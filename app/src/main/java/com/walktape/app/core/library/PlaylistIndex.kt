@@ -7,13 +7,18 @@ import com.walktape.app.core.net.ApiError
 import com.walktape.app.core.net.ApiResult
 import com.walktape.app.core.net.OpenSubsonicClient
 
-class PlaylistIndex(private val dao: BrowseDao) {
+class PlaylistIndex(private val dao: BrowseDao,
+    private val locallyDeleted: suspend (Long) -> Set<String> = { emptySet() }) {
     suspend fun refresh(profileId: Long, client: OpenSubsonicClient): ApiError? {
         val list = client.playlists()
         if (list is ApiResult.Failure) return list.error
         val playlists = (list as ApiResult.Success).value
         if (playlists.map { it.id }.distinct().size != playlists.size) return ApiError.InvalidResponse
+        val tombstones = locallyDeleted(profileId)
         for (summary in playlists) {
+            if (summary.id in tombstones) continue
+            val local = dao.playlistOnce(profileId, summary.id)
+            if (local?.pendingSync == true || local?.pendingConflict == true) continue
             when (val result = client.playlist(summary.id)) {
                 is ApiResult.Failure -> return result.error
                 is ApiResult.Success -> {

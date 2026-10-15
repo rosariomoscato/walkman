@@ -5,6 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,8 @@ class SettingsRepository(private val context: Context) {
     private val suggestionsKey = booleanPreferencesKey("suggestions_enabled")
     private val hapticsKey = booleanPreferencesKey("haptics_enabled")
     private val keyClicksKey = booleanPreferencesKey("key_clicks_enabled")
+    private val audioCacheLimitKey = longPreferencesKey("audio_cache_limit_bytes")
+    private val coverCacheLimitKey = longPreferencesKey("cover_cache_limit_bytes")
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { prefs ->
         AppSettings(
@@ -30,8 +33,20 @@ class SettingsRepository(private val context: Context) {
             suggestionsEnabled = prefs[suggestionsKey] ?: false,
             hapticsEnabled = prefs[hapticsKey] ?: true,
             keyClicksEnabled = prefs[keyClicksKey] ?: false,
+            audioCacheLimitBytes = prefs[audioCacheLimitKey] ?: AppSettings.DEFAULT_AUDIO_CACHE_BYTES,
+            coverCacheLimitBytes = prefs[coverCacheLimitKey] ?: AppSettings.DEFAULT_COVER_CACHE_BYTES,
             loaded = true
         )
+    }
+
+    suspend fun setAudioCacheLimitBytes(bytes: Long) {
+        require(bytes in MIN_CACHE_LIMIT..MAX_CACHE_LIMIT)
+        context.settingsStore.edit { prefs -> prefs[audioCacheLimitKey] = bytes }
+    }
+
+    suspend fun setCoverCacheLimitBytes(bytes: Long) {
+        require(bytes in MIN_CACHE_LIMIT..MAX_CACHE_LIMIT)
+        context.settingsStore.edit { prefs -> prefs[coverCacheLimitKey] = bytes }
     }
 
     suspend fun setThemeMode(mode: ThemeMode) {
@@ -74,4 +89,9 @@ class SettingsRepository(private val context: Context) {
             prefs.asMap().filterKeys { it.name.startsWith("sort_") }
                 .mapKeys { it.key.name }.mapValues { it.value as String }
         }
+
+    companion object {
+        const val MIN_CACHE_LIMIT = 50L * 1024 * 1024
+        const val MAX_CACHE_LIMIT = 20L * 1024 * 1024 * 1024
+    }
 }

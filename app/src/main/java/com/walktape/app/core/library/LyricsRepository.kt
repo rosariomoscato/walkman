@@ -15,6 +15,7 @@ import com.walktape.app.core.net.OpenSubsonicClient
 class LyricsRepository(
     private val dao: LyricsDao,
     private val clientProvider: suspend (Long) -> OpenSubsonicClient?,
+    private val offlineOnly: (Long) -> Boolean = { false },
 ) {
     data class LyricsLine(val value: String, val startMs: Long?, val endMs: Long?)
     data class SongLyrics(
@@ -37,6 +38,7 @@ class LyricsRepository(
                 return cached.toResult(fromCache = true)
             }
         }
+        if (offlineOnly(profileId)) return Result.Unavailable(ApiError.Unreachable)
         val client = clientProvider(profileId) ?: return Result.Unavailable(ApiError.CredentialsUnavailable)
         return when (val result = client.lyrics(songId)) {
             is ApiResult.Failure -> Result.Unavailable(result.error)

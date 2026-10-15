@@ -12,7 +12,8 @@ import java.io.IOException
 /**
  * Resolves wtstream:// queue uris into per-request authenticated stream URLs (fresh token+salt
  * on every open, D17) and rejects JSON error envelopes via the content-type predicate, so the
- * player reports a playback error instead of feeding markup to the decoders.
+ * player reports a playback error instead of feeding markup to the decoders. While the profile
+ * is in offline-only mode the resolution fails: no network request leaves the app (W08-T04).
  */
 data class StreamProfile(val id: Long, val client: OpenSubsonicClient)
 
@@ -20,6 +21,7 @@ data class StreamProfile(val id: Long, val client: OpenSubsonicClient)
 class SubsonicStreamDataSourceFactory(
     http: okhttp3.OkHttpClient,
     userAgent: String,
+    private val offlineOnly: (Long) -> Boolean = { false },
     private val clientProvider: () -> StreamProfile?,
 ) : DataSource.Factory {
 
@@ -32,6 +34,7 @@ class SubsonicStreamDataSourceFactory(
 
     private fun resolve(dataSpec: DataSpec): DataSpec {
         val profile = clientProvider() ?: throw IOException("No active profile connection")
+        if (offlineOnly(profile.id)) throw IOException("Profile is in offline-only mode")
         val songId = SubsonicStream.songId(dataSpec.uri.toString(), profile.id)
             ?: throw IOException("Unsupported playback uri")
         val streamUrl = profile.client.streamUrl(songId, randomSalt()).toString()

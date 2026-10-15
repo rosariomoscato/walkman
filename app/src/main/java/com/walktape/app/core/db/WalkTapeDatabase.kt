@@ -12,8 +12,10 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongEntity::class, GenreEntity::class, LibraryStateEntity::class,
         PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class,
         QueueStateEntity::class, QueueEntryEntity::class,
-        ScrobbleEventEntity::class, LyricsEntity::class, ListeningStateEntity::class],
-    version = 7,
+        ScrobbleEventEntity::class, LyricsEntity::class, ListeningStateEntity::class,
+        DownloadEntity::class, DownloadOriginEntity::class,
+        PendingOpEntity::class, ProfileSettingsEntity::class, DownloadGroupEntity::class],
+    version = 10,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -24,6 +26,7 @@ abstract class WalkTapeDatabase : RoomDatabase() {
     abstract fun queueDao(): QueueDao
     abstract fun scrobbleDao(): ScrobbleDao
     abstract fun lyricsDao(): LyricsDao
+    abstract fun downloadDao(): DownloadDao
 
     companion object {
         val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
@@ -73,6 +76,26 @@ abstract class WalkTapeDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS `scrobble_event` (`profileId` INTEGER NOT NULL, `eventId` TEXT NOT NULL, `songId` TEXT NOT NULL, `title` TEXT NOT NULL, `artist` TEXT, `album` TEXT, `playedAtMs` INTEGER NOT NULL, `listenedMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `sentAt` INTEGER, PRIMARY KEY(`profileId`, `eventId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_scrobble_event_profileId_sentAt` ON `scrobble_event` (`profileId`, `sentAt`)")
                 db.execSQL("CREATE TABLE IF NOT EXISTS `lyrics` (`profileId` INTEGER NOT NULL, `songId` TEXT NOT NULL, `displayArtist` TEXT, `displayTitle` TEXT, `lang` TEXT, `synced` INTEGER NOT NULL, `lines` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `songId`), FOREIGN KEY(`profileId`, `songId`) REFERENCES `song`(`profileId`, `id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }, object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `download` (`profileId` INTEGER NOT NULL, `songId` TEXT NOT NULL, `status` TEXT NOT NULL, `relativePath` TEXT, `bytes` INTEGER NOT NULL, `totalBytes` INTEGER NOT NULL, `title` TEXT NOT NULL, `artist` TEXT, `album` TEXT, `albumId` TEXT, `coverArt` TEXT, `duration` INTEGER NOT NULL, `suffix` TEXT, `contentType` TEXT, `serverSize` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `completedAt` INTEGER, `updatedAt` INTEGER NOT NULL, `lastError` TEXT, `attempts` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `songId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_profileId` ON `download` (`profileId`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `download_origin` (`profileId` INTEGER NOT NULL, `songId` TEXT NOT NULL, `origin` TEXT NOT NULL, `createdAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `songId`, `origin`), FOREIGN KEY(`profileId`, `songId`) REFERENCES `download`(`profileId`, `songId`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_download_origin_profileId_origin` ON `download_origin` (`profileId`, `origin`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `pending_op` (`profileId` INTEGER NOT NULL, `opId` TEXT NOT NULL, `kind` TEXT NOT NULL, `payload` TEXT NOT NULL, `baselineChanged` TEXT, `baselineSignature` TEXT, `createdAt` INTEGER NOT NULL, `state` TEXT NOT NULL, `attempts` INTEGER NOT NULL, `lastError` TEXT, `updatedAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `opId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_pending_op_profileId_state` ON `pending_op` (`profileId`, `state`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `profile_settings` (`profileId` INTEGER NOT NULL, `wifiOnly` INTEGER NOT NULL DEFAULT 1, `offlineOnly` INTEGER NOT NULL DEFAULT 0, `skipUnavailable` INTEGER NOT NULL DEFAULT 1, PRIMARY KEY(`profileId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("ALTER TABLE playlist ADD COLUMN pendingSync INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE playlist ADD COLUMN pendingConflict INTEGER NOT NULL DEFAULT 0")
+            }
+        }, object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE download ADD COLUMN serverMissing INTEGER NOT NULL DEFAULT 0")
+            }
+        }, object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS download_group (profileId INTEGER NOT NULL, origin TEXT NOT NULL, name TEXT NOT NULL, songIds TEXT NOT NULL, refreshedAt INTEGER NOT NULL, serverMissing INTEGER NOT NULL, PRIMARY KEY(profileId,origin), FOREIGN KEY(profileId) REFERENCES profile(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
             }
         })
 

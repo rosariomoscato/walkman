@@ -21,6 +21,10 @@ data class PlaylistEntity(
     val fetchedAt: Long,
     /** Server-side write permission flag (Navidrome "readonly"); own playlists are always false. */
     @ColumnInfo(defaultValue = "0") val readOnly: Boolean = false,
+    /** Local edits not yet confirmed by the server (W08-T06). */
+    @ColumnInfo(defaultValue = "0") val pendingSync: Boolean = false,
+    /** Concurrent server change detected: the user must resolve explicitly. */
+    @ColumnInfo(defaultValue = "0") val pendingConflict: Boolean = false,
 )
 
 @Entity(tableName = "playlist_entry", primaryKeys = ["profileId", "playlistId", "position"],

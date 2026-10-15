@@ -105,6 +105,8 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setKeyClicksEnabled
         )
 
+        DownloadsStorageSection(viewModel)
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -142,6 +144,107 @@ private fun SettingLabel(text: String, paddingStart: Int) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = paddingStart.dp)
     )
+}
+
+/** Per-profile download/offline controls plus honest on-disk space accounting. */
+@Composable
+private fun DownloadsStorageSection(viewModel: SettingsViewModel) {
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val profileSettings by viewModel.profileSettings.collectAsStateWithLifecycle()
+    val space by viewModel.space.collectAsStateWithLifecycle()
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val cacheCleared by viewModel.cacheCleared.collectAsStateWithLifecycle()
+
+    SectionHeader(text = stringResource(R.string.download_settings))
+    if (profile == null) {
+        Text(stringResource(R.string.home_empty_body),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 16.dp))
+        return
+    }
+    FeedbackSetting(
+        title = stringResource(R.string.download_wifi_only),
+        help = stringResource(R.string.download_wifi_only_help),
+        enabled = profileSettings.wifiOnly,
+        onCheckedChange = viewModel::setWifiOnly
+    )
+    FeedbackSetting(
+        title = stringResource(R.string.download_offline_only),
+        help = stringResource(R.string.download_offline_only_help),
+        enabled = profileSettings.offlineOnly,
+        onCheckedChange = viewModel::setOfflineOnly
+    )
+    FeedbackSetting(
+        title = stringResource(R.string.download_skip_unavailable),
+        help = stringResource(R.string.download_skip_unavailable_help),
+        enabled = profileSettings.skipUnavailable,
+        onCheckedChange = viewModel::setSkipUnavailable
+    )
+
+    Text(stringResource(R.string.download_space_title),
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    if (cacheCleared == false) {
+        Text(stringResource(R.string.download_cache_clear_blocked),
+            color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+    } else if (cacheCleared == true) {
+        Text(stringResource(R.string.download_cache_cleared),
+            color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        if (space.musicBytes >= 0) Text(stringResource(R.string.download_space_music,
+            com.walktape.app.ui.components.formatDownloadBytes(space.musicBytes)))
+        if (space.audioCacheBytes >= 0) Text(stringResource(R.string.download_space_audio_cache,
+            com.walktape.app.ui.components.formatDownloadBytes(space.audioCacheBytes)))
+        if (space.coversBytes >= 0) Text(stringResource(R.string.download_space_covers,
+            com.walktape.app.ui.components.formatDownloadBytes(space.coversBytes)))
+        if (space.totalBytes >= 0) Text(stringResource(R.string.download_space_total,
+            com.walktape.app.ui.components.formatDownloadBytes(space.totalBytes)),
+            style = MaterialTheme.typography.titleSmall)
+    }
+    androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 16.dp)) {
+        TextButton(onClick = viewModel::clearAudioCache) {
+            Text(stringResource(R.string.download_clear_audio_cache))
+        }
+        TextButton(onClick = viewModel::clearCoversCache) {
+            Text(stringResource(R.string.download_clear_covers_cache))
+        }
+        TextButton(onClick = viewModel::refreshSpace) { Text(stringResource(R.string.action_retry)) }
+    }
+    if (cacheCleared != null) {
+        TextButton(onClick = viewModel::dismissCacheCleared, modifier = Modifier.padding(horizontal = 16.dp)) {
+            Text(stringResource(R.string.action_cancel))
+        }
+    }
+
+    CacheLimitChooser(
+        label = stringResource(R.string.download_cache_limit_audio),
+        options = listOf(512L * 1024 * 1024, 1024L * 1024 * 1024, 2L * 1024 * 1024 * 1024,
+            4L * 1024 * 1024 * 1024, 8L * 1024 * 1024 * 1024),
+        selected = settings.audioCacheLimitBytes,
+        onSelect = viewModel::setAudioCacheLimit
+    )
+    CacheLimitChooser(
+        label = stringResource(R.string.download_cache_limit_covers),
+        options = listOf(100L * 1024 * 1024, 250L * 1024 * 1024, 500L * 1024 * 1024, 1024L * 1024 * 1024),
+        selected = settings.coverCacheLimitBytes,
+        onSelect = viewModel::setCoverCacheLimit
+    )
+}
+
+@Composable
+private fun CacheLimitChooser(label: String, options: List<Long>, selected: Long, onSelect: (Long) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        Text(label, style = MaterialTheme.typography.titleMedium)
+        androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth()) {
+            options.forEachIndexed { index, bytes ->
+                androidx.compose.material3.FilterChip(
+                    selected = selected == bytes,
+                    onClick = { onSelect(bytes) },
+                    label = { Text(com.walktape.app.ui.components.formatDownloadBytes(bytes)) }
+                )
+            }
+        }
+    }
 }
 
 @Composable

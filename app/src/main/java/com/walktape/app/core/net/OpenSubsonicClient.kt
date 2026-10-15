@@ -27,6 +27,7 @@ class OpenSubsonicClient(
     private val address: ServerAddress,
     private val credentials: Credentials,
     private val http: OkHttpClient = defaultHttpClient(),
+    private val networkAllowed: suspend () -> Boolean = { true },
     private val salt: () -> String = ::randomSalt,
 ) {
     suspend fun ping(): ApiResult<ServerInfo> = when (val result = request("ping")) {
@@ -235,6 +236,7 @@ class OpenSubsonicClient(
 
     /** Binary cover art; a JSON error envelope on HTTP 200 is treated as a protocol failure. */
     suspend fun coverArt(coverArtId: String, sizePx: Int?): ApiResult<ByteArray> {
+        if (!networkAllowed()) return ApiResult.Failure(ApiError.Unreachable)
         if (coverArtId.isEmpty()) return ApiResult.Failure(ApiError.InvalidRequest)
         val saltValue = salt()
         val url = address.url.newBuilder().addPathSegment("rest").addPathSegment("getCoverArt.view")
@@ -302,6 +304,21 @@ class OpenSubsonicClient(
         return url.build()
     }
 
+    /**
+     * Authenticated original-file URL for downloads (D17: `download` always returns the
+     * original and honors Range, verified on the real server). No format parameter.
+     */
+    fun downloadUrl(songId: String, salt: String): HttpUrl {
+        return address.url.newBuilder().addPathSegment("rest").addPathSegment("download.view")
+            .addQueryParameter("u", credentials.username)
+            .addQueryParameter("t", credentials.token(salt))
+            .addQueryParameter("s", salt)
+            .addQueryParameter("v", "1.16.1")
+            .addQueryParameter("c", "WalkTape")
+            .addQueryParameter("id", songId)
+            .build()
+    }
+
     /** Repeated parameters are preserved for playlist endpoints in later waves. */
     internal suspend fun request(
         endpoint: String,
@@ -322,6 +339,7 @@ class OpenSubsonicClient(
         parameters: List<Pair<String, String>>,
         asPost: Boolean,
     ): ApiResult<JsonObject> {
+        if (!networkAllowed()) return ApiResult.Failure(ApiError.Unreachable)
         if (!endpoint.matches(Regex("[a-zA-Z][a-zA-Z0-9]*")) ||
             parameters.any { it.first in RESERVED }) return ApiResult.Failure(ApiError.InvalidRequest)
         val requestSalt = salt()
@@ -371,6 +389,7 @@ class OpenSubsonicClient(
         private val RESERVED = setOf("u", "p", "t", "s", "v", "c", "f", "apiKey", "callback")
 
         fun defaultHttpClient(): OkHttpClient = OkHttpClient.Builder()
+            .eventListener(NetworkTraffic.listener)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .callTimeout(30, TimeUnit.SECONDS)
@@ -385,6 +404,7 @@ class OpenSubsonicClient(
          * requests on the original (pass-through) stream.
          */
         fun streamingHttpClient(): OkHttpClient = OkHttpClient.Builder()
+            .eventListener(NetworkTraffic.listener)
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .followRedirects(false).followSslRedirects(false)

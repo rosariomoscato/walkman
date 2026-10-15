@@ -16,11 +16,16 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.junit.Before
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class SubsonicStreamDataSourceTest {
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
+
+    @Before fun waitForLoadedAppNetworkPolicy(): Unit = runBlocking {
+        kotlinx.coroutines.withTimeout(10_000) { com.walktape.app.Graph.networkGate.awaitReady() }
+    }
 
     private fun md5(value: String) = MessageDigest.getInstance("MD5")
         .digest(value.toByteArray(Charsets.UTF_8)).joinToString("") { "%02x".format(it.toInt() and 0xff) }
