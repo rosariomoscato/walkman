@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_play_playlist">Play playlist</string>
+    <string name="player_title">Player</string>
+    <string name="player_open">Open the WalkTape player</string>
+    <string name="player_empty_title">No tracks in the queue</string>
+    <string name="player_empty_body">Pick an album or some songs from the library: the queue shows up here, ready to play.</string>
+    <string name="player_stop">Stop playback</string>
+    <string name="player_scrub_back">Rewind 10 seconds</string>
+    <string name="player_scrub_forward">Fast forward 10 seconds</string>
+    <string name="player_volume_down">Lower media volume</string>
+    <string name="player_volume_up">Raise media volume</string>
+    <string name="cassette_description">Cassette: %1$s — %2$s</string>
+    <string name="cassette_empty">Blank cassette: no tracks in the queue.</string>
+    <string name="cassette_label_mixtape">Mixtape</string>
+    <string name="cover_enlarge">Enlarge the cover</string>
+    <string name="cover_dialog_close">Tap to close</string>
+    <string name="settings_haptics">Key haptic feedback</string>
+    <string name="settings_haptics_help">Light vibration when pressing the player keys.</string>
+    <string name="settings_key_clicks">Key clicks</string>
+    <string name="settings_key_clicks_help">Click sound on key press, when system sounds are on. Off by default.</string>
+</resources>

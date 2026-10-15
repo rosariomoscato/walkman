@@ -40,7 +40,7 @@ interface QueueDao {
         deleteEntries(queue.profileId)
         putState(queue.toState())
         putEntries(queue.items.mapIndexed { index, item -> QueueEntryEntity(queue.profileId, index,
-            ranks.getValue(item.entryId), item.entryId, item.songId, item.title, item.artist, item.album, item.durationMs) })
+            ranks.getValue(item.entryId), item.entryId, item.songId, item.title, item.artist, item.album, item.durationMs, item.originName) })
         return true
     }
 
@@ -51,7 +51,7 @@ interface QueueDao {
         require(rows.map { it.position } == rows.indices.toList())
         require(rows.map { it.shufflePosition }.sorted() == rows.indices.toList())
         val queue = SavedQueue(profileId, rows.map { SavedQueueItem(it.entryId, it.songId, it.title,
-            it.artist, it.album, it.durationMs) }, rows.sortedBy { it.shufflePosition }.map { it.entryId },
+            it.artist, it.album, it.durationMs, it.originName) }, rows.sortedBy { it.shufflePosition }.map { it.entryId },
             state.currentId, state.positionMs, state.repeatMode, state.shuffle, state.updatedAt)
         require(queue.isValid())
         return queue

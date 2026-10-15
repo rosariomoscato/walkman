@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="playback_controls">Controlli di riproduzione</string>
-    <string name="playback_open_controls">Apri controlli di riproduzione</string>
     <string name="playback_unknown_title">Brano in riproduzione</string>
     <string name="playback_play">Riproduci</string>
     <string name="playback_resume">Riprendi ascolto</string>

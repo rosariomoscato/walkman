@@ -62,7 +62,8 @@ class PlaybackPersistence(
                     item.mediaMetadata.title?.toString().orEmpty(), item.mediaMetadata.artist?.toString(),
                     item.mediaMetadata.albumTitle?.toString(),
                     current.getWindow(index, window).durationMs.takeIf { it > 0 && it != C.TIME_UNSET }
-                        ?: item.mediaMetadata.durationMs?.takeIf { it > 0 })
+                        ?: item.mediaMetadata.durationMs?.takeIf { it > 0 },
+                    item.mediaMetadata.extras?.getString(QueueIdentity.ORIGIN))
             }
             timeline = current
         }
@@ -108,13 +109,15 @@ class PlaybackPersistence(
     }
 
     private suspend fun restore(queue: SavedQueue) {
-        val albumIds = queue.items.map { it.songId }.distinct().chunked(500).flatMap {
+        val songs = queue.items.map { it.songId }.distinct().chunked(500).flatMap {
             Graph.database.libraryDao().songsByIds(queue.profileId, it)
-        }.associate { it.id to it.albumId }
+        }.associateBy { it.id }
         val items = queue.items.map { item ->
             val extras = Bundle().apply {
                 putString(QueueIdentity.SONG, item.songId)
-                putString(SleepTimer.ALBUM_ID, albumIds[item.songId])
+                putString(SleepTimer.ALBUM_ID, songs[item.songId]?.albumId)
+                putString(QueueIdentity.ORIGIN, item.originName)
+                songs[item.songId]?.coverArt?.let { putString(QueueIdentity.COVER_ART, it) }
             }
             MediaItem.Builder().setMediaId(item.entryId).setUri(SubsonicStream.uri(queue.profileId, item.songId).toUri())
                 .setMediaMetadata(MediaMetadata.Builder().setTitle(item.title).setArtist(item.artist)

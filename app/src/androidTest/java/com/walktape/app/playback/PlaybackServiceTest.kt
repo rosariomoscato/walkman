@@ -147,8 +147,8 @@ class PlaybackServiceTest {
             awaitPlayback("In-app play must reach the service") { controller.isPlaying && bridge.state.value.isPlaying }
             clickUi { it.contentDescription?.toString() == "Pausa" }
             awaitPlayback("In-app pause must reach the service") { !controller.playWhenReady && !bridge.state.value.playWhenReady }
-            clickUi { it.contentDescription?.toString() == "Apri controlli di riproduzione" }
-            awaitUi { it.text?.toString() == "Controlli di riproduzione" }
+            clickUi { it.contentDescription?.toString() == "Apri il lettore WalkTape" }
+            awaitUi { it.text?.toString() == "Lettore" }
             awaitPlayback("Seek must remain available in the panel") { bridge.state.value.canSeek }
             val seek = awaitProgress("Posizione di riproduzione")
             assertTrue("Accessible seek action must be supported", seek.performAction(
@@ -183,7 +183,7 @@ class PlaybackServiceTest {
                 controller.currentMediaItemIndex == 0 && bridge.state.value.itemKey == firstKey
             }
 
-            clickUi { it.text?.toString() == "Ripetizione: disattivata" }
+            clickUi { it.contentDescription?.toString() == "Ripetizione: disattivata" }
             awaitPlayback("Repeat-one must be reflected by the external session controller") { controller.repeatMode == Player.REPEAT_MODE_ONE }
             awaitPlayback("Track must be prepared after previous") { bridge.state.value.canSeek && controller.playbackState == Player.STATE_READY }
             withContext(Dispatchers.Main) {
@@ -191,10 +191,12 @@ class PlaybackServiceTest {
                 bridge.togglePlayPause()
             }
             awaitPlayback("Repeat-one must actually wrap the current track") {
-                controller.isPlaying && controller.currentMediaItemIndex == 0 && controller.currentPosition < 3000
+                // Starting from duration-400, any position well below the end proves the wrap.
+                controller.isPlaying && controller.currentMediaItemIndex == 0 &&
+                    controller.currentPosition + 1_000 < controller.duration
             }
             withContext(Dispatchers.Main) { bridge.togglePlayPause() }
-            clickUi { it.text?.toString() == "Ripetizione: brano" }
+            clickUi { it.contentDescription?.toString() == "Ripetizione: brano" }
             awaitPlayback("Repeat-all must be applied") { controller.repeatMode == Player.REPEAT_MODE_ALL }
             withContext(Dispatchers.Main) { bridge.next() }
             awaitPlayback("Last track must be ready for repeat-all") {
@@ -206,10 +208,11 @@ class PlaybackServiceTest {
                 bridge.togglePlayPause()
             }
             awaitPlayback("Repeat-all must wrap back to the first track") {
-                controller.isPlaying && controller.currentMediaItemIndex == 0 && controller.currentPosition < 3000
+                controller.isPlaying && controller.currentMediaItemIndex == 0 &&
+                    controller.currentPosition + 1_000 < controller.duration
             }
             withContext(Dispatchers.Main) { bridge.togglePlayPause() }
-            clickUi { it.text?.toString() == "Ripetizione: coda" }
+            clickUi { it.contentDescription?.toString() == "Ripetizione: coda" }
             awaitPlayback("Repeat must return to off") { controller.repeatMode == Player.REPEAT_MODE_OFF }
 
             withContext(Dispatchers.Main) { bridge.next() }
@@ -366,9 +369,9 @@ class PlaybackServiceTest {
         val original = bridge.state.value.queue.map { it.entryId }
         assertEquals(5, original.toSet().size)
         val selected = original[3]
-        val opener = awaitUi { it.contentDescription?.toString() == "Apri controlli di riproduzione" ||
-            it.text?.toString()?.startsWith("Apri la coda") == true }
-        if (opener.contentDescription?.toString() == "Apri controlli di riproduzione") performClick(opener)
+        val opener = awaitUi { it.contentDescription?.toString() == "Apri il lettore WalkTape" ||
+            it.contentDescription?.toString()?.startsWith("Apri la coda") == true }
+        if (opener.contentDescription?.toString() == "Apri il lettore WalkTape") performClick(opener)
         clickQueueButton()
         awaitUi { it.text?.toString() == "Coda" }
         clickUi { it.contentDescription?.toString() == "Mescola la coda" }
@@ -394,10 +397,10 @@ class PlaybackServiceTest {
             !bridge.state.value.shuffleOn && bridge.state.value.queue.map { it.entryId } == original &&
                 controller.currentMediaItem?.mediaId == last
         }
-        // The transient disconnect may dismiss the sheet; reopen through the bar if necessary.
+        // The transient disconnect may dismiss the sheet; the player screen is still on top,
+        // so reopen through its queue key (any visible queue opener works in clickQueueButton).
         val root = instrumentation.uiAutomation.rootInActiveWindow
         if (findNode(root ?: throw AssertionError("No UI root")) { it.text?.toString() == "Coda" } == null) {
-            clickUi { it.contentDescription?.toString() == "Apri controlli di riproduzione" }
             clickQueueButton()
         }
         val removed = original.first { it != last }
@@ -454,13 +457,17 @@ class PlaybackServiceTest {
         repeat(8) {
             val root = instrumentation.uiAutomation.rootInActiveWindow
             if (root != null) {
-                findNode(root) { it.text?.toString()?.startsWith("Apri la coda") == true && it.isVisibleToUser }?.let { performClick(it); return }
+                findNode(root) {
+                    (it.text?.toString()?.startsWith("Apri la coda") == true ||
+                        it.contentDescription?.toString()?.startsWith("Apri la coda") == true) &&
+                        it.isVisibleToUser
+                }?.let { performClick(it); return }
                 findNode(root) { it.isScrollable && it.className?.toString() == "android.widget.ScrollView" }
                     ?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
             }
             Thread.sleep(300)
         }
-        clickUi { it.text?.toString()?.startsWith("Apri la coda") == true }
+        clickUi { it.contentDescription?.toString()?.startsWith("Apri la coda") == true }
     }
 
     private fun dragHandle(x: Float, y: Float, distance: Float) {
@@ -523,6 +530,8 @@ class PlaybackServiceTest {
     private fun awaitUi(predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo {
         val deadline = System.currentTimeMillis() + 30_000
         while (System.currentTimeMillis() < deadline) {
+            // Dynamic nodes go stale across recompositions: refresh the accessibility cache.
+            if (android.os.Build.VERSION.SDK_INT >= 33) instrumentation.uiAutomation.clearCache()
             val root = instrumentation.uiAutomation.rootInActiveWindow
             if (root != null) {
                 val wait = findNode(root) { it.text?.toString() == "Wait" }
@@ -559,22 +568,38 @@ class PlaybackServiceTest {
 
     private fun clickUi(predicate: (AccessibilityNodeInfo) -> Boolean) = performClick(awaitUi(predicate))
 
-    private fun awaitProgress(description: String): AccessibilityNodeInfo = awaitUi { node ->
-        if (!node.actionList.any { it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.id }) false
-        else {
-            var ancestor: AccessibilityNodeInfo? = node
-            var labelled = false
-            while (ancestor != null) {
-                if (ancestor.contentDescription?.toString() == description) { labelled = true; break }
-                ancestor = ancestor.parent
+    private fun awaitProgress(description: String): AccessibilityNodeInfo {
+        val predicate: (AccessibilityNodeInfo) -> Boolean = { node ->
+            if (!node.actionList.any { it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS.id }) false
+            else {
+                var ancestor: AccessibilityNodeInfo? = node
+                var labelled = false
+                while (ancestor != null) {
+                    if (ancestor.contentDescription?.toString() == description) { labelled = true; break }
+                    ancestor = ancestor.parent
+                }
+                labelled
             }
-            labelled
         }
+        // The player screen scrolls and off-screen sections stay out of the tree:
+        // page forward until the slider enters the viewport.
+        repeat(8) {
+            val root = instrumentation.uiAutomation.rootInActiveWindow
+            if (root != null) {
+                findNode(root, predicate)?.let { return it }
+                findNode(root) { it.isScrollable && it.className?.toString() == "android.widget.ScrollView" }
+                    ?.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            }
+            Thread.sleep(400)
+        }
+        return awaitUi(predicate)
     }
 
     private fun tapProgress(description: String, fraction: Float) {
+        val node = awaitProgress(description)
+        ensureNodeVisible(node)
         val bounds = Rect()
-        awaitProgress(description).getBoundsInScreen(bounds)
+        node.getBoundsInScreen(bounds)
         val x = bounds.left + bounds.width() * fraction
         val y = bounds.exactCenterY()
         val start = SystemClock.uptimeMillis()
@@ -583,6 +608,22 @@ class PlaybackServiceTest {
         Thread.sleep(80)
         val up = MotionEvent.obtain(start, SystemClock.uptimeMillis(), MotionEvent.ACTION_UP, x, y, 0)
         try { assertTrue(instrumentation.uiAutomation.injectInputEvent(up, true)) } finally { up.recycle() }
+    }
+
+    /** The player screen scrolls; bring the node on screen before injecting touch coordinates. */
+    private fun ensureNodeVisible(node: AccessibilityNodeInfo) {
+        val screen = Rect()
+        instrumentation.uiAutomation.rootInActiveWindow?.getBoundsInScreen(screen) ?: return
+        repeat(6) {
+            val bounds = Rect()
+            node.getBoundsInScreen(bounds)
+            if (bounds.top >= screen.top && bounds.bottom <= screen.bottom) return
+            val scrollable = findNode(instrumentation.uiAutomation.rootInActiveWindow ?: return) {
+                it.isScrollable && it.className?.toString() == "android.widget.ScrollView"
+            } ?: return
+            scrollable.performAction(AccessibilityNodeInfo.ACTION_SCROLL_FORWARD)
+            Thread.sleep(250)
+        }
     }
 
     private fun performClick(node: AccessibilityNodeInfo) {

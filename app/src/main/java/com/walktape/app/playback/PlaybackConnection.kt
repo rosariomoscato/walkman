@@ -54,6 +54,7 @@ class PlaybackConnection(private val context: Context) {
     private var requestFailure: PlaybackFailure? = null
     private var queueCacheKey: Triple<Any?, Int, Boolean>? = null
     private var queueCache: List<PlaybackQueueEntry> = emptyList()
+    private var queueOriginCache: String? = null
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) { refresh() }
     }
@@ -113,9 +114,15 @@ class PlaybackConnection(private val context: Context) {
         requestFailure = null
         queueCacheKey = null
         queueCache = emptyList()
+        queueOriginCache = null
     }
 
-    fun playQueue(songs: List<SongEntity>, startIndex: Int, autoPlay: Boolean = true) {
+    fun playQueue(
+        songs: List<SongEntity>,
+        startIndex: Int,
+        autoPlay: Boolean = true,
+        queueOrigin: String? = null
+    ) {
         if (songs.isEmpty()) return
         val safeIndex = startIndex.coerceIn(0, songs.lastIndex)
         editJobs.toList().forEach { it.cancel() }
@@ -139,7 +146,7 @@ class PlaybackConnection(private val context: Context) {
             }
             requestFailure = null
             mediaController.shuffleModeEnabled = false
-            mediaController.setMediaItems(songs.map(::songMediaItem), safeIndex, 0)
+            mediaController.setMediaItems(songs.map { songMediaItem(it, queueOrigin) }, safeIndex, 0)
             mediaController.prepare()
             if (autoPlay) mediaController.play() else mediaController.pause()
             refresh()
@@ -358,7 +365,7 @@ class PlaybackConnection(private val context: Context) {
     }
 
     private fun key(player: Player): String? = player.currentMediaItem?.let {
-        "${it.localConfiguration?.uri ?: it.mediaId}:${player.currentMediaItemIndex}"
+        "${it.mediaId}:${it.localConfiguration?.uri}:${player.currentMediaItemIndex}"
     }
 
     private fun refresh() {
@@ -397,6 +404,8 @@ class PlaybackConnection(private val context: Context) {
                 player?.isCommandAvailable(Player.COMMAND_CHANGE_MEDIA_ITEMS) == true,
             canShuffle = itemCount > 1 && player?.isCommandAvailable(Player.COMMAND_SET_SHUFFLE_MODE) == true,
             failure = if (player?.playerError != null) PlaybackFailure.PLAYBACK else requestFailure,
+            coverArtId = player?.currentMediaItem?.mediaMetadata?.extras?.getString(QueueIdentity.COVER_ART),
+            queueOriginName = queueOriginCache,
         )
     }
 
@@ -405,6 +414,7 @@ class PlaybackConnection(private val context: Context) {
         if (player == null || count == 0) {
             queueCacheKey = null
             queueCache = emptyList()
+            queueOriginCache = null
             return emptyList()
         }
         val timeline = player.currentTimeline
@@ -425,10 +435,17 @@ class PlaybackConnection(private val context: Context) {
                 mediaId = item.mediaMetadata.extras?.getString(QueueIdentity.SONG) ?: item.mediaId,
                 title = item.mediaMetadata.title?.toString().orEmpty(),
                 artist = item.mediaMetadata.artist?.toString().orEmpty(),
+                album = item.mediaMetadata.albumTitle?.toString(),
+                albumId = item.mediaMetadata.extras?.getString(SleepTimer.ALBUM_ID),
                 durationMs = windowDuration.takeIf { it != C.TIME_UNSET && it > 0 } ?: item.mediaMetadata.durationMs,
                 isCurrent = index == currentIndex,
             )
         }
+        // An origin label is valid only while every surviving occurrence shares it.
+        val origins = indices.map { index ->
+            player.getMediaItemAt(index).mediaMetadata.extras?.getString(QueueIdentity.ORIGIN)
+        }.distinct()
+        queueOriginCache = origins.singleOrNull()?.takeIf { it.isNotBlank() }
         queueCacheKey = key
         return queueCache
     }

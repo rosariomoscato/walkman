@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -154,7 +155,10 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
     Scaffold(
         bottomBar = {
             Column {
-                PlaybackControls()
+                // The player route replaces the mini bar with the full TPS-L2 chassis.
+                if (currentRoute != Routes.PLAYER) {
+                    PlaybackControls(onOpenPlayer = { navController.navigate(Routes.PLAYER) })
+                }
                 if (showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
                     NavigationBar {
                         WalkTapeDestination.entries.forEach { destination ->
@@ -185,7 +189,7 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
             if (!showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
                 NavigationRail {
                     Column(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxHeight(),
                         verticalArrangement = Arrangement.Center
                     ) {
                         WalkTapeDestination.entries.forEach { destination ->
@@ -213,6 +217,7 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
             WalkTapeNavHost(
                 navController = navController,
                 modifier = Modifier
+                    .weight(1f)
                     .fillMaxSize()
                     .padding(innerPadding)
             )

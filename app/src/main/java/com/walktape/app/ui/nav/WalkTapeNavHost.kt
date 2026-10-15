@@ -12,6 +12,7 @@ import com.walktape.app.ui.screens.library.ArtistDetailScreen
 import com.walktape.app.ui.screens.library.GenreDetailScreen
 import com.walktape.app.ui.screens.library.LibraryScreen
 import com.walktape.app.ui.screens.library.PlaylistDetailScreen
+import com.walktape.app.ui.screens.player.PlayerScreen
 import com.walktape.app.ui.screens.profiles.ProfilesScreen
 import com.walktape.app.ui.screens.settings.SettingsScreen
 
@@ -20,6 +21,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val DIAGNOSTICS = "diagnostics"
     const val PROFILES = "profiles"
+    const val PLAYER = "player"
     const val ALBUM = "album/{id}"
     const val ARTIST = "artist/{id}"
     const val GENRE = "genre/{name}"
@@ -59,6 +61,7 @@ fun WalkTapeNavHost(
             DiagnosticsScreen()
         }
         composable(Routes.PROFILES) { ProfilesScreen() }
+        composable(Routes.PLAYER) { PlayerScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.ALBUM) { entry ->
             AlbumDetailScreen(
                 albumId = entry.arguments?.getString("id") ?: "",

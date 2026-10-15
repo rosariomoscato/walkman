@@ -30,4 +30,5 @@ data class QueueEntryEntity(
     val artist: String?,
     val album: String?,
     val durationMs: Long?,
+    val originName: String? = null,
 )

@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.walktape.app.R
-import com.walktape.app.ui.components.MechanicalKey
+import com.walktape.app.ui.components.MechanicalTextKey
 import kotlinx.coroutines.launch
 
 @Composable
@@ -67,7 +67,7 @@ fun DiagnosticsScreen(
         )
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            MechanicalKey(
+            MechanicalTextKey(
                 text = stringResource(R.string.diagnostics_copy),
                 onClick = {
                     report?.let {
@@ -76,7 +76,7 @@ fun DiagnosticsScreen(
                     }
                 }
             )
-            MechanicalKey(
+            MechanicalTextKey(
                 text = stringResource(R.string.diagnostics_export),
                 emphasized = true,
                 onClick = {

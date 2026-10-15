@@ -39,6 +39,18 @@ class SettingsViewModel(
         }
     }
 
+    fun setHapticsEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setHapticsEnabled(enabled)
+        }
+    }
+
+    fun setKeyClicksEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setKeyClicksEnabled(enabled)
+        }
+    }
+
     companion object {
         val Factory: ViewModelProvider.Factory = viewModelFactory {
             initializer {

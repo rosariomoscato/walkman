@@ -25,6 +25,8 @@ interface BrowseDao {
     fun playlist(profileId: Long, id: String): Flow<PlaylistEntity?>
     @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
     fun entries(profileId: Long, id: String): PagingSource<Int, PlaylistEntryEntity>
+    @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
+    suspend fun queueEntries(profileId: Long, id: String): List<PlaylistEntryEntity>
 
     @RawQuery(observedEntities = [AlbumEntity::class, SongEntity::class, LocalAudioEntity::class])
     fun albums(query: SupportSQLiteQuery): PagingSource<Int, AlbumEntity>

@@ -36,7 +36,7 @@ object SubsonicStream {
     }
 }
 
-fun songMediaItem(song: SongEntity): MediaItem = MediaItem.Builder()
+fun songMediaItem(song: SongEntity, queueOrigin: String? = null): MediaItem = MediaItem.Builder()
     .setMediaId(song.id)
     .setUri(SubsonicStream.uri(song.profileId, song.id).toUri())
     .setMediaMetadata(
@@ -45,7 +45,11 @@ fun songMediaItem(song: SongEntity): MediaItem = MediaItem.Builder()
             .setArtist((song.displayArtist ?: song.artist)?.takeIf { it.isNotBlank() })
             .setAlbumTitle(song.album?.takeIf { it.isNotBlank() })
             .setDurationMs(song.duration * 1000L)
-            .setExtras(Bundle().apply { putString(SleepTimer.ALBUM_ID, song.albumId) })
+            .setExtras(Bundle().apply {
+                putString(SleepTimer.ALBUM_ID, song.albumId)
+                song.coverArt?.let { putString(QueueIdentity.COVER_ART, it) }
+                queueOrigin?.let { putString(QueueIdentity.ORIGIN, it) }
+            })
             .build()
     )
     .build()

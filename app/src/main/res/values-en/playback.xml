@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="playback_controls">Playback controls</string>
-    <string name="playback_open_controls">Open playback controls</string>
     <string name="playback_unknown_title">Current track</string>
     <string name="playback_play">Play</string>
     <string name="playback_resume">Resume listening</string>

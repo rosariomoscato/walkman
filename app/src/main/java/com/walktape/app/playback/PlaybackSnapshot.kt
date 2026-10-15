@@ -28,6 +28,10 @@ data class PlaybackSnapshot(
     val canEditQueue: Boolean = false,
     val canShuffle: Boolean = false,
     val failure: PlaybackFailure? = null,
+    /** Cover art id of the current item, when known; null keeps the honest empty cover. */
+    val coverArtId: String? = null,
+    /** Recorded queue origin name (e.g. the playlist that started the queue), when known. */
+    val queueOriginName: String? = null,
 ) {
     val hasMedia: Boolean get() = itemKey != null
 }
@@ -38,8 +42,10 @@ data class PlaybackQueueEntry(
     val mediaId: String,
     val title: String,
     val artist: String,
+    val album: String? = null,
     val durationMs: Long? = null,
     val isCurrent: Boolean = false,
+    val albumId: String? = null,
 )
 
 enum class PlaybackFailure { CONNECTION, PLAYBACK, REQUEST, VOLUME }

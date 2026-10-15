@@ -154,7 +154,17 @@ Vincoli registrati:
 - D16 — Account di test `walktape-test` sul server reale; credenziali in `local/test-server.env`, mai in chat/documenti/Git.
 - D17 — Client OpenSubsonic: autenticazione token+salt MD5; transcoding server attivo (Opus di default per client sconosciuti) con `format`/`maxBitRate` selezionabili dal client; download sempre originale.
 
-## Controlli non eseguiti
+## Incremento W06 — player, etichette e migrazione (2026-10-15)
+
+- `ui/screens/player` ospita la rotta player e la Canvas cassetta; `PlaybackSections` riusa seek/volume/timer/suggerimenti W05. Nessun secondo player audio. `MechanicalKey` ripete il seek dopo long-press e si arresta al rilascio/cancellazione/non-RESUMED; il sottogruppo è keyed per occorrenza. La chiave del seek ora comprende l'UUID media oltre a URI logica/indice, per non colpire una coda sostituita con la stessa canzone.
+- Snapshot aggiunge coverArtId, albumId per riga e origine playlist. `songMediaItem` conserva solo ID art e nome origine negli extras; restore recupera albumId/coverArt dall'indice locale per profilo senza rete. Immagini via CoverArtStore esistente; nessun URL autenticato nella UI.
+- **Room v6**: colonna nullable `queue_entry.originName`, migrazione esplicita 5→6, schema `6.json`. SavedQueueItem/QueueDao/PlaybackPersistence la conservano per occorrenza; writer FIFO e aggiornamento leggero restano invariati. Provenienza omogenea dà il nome playlist; inserimenti senza origine la invalidano per l'etichetta. Migration test da schema 5 reale con coda/posizione e round-trip su disco a due profili; catena 4→6 conserva libreria/profili/playlist.
+- PlaylistDetailViewModel risolve tutte le posizioni cache (copie incluse), recupera SongEntity a blocchi di 500, controlla completezza e profilo prima del play. Nessuna mutazione playlist sul server; nome personalizzato/salvataggio/CRUD rimangono W07. Prova positiva con playlist fixture locale e streaming di brani reali; account di test ancora senza playlist server attestata.
+- Preferenze DataStore haptics/key clicks, default true/false; niente nuovi servizi o dipendenze. ContentObserver su animation scales Android per movimento ridotto; feedback soltanto su input esplicito, lifecycle del hold ancorato alla UI.
+- Corretto layout shell preesistente: Column della rail limitata a fillMaxHeight invece di consumare tutta la larghezza; NavHost con weight. Inset orizzontali safeDrawing per la mini-bar e nessuno scroll verticale illimitato attorno alla LazyColumn coda affiancata.
+- Test e limiti in WORKLOG; non usare i dump come attestazione TalkBack o gli screenshot come collaudo hardware. Versioni dipendenze invariate.
+
+## Controlli non eseguiti nella wave 01 (registro storico)
 
 - Prove su emulatore e telefono (nessun AVD/dispositivo collegato in wave 01).
 - LAN/Tailscale dal telefono verso il server.

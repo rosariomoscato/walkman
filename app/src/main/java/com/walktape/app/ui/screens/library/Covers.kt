@@ -2,6 +2,7 @@ package com.walktape.app.ui.screens.library
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,20 +28,33 @@ fun CoverArt(
     modifier: Modifier = Modifier,
 ) {
     val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
-    val sizePx = with(LocalDensity.current) { size.roundToPx() }
-    var bitmap by remember(coverArtId, profile?.id) { mutableStateOf<android.graphics.Bitmap?>(null) }
-    LaunchedEffect(coverArtId, profile?.id, sizePx) {
-        val id = coverArtId ?: return@LaunchedEffect
-        val profileId = profile?.id ?: return@LaunchedEffect
-        bitmap = Graph.coverArtStore(profileId).bitmap(id, sizePx)
-    }
     Box(modifier = modifier.size(size)) {
+        CoverArtById(profile?.id, coverArtId, Modifier.size(size))
+    }
+}
+
+/** Same bounded cache, addressed directly by profile id (player screen, enlarged cover). */
+@Composable
+fun CoverArtById(
+    profileId: Long?,
+    coverArtId: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+) {
+    BoxWithConstraints(modifier) {
+        val sizePx = with(LocalDensity.current) { maxWidth.roundToPx() }.coerceAtLeast(1)
+        var bitmap by remember(coverArtId, profileId, sizePx) { mutableStateOf<android.graphics.Bitmap?>(null) }
+        LaunchedEffect(coverArtId, profileId, sizePx) {
+            val id = coverArtId ?: return@LaunchedEffect
+            val profile = profileId ?: return@LaunchedEffect
+            bitmap = Graph.coverArtStore(profile).bitmap(id, sizePx)
+        }
         bitmap?.let {
             Image(
                 bitmap = it.asImageBitmap(),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.size(size)
+                contentScale = contentScale,
+                modifier = Modifier.matchParentSize()
             )
         }
     }

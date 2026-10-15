@@ -20,12 +20,48 @@ class QueueStorageTest {
     private val context = instrumentation.targetContext
 
     private fun sample(id: Long, position: Long = 12_345) = SavedQueue(id, listOf(
-        SavedQueueItem("queue/a", "same-song", "First copy", "Artist", "Album", 90_000),
-        SavedQueueItem("queue/b", "same-song", "Second copy", "Artist", "Album", 90_000)),
+        SavedQueueItem("queue/a", "same-song", "First copy", "Artist", "Album", 90_000, "Fixture playlist"),
+        SavedQueueItem("queue/b", "same-song", "Second copy", "Artist", "Album", 90_000, "Fixture playlist")),
         listOf("queue/b", "queue/a"), "queue/b", position, 2, true, 100)
 
     private suspend fun profile(db: WalkTapeDatabase, name: String): Long = db.profileDao().insert(
         ProfileEntity(name = name, serverUrl = "https://example.invalid", username = "fixture", createdAt = 1))
+
+    @Test fun migrateV5KeepsExistingQueueAndAddsNullableOrigin(): Unit = runBlocking {
+        val name = "queue-origin-${UUID.randomUUID()}.db"
+        val schema = instrumentation.context.assets.open("com.walktape.app.core.db.WalkTapeDatabase/5.json")
+            .bufferedReader().use { JsonParser.parseReader(it).asJsonObject.getAsJsonObject("database") }
+        val helper = object : SQLiteOpenHelper(context, name, null, 5) {
+            override fun onCreate(db: SQLiteDatabase) {
+                schema.getAsJsonArray("entities").forEach { entry ->
+                    val entity = entry.asJsonObject
+                    val table = entity.get("tableName").asString
+                    db.execSQL(entity.get("createSql").asString.replace("\${TABLE_NAME}", table))
+                    entity.getAsJsonArray("indices")?.forEach { index ->
+                        db.execSQL(index.asJsonObject.get("createSql").asString.replace("\${TABLE_NAME}", table))
+                    }
+                }
+                schema.getAsJsonArray("setupQueries").forEach { db.execSQL(it.asString) }
+            }
+            override fun onUpgrade(db: SQLiteDatabase, old: Int, new: Int) {}
+        }
+        helper.writableDatabase.apply {
+            execSQL("INSERT INTO profile(id,name,serverUrl,username,isActive,createdAt,credentialId,encryptedPassword,allowLocalHttp) VALUES(1,'Preserved','https://example.invalid','fixture',1,1,'key','encrypted-fixture',0)")
+            execSQL("INSERT INTO queue_state VALUES(1,'queue/a',12345,2,0,100)")
+            execSQL("INSERT INTO queue_entry VALUES(1,0,0,'queue/a','song','Preserved title','Artist','Album',90000)")
+        }
+        helper.close()
+        val db = Room.databaseBuilder(context, WalkTapeDatabase::class.java, name)
+            .addMigrations(*WalkTapeDatabase.MIGRATIONS).build()
+        try {
+            val queue = db.queueDao().load(1)!!
+            assertEquals(12345L, queue.positionMs)
+            assertEquals("Preserved title", queue.items.single().title)
+            assertNull(queue.items.single().originName)
+            db.queueDao().replace(sample(1))
+            assertEquals(sample(1), db.queueDao().load(1))
+        } finally { db.close(); context.deleteDatabase(name) }
+    }
 
     @Test fun migrateV4PreservesExistingProfileLibraryAndPlaylist(): Unit = runBlocking {
         val name = "queue-migration-${UUID.randomUUID()}.db"

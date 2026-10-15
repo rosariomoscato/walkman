@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.walktape.app.Graph
@@ -51,8 +52,8 @@ import java.util.Locale
 
 /**
  * Editable queue: tap to play, remove, reorder through the row menu or accessibility actions.
- * Shuffle keeps the current track and, when switched
- * off, restores the order saved before shuffling. The TPS-L2 look arrives in wave 06.
+ * Shuffle keeps the current track and, when switched off, restores the order saved before
+ * shuffling. The same list content is embedded in the expanded player pane.
  */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -62,44 +63,52 @@ fun QueueSheet(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
-        Column(Modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }
-            .padding(horizontal = 16.dp).navigationBarsPadding()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f))
-                Text(stringResource(R.string.queue_count, state.queue.size),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = 8.dp))
-                val shuffleLabel = stringResource(if (state.shuffleOn) R.string.queue_shuffle_off else R.string.queue_shuffle_on)
-                IconButton(onClick = Graph.playback::toggleShuffle, enabled = state.canShuffle,
-                    modifier = Modifier.size(48.dp).semantics { contentDescription = shuffleLabel }) {
-                    Icon(Icons.Default.Shuffle, contentDescription = null,
-                        tint = if (state.shuffleOn) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+        QueueListContent(Modifier.padding(horizontal = 16.dp).navigationBarsPadding(), maxListHeight = 420.dp)
+    }
+}
+
+@OptIn(androidx.compose.ui.ExperimentalComposeUiApi::class)
+@Composable
+internal fun QueueListContent(modifier: Modifier = Modifier, maxListHeight: Dp? = 420.dp) {
+    val state by Graph.playback.state.collectAsStateWithLifecycle()
+    Column(modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.queue_count, state.queue.size),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 8.dp))
+            val shuffleLabel = stringResource(if (state.shuffleOn) R.string.queue_shuffle_off else R.string.queue_shuffle_on)
+            IconButton(onClick = Graph.playback::toggleShuffle, enabled = state.canShuffle,
+                modifier = Modifier.size(48.dp).semantics { contentDescription = shuffleLabel }) {
+                Icon(Icons.Default.Shuffle, contentDescription = null,
+                    tint = if (state.shuffleOn) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (state.shuffleOn) Text(stringResource(R.string.queue_reorder_hint),
-                style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
-            if (state.queue.isEmpty()) {
-                Text(stringResource(R.string.queue_empty), Modifier.padding(vertical = 24.dp))
-            } else {
-                LazyColumn(Modifier.fillMaxWidth().heightIn(max = 420.dp)) {
-                    itemsIndexed(state.queue, key = { _, entry -> entry.entryId }) { index, entry ->
-                        QueueRow(
-                            entry = entry,
-                            enabled = state.canEditQueue,
-                            isFirst = index == 0,
-                            isLast = index == state.queue.lastIndex,
-                            onClick = { Graph.playback.playQueueEntry(entry.entryId) },
-                            onRemove = { Graph.playback.removeQueueItem(entry.entryId) },
-                            onMove = { steps ->
-                                val from = state.queue.indexOfFirst { it.entryId == entry.entryId }
-                                if (from >= 0) Graph.playback.moveQueueItem(entry.entryId,
-                                    state.queue[(from + steps).coerceIn(0, state.queue.lastIndex)].entryId)
-                            },
-                        )
-                    }
+        }
+        if (state.shuffleOn) Text(stringResource(R.string.queue_reorder_hint),
+            style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
+        if (state.queue.isEmpty()) {
+            Text(stringResource(R.string.queue_empty), Modifier.padding(vertical = 24.dp))
+        } else {
+            val listModifier = if (maxListHeight != null) Modifier.fillMaxWidth().heightIn(max = maxListHeight)
+            else Modifier.fillMaxWidth()
+            LazyColumn(listModifier) {
+                itemsIndexed(state.queue, key = { _, entry -> entry.entryId }) { index, entry ->
+                    QueueRow(
+                        entry = entry,
+                        enabled = state.canEditQueue,
+                        isFirst = index == 0,
+                        isLast = index == state.queue.lastIndex,
+                        onClick = { Graph.playback.playQueueEntry(entry.entryId) },
+                        onRemove = { Graph.playback.removeQueueItem(entry.entryId) },
+                        onMove = { steps ->
+                            val from = state.queue.indexOfFirst { it.entryId == entry.entryId }
+                            if (from >= 0) Graph.playback.moveQueueItem(entry.entryId,
+                                state.queue[(from + steps).coerceIn(0, state.queue.lastIndex)].entryId)
+                        },
+                    )
                 }
             }
         }
@@ -173,10 +182,4 @@ private fun QueueRow(
             Icon(Icons.Default.Close, contentDescription = removeLabel)
         }
     }
-}
-
-private fun timeLabel(ms: Long): String {
-    val seconds = ms.coerceAtLeast(0) / 1000
-    return if (seconds >= 3600) String.format(Locale.getDefault(), "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
-    else String.format(Locale.getDefault(), "%d:%02d", seconds / 60, seconds % 60)
 }

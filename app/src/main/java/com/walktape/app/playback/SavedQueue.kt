@@ -8,6 +8,7 @@ data class SavedQueueItem(
     val artist: String?,
     val album: String?,
     val durationMs: Long?,
+    val originName: String? = null,
 )
 
 data class SavedQueue(

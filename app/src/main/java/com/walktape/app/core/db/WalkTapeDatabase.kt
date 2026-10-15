@@ -12,7 +12,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         SongEntity::class, GenreEntity::class, LibraryStateEntity::class,
         PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class,
         QueueStateEntity::class, QueueEntryEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -57,6 +57,10 @@ abstract class WalkTapeDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS queue_state (profileId INTEGER NOT NULL, currentId TEXT, positionMs INTEGER NOT NULL, repeatMode INTEGER NOT NULL, shuffle INTEGER NOT NULL, updatedAt INTEGER NOT NULL, PRIMARY KEY(profileId), FOREIGN KEY(profileId) REFERENCES profile(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
                 db.execSQL("CREATE TABLE IF NOT EXISTS queue_entry (profileId INTEGER NOT NULL, position INTEGER NOT NULL, shufflePosition INTEGER NOT NULL, entryId TEXT NOT NULL, songId TEXT NOT NULL, title TEXT NOT NULL, artist TEXT, album TEXT, durationMs INTEGER, PRIMARY KEY(profileId,position), FOREIGN KEY(profileId) REFERENCES queue_state(profileId) ON UPDATE NO ACTION ON DELETE CASCADE)")
                 db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_queue_entry_profileId_entryId ON queue_entry(profileId,entryId)")
+            }
+        }, object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE queue_entry ADD COLUMN originName TEXT")
             }
         })
 

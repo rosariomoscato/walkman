@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="player_play_playlist">Riproduci playlist</string>
+    <string name="player_title">Lettore</string>
+    <string name="player_open">Apri il lettore WalkTape</string>
+    <string name="player_empty_title">Nessun brano in coda</string>
+    <string name="player_empty_body">Scegli un album o dei brani dalla libreria: la coda appare qui, pronta per l\'ascolto.</string>
+    <string name="player_stop">Ferma la riproduzione</string>
+    <string name="player_scrub_back">Arretra di 10 secondi</string>
+    <string name="player_scrub_forward">Avanza di 10 secondi</string>
+    <string name="player_volume_down">Abbassa il volume multimediale</string>
+    <string name="player_volume_up">Alza il volume multimediale</string>
+    <string name="cassette_description">Cassetta: %1$s — %2$s</string>
+    <string name="cassette_empty">Cassetta vuota: nessun brano in coda.</string>
+    <string name="cassette_label_mixtape">Mixtape</string>
+    <string name="cover_enlarge">Ingrandisci la copertina</string>
+    <string name="cover_dialog_close">Tocca per chiudere</string>
+    <string name="settings_haptics">Feedback aptico dei tasti</string>
+    <string name="settings_haptics_help">Vibrazione leggera alla pressione dei tasti del lettore.</string>
+    <string name="settings_key_clicks">Clic dei tasti</string>
+    <string name="settings_key_clicks_help">Scatto sonoro alla pressione, se i suoni di sistema sono attivi. Inizialmente spento.</string>
+</resources>

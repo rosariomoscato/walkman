@@ -118,18 +118,26 @@ Riscontro successivo: **punto 10 suggerimenti OK**, l'utente conferma che il pul
 
 Dipendenze: wave 05; design wave 02.
 
-- [ ] W06-T01 — Realizzare scocca blu/argento/arancione e tasti meccanici con marchio WalkTape.
-- [ ] W06-T02 — Implementare cassetta, bobine, etichetta dinamica e copertina ingrandibile.
-- [ ] W06-T03 — Collegare tutti i tasti al motore reale; aggiungere pressioni prolungate e avanzamento preciso.
-- [ ] W06-T04 — Implementare feedback aptico e clic opzionali, rispettando pausa e riduzione movimento.
-- [ ] W06-T05 — Integrare accesso al player da ogni schermata, coda e layout telefono/tablet/orizzontale.
+Sequenza approvata dall'utente 2026-10-14: sviluppare **W06-T01–T06** sul motore W05 disponibile e collaudare poi il player **insieme ai punti hardware W05 ancora aperti**. Questa autorizzazione anticipa lo sviluppo W06 rispetto alla chiusura formale W05; W05-T05/T07 non sono segnati completati e le verifiche restano richieste. Build/test automatici e controlli accessibilità pertinenti proseguono durante W06. Punto di ripresa W06-T01.
+
+- [x] W06-T01 — Realizzare scocca blu/argento/arancione e tasti meccanici con marchio WalkTape.
+- [x] W06-T02 — Implementare cassetta, bobine, etichetta dinamica e copertina ingrandibile.
+- [x] W06-T03 — Collegare tutti i tasti al motore reale; aggiungere pressioni prolungate e avanzamento preciso.
+- [x] W06-T04 — Implementare feedback aptico e clic opzionali, rispettando pausa e riduzione movimento.
+- [x] W06-T05 — Integrare accesso al player da ogni schermata, coda e layout telefono/tablet/orizzontale.
 - [ ] W06-T06 — Verificare contrasto, lettore schermo, caratteri ingranditi, touch target e coerenza con `DESIGN.md`.
 
 Criterio di uscita: player riconoscibile come reinterpretazione TPS-L2, utilizzabile e collegato alle funzioni reali.
 
+Incremento 2026-10-15: **T01–T05 implementati e verificati; T06 parziale**. Player come rotta globale aperta dalla mini-bar: materiali blu/argento/arancio, cassetta e copertina privata ingrandibile, bobine guidate da `isPlaying`, trasporto/seek/volume STREAM_MUSIC/shuffle/repeat/coda/timer/suggerimenti sul bridge W05. Pressione prolungata con target cumulativo e cancellazione al cambio occorrenza; STOP è pausa senza perdita della posizione. Preferenze aptica on/clic off, rispettati i toggle Android; movimento ridotto osservato dal sistema. Etichetta album per ID comune, playlist per provenienza omogenea, altrimenti Mixtape. Riproduzione playlist dal dettaglio in sola lettura, ordine/copie preservati e indisponibilità esplicita se indice incompleto. **Room v6**, migrazione 5→6 con origine per occorrenza persistita.
+
+Verifiche: build app/androidTest, **78/78 JVM**, lint **0 errori/22 avvisi**; Android **7/7 player+preferenze+storage** (migrazioni 4→6 e 5→6, round-trip e isolamento), poi **9/9 player/regressioni su esecuzioni separate** (7 passati nella suite unica; timer e fixture suggerimenti falliti e ripetuti separatamente con successo). Le fixture playlist sono locali con brani/audio reali, non playlist create sul server. Selezioni libreria **2/2** nella fase precedente della sessione. Verificati dump/screenshot chiaro/scuro, landscape con rail, tablet simulato con coda affiancata, EN e font 200%; corretti rail che consumava tutta la larghezza, inset laterale della mini-bar e scroll annidato. Restano **TalkBack manuale, percezione aptica/clic, osservazione bobine/riduzione movimento su telefono e approvazione visiva** in T06/collaudo privato `local/PHONE_TESTS_W06_W05.md`. Non chiusa l'intera wave né W05-T05/T07. APK debug aggiornato, nessun commit/push/release.
+
 ## Wave 07 — Playlist, preferiti, testi e cronologia
 
 Dipendenze: wave 04 e 05.
+
+Handoff 2026-10-15: l'utente riferisce «mi sembra tutto ok» sul nuovo player e richiede il prompt W07 per un'altra sessione. Riscontro generale positivo W06, non attestazione puntuale dei controlli manuali residui: W06-T06 e W05-T05/T07 restano aperti. Punto di ripresa **W07-T01**, poi T02–T06; nessun codice W07 iniziato nell'handoff. Preservare tutto il working tree W06 locale non committato (Room v6 compresa). Prompt aggiornato in NEXT_PROMPT.md, ignorato da Git.
 
 - [ ] W07-T01 — Implementare CRUD delle playlist, riordino, azioni dalla selezione multipla e rispetto delle autorizzazioni del server.
 - [ ] W07-T02 — Implementare preferiti per brani/album/artisti e sincronizzazione con Navidrome.

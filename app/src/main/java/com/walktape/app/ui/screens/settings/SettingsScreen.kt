@@ -91,6 +91,20 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setSuggestionsEnabled
         )
 
+        FeedbackSetting(
+            title = stringResource(R.string.settings_haptics),
+            help = stringResource(R.string.settings_haptics_help),
+            enabled = settings.hapticsEnabled,
+            onCheckedChange = viewModel::setHapticsEnabled
+        )
+
+        FeedbackSetting(
+            title = stringResource(R.string.settings_key_clicks),
+            help = stringResource(R.string.settings_key_clicks_help),
+            enabled = settings.keyClicksEnabled,
+            onCheckedChange = viewModel::setKeyClicksEnabled
+        )
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -182,6 +196,36 @@ private fun SuggestionSetting(enabled: Boolean, onCheckedChange: (Boolean) -> Un
             )
             Text(
                 text = stringResource(R.string.settings_suggestions_help),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Switch(checked = enabled, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun FeedbackSetting(
+    title: String,
+    help: String,
+    enabled: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .toggleable(value = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleMedium
+            )
+            Text(
+                text = help,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

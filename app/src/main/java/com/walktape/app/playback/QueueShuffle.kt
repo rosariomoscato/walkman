@@ -44,4 +44,6 @@ object QueueIdentity {
     const val PREFIX = "queue/"
     const val SONG = "walktape.queue.song"
     const val AFTER = "walktape.queue.after"
+    const val COVER_ART = "walktape.queue.coverArt"
+    const val ORIGIN = "walktape.queue.origin"
 }
