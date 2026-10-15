@@ -8,13 +8,6 @@
       "skillPath": "skills/apps/create-brand-kit/SKILL.md",
       "computedHash": "d05484eeebd84e6388bdf8854db69a3841373cd33bc69948c33e7e16efe02cbf"
     },
-    "deploy-an-app": {
-      "source": "leonvanzyl/skills",
-      "ref": "main",
-      "sourceType": "github",
-      "skillPath": "skills/apps/deploy-an-app/SKILL.md",
-      "computedHash": "f3dd14f12072dcf8a2d67ac27e9e1f78ecba48a7e06d83fe27035abd1aa37dd9"
-    },
     "review-an-app": {
       "source": "leonvanzyl/skills",
       "ref": "main",
