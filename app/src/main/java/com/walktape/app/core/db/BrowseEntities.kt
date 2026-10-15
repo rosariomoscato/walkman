@@ -1,5 +1,6 @@
 package com.walktape.app.core.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -18,6 +19,8 @@ data class PlaylistEntity(
     val created: String?,
     val changed: String?,
     val fetchedAt: Long,
+    /** Server-side write permission flag (Navidrome "readonly"); own playlists are always false. */
+    @ColumnInfo(defaultValue = "0") val readOnly: Boolean = false,
 )
 
 @Entity(tableName = "playlist_entry", primaryKeys = ["profileId", "playlistId", "position"],

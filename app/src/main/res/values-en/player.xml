@@ -19,4 +19,18 @@
     <string name="settings_haptics_help">Light vibration when pressing the player keys.</string>
     <string name="settings_key_clicks">Key clicks</string>
     <string name="settings_key_clicks_help">Click sound on key press, when system sounds are on. Off by default.</string>
+    <string name="song_details">Song details</string>
+    <string name="song_details_artist">Artist</string>
+    <string name="song_details_album">Album</string>
+    <string name="song_details_year">Year</string>
+    <string name="song_details_genre">Genre</string>
+    <string name="song_details_format">Format</string>
+    <string name="song_details_bitrate">Bitrate</string>
+    <string name="song_details_bitrate_value">%1$d kbps</string>
+    <string name="song_details_duration">Duration</string>
+    <string name="song_details_unavailable">Details not available for this song.</string>
+    <string name="lyrics_title">Lyrics</string>
+    <string name="lyrics_not_available">No lyrics available for this song.</string>
+    <string name="lyrics_error">Lyrics not loaded: server unreachable.</string>
+    <string name="lyrics_current_line">Current line</string>
 </resources>

@@ -35,6 +35,7 @@ class PlaybackPersistence(
     private var cachedShuffle = false
     private var profileJob: Job? = null
     private var tickJob: Job? = null
+    private var namingJob: Job? = null
 
     fun start() {
         player.addListener(this)
@@ -44,6 +45,10 @@ class PlaybackPersistence(
         }
         tickJob = scope.launch {
             while (isActive) { delay(1000); if (player.isPlaying) save() }
+        }
+        namingJob = scope.launch {
+            // A rename while paused must still reach storage before a possible process death.
+            Graph.queueNaming.collect { if (owner != null) save() }
         }
     }
 
@@ -77,9 +82,11 @@ class PlaybackPersistence(
             cachedTraversal = traversal
             cachedShuffle = player.shuffleModeEnabled
         }
+        if (cachedItems.isEmpty() && Graph.queueNaming.value != null) Graph.queueNaming.value = null
         val queue = SavedQueue(id, cachedItems, cachedTraversal, player.currentMediaItem?.mediaId,
             if (cachedItems.isEmpty()) 0 else player.currentPosition.coerceAtLeast(0), player.repeatMode,
-            player.shuffleModeEnabled && cachedItems.isNotEmpty(), System.currentTimeMillis())
+            player.shuffleModeEnabled && cachedItems.isNotEmpty(), System.currentTimeMillis(),
+            Graph.queueNaming.value?.trim()?.takeIf { it.isNotEmpty() && cachedItems.isNotEmpty() })
         store.enqueue(queue) // Complete structural validation happens off the player's looper.
     }
 
@@ -97,6 +104,7 @@ class PlaybackPersistence(
         timeline = null
         cachedItems = emptyList()
         cachedTraversal = emptyList()
+        Graph.queueNaming.value = null
         if (id == null) { changing = false; return }
         val stored = store.load(id) // FIFO barrier: includes final saves from the old service.
         val client = Graph.profiles.clientFor(id)
@@ -130,6 +138,7 @@ class PlaybackPersistence(
         player.repeatMode = queue.repeatMode
         shuffle.restore(queue.traversal, queue.shuffle)
         player.pause()
+        Graph.queueNaming.value = queue.mixtapeName
         // Deliberately no prepare/play: restoring metadata must work offline without HTTP/audio.
     }
 
@@ -140,6 +149,7 @@ class PlaybackPersistence(
         changing = true
         profileJob?.cancel()
         tickJob?.cancel()
+        namingJob?.cancel()
         player.removeListener(this)
         setConnection(null)
     }

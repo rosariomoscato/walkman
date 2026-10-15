@@ -106,41 +106,132 @@ class LibraryViewModel : ViewModel() {
     /** Queue actions from the multi-selection; only tabs whose rows resolve to songs. */
     enum class QueueInsert { NOW, NEXT, APPEND }
 
+    private val mutablePlaylistBusy = MutableStateFlow(false)
+    val playlistBusy = mutablePlaylistBusy.asStateFlow()
+    private val mutablePlaylistError = MutableStateFlow(false)
+    val playlistError = mutablePlaylistError.asStateFlow()
+    private val mutableFavoriteError = MutableStateFlow(false)
+    val favoriteError = mutableFavoriteError.asStateFlow()
+
+    /** Own playlists only: server-side edits are refused for other owners' playlists. */
+    val editablePlaylists: StateFlow<List<PlaylistEntity>> = combine(activeProfile, profiles.profiles) { active, _ -> active }
+        .flatMapLatest { profile ->
+            profile?.let { database.browseDao().editablePlaylists(it.id, it.username) } ?: flowOf(emptyList())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun enqueueSelection(insert: QueueInsert, visibleItems: List<Any>) {
         val profileId = activeProfile.value?.id ?: return
-        val ids = mutableSelection.value
-        if (ids.isEmpty() || mutableQueueBusy.value) return
+        if (mutableSelection.value.isEmpty() || mutableQueueBusy.value) return
         val selectedTab = tab.value
         val revision = selectionRevision
-        val displayedIds = when (selectedTab) {
-            LibraryTab.SONGS -> visibleItems.filterIsInstance<SongEntity>().filter { it.profileId == profileId }.map { it.id }
-            LibraryTab.ALBUMS -> visibleItems.filterIsInstance<AlbumEntity>().filter { it.profileId == profileId }.map { it.id }
-            else -> return
-        }
-        val orderedIds = displayedIds.filter { it in ids } + ids.filter { it !in displayedIds }
         mutableQueueBusy.value = true
         viewModelScope.launch {
             try {
-                val dao = database.libraryDao()
-                val songs = if (selectedTab == LibraryTab.SONGS) {
-                    val rows = orderedIds.chunked(500).flatMap { dao.songsByIds(profileId, it) }.associateBy { it.id }
-                    orderedIds.mapNotNull { rows[it] }
-                } else {
-                    val rows = orderedIds.chunked(500).flatMap { dao.songsInAlbums(profileId, it) }.groupBy { it.albumId }
-                    orderedIds.flatMap { rows[it].orEmpty() }
-                }
+                val resolved = resolveSelectionSongs(profileId, selectedTab, visibleItems) ?: return@launch
                 if (revision != selectionRevision || activeProfile.value?.id != profileId) return@launch
-                val complete = if (selectedTab == LibraryTab.SONGS) songs.size == ids.size
-                    else ids.all { id -> songs.any { it.albumId == id } }
-                if (!complete || songs.isEmpty()) { mutableQueueError.value = true; return@launch }
+                if (!resolved.complete) { mutableQueueError.value = true; return@launch }
                 when (insert) {
-                    QueueInsert.NOW -> Graph.playback.playNow(songs)
-                    QueueInsert.NEXT -> Graph.playback.playNext(songs)
-                    QueueInsert.APPEND -> Graph.playback.appendToQueue(songs)
+                    QueueInsert.NOW -> Graph.playback.playNow(resolved.songs)
+                    QueueInsert.NEXT -> Graph.playback.playNext(resolved.songs)
+                    QueueInsert.APPEND -> Graph.playback.appendToQueue(resolved.songs)
                 }
                 clearSelection()
             } finally { mutableQueueBusy.value = false }
         }
+    }
+
+    /** Adds the selection to an existing own playlist, or creates a new one with these songs. */
+    fun addSelectionToPlaylist(playlistId: String?, newName: String, visibleItems: List<Any>) {
+        val profileId = activeProfile.value?.id ?: return
+        if (mutableSelection.value.isEmpty() || mutablePlaylistBusy.value) return
+        val selectedTab = tab.value
+        val revision = selectionRevision
+        val name = if (playlistId == null) newName.trim() else null
+        if (playlistId == null && name.isNullOrEmpty()) { mutablePlaylistError.value = true; return }
+        mutablePlaylistBusy.value = true
+        viewModelScope.launch {
+            try {
+                val resolved = resolveSelectionSongs(profileId, selectedTab, visibleItems) ?: return@launch
+                if (revision != selectionRevision || activeProfile.value?.id != profileId) return@launch
+                if (!resolved.complete || resolved.songs.isEmpty()) { mutablePlaylistError.value = true; return@launch }
+                val repository = Graph.playlistRepository()
+                val error = if (playlistId == null) {
+                    repository.create(profileId, name!!, resolved.songs.map { it.id })
+                } else {
+                    repository.addSongs(profileId, playlistId, resolved.songs.map { it.id })
+                }
+                if (error != null) mutablePlaylistError.value = true else clearSelection()
+            } finally { mutablePlaylistBusy.value = false }
+        }
+    }
+
+    fun createPlaylist(name: String) {
+        val profileId = activeProfile.value?.id ?: return
+        val trimmed = name.trim()
+        if (trimmed.isEmpty() || mutablePlaylistBusy.value) return
+        mutablePlaylistBusy.value = true
+        viewModelScope.launch {
+            try {
+                if (Graph.playlistRepository().create(profileId, trimmed, emptyList()) != null) {
+                    mutablePlaylistError.value = true
+                }
+            } finally { mutablePlaylistBusy.value = false }
+        }
+    }
+
+    fun toggleSongFavorite(song: SongEntity) {
+        viewModelScope.launch {
+            if (Graph.starRepository().setStarred(song.profileId,
+                    com.walktape.app.core.library.StarRepository.Kind.SONG, song.id, song.starred == null) != null) {
+                mutableFavoriteError.value = true
+            }
+        }
+    }
+
+    fun toggleAlbumFavorite(profileId: Long, albumId: String, starred: Boolean) {
+        viewModelScope.launch {
+            if (Graph.starRepository().setStarred(profileId,
+                    com.walktape.app.core.library.StarRepository.Kind.ALBUM, albumId, starred) != null) {
+                mutableFavoriteError.value = true
+            }
+        }
+    }
+
+    fun toggleArtistFavorite(profileId: Long, artistId: String, starred: Boolean) {
+        viewModelScope.launch {
+            if (Graph.starRepository().setStarred(profileId,
+                    com.walktape.app.core.library.StarRepository.Kind.ARTIST, artistId, starred) != null) {
+                mutableFavoriteError.value = true
+            }
+        }
+    }
+
+    fun dismissFavoriteError() { mutableFavoriteError.value = false }
+    fun dismissPlaylistError() { mutablePlaylistError.value = false }
+
+    private class ResolvedSelection(val songs: List<SongEntity>, val complete: Boolean)
+
+    private suspend fun resolveSelectionSongs(profileId: Long, selectedTab: LibraryTab, visibleItems: List<Any>): ResolvedSelection? {
+        val ids = mutableSelection.value
+        if (ids.isEmpty()) return null
+        if (selectedTab != LibraryTab.SONGS && selectedTab != LibraryTab.ALBUMS) return null
+        val displayedIds = when (selectedTab) {
+            LibraryTab.SONGS -> visibleItems.filterIsInstance<SongEntity>().filter { it.profileId == profileId }.map { it.id }
+            LibraryTab.ALBUMS -> visibleItems.filterIsInstance<AlbumEntity>().filter { it.profileId == profileId }.map { it.id }
+            else -> return null
+        }
+        val orderedIds = displayedIds.filter { it in ids } + ids.filter { it !in displayedIds }
+        val dao = database.libraryDao()
+        val songs = if (selectedTab == LibraryTab.SONGS) {
+            val rows = orderedIds.chunked(500).flatMap { dao.songsByIds(profileId, it) }.associateBy { it.id }
+            orderedIds.mapNotNull { rows[it] }
+        } else {
+            val rows = orderedIds.chunked(500).flatMap { dao.songsInAlbums(profileId, it) }.groupBy { it.albumId }
+            orderedIds.flatMap { rows[it].orEmpty() }
+        }
+        val complete = if (selectedTab == LibraryTab.SONGS) songs.size == ids.size
+            else ids.all { id -> songs.any { it.albumId == id } }
+        return ResolvedSelection(songs, complete && songs.isNotEmpty())
     }
 
     val pager: Flow<PagingData<Any>> = combine(activeProfile, mutableTab, mutableQuery, mutableSorts, mutableFilter) { profile, tab, query, sorts, filter ->

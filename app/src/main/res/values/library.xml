@@ -18,7 +18,6 @@
     <string name="sort_playlist_name">Nome</string>
     <string name="sort_playlist_changed">Aggiornamento</string>
     <string name="playlist_owner">Proprietario: %1$s</string>
-    <string name="playlist_read_only">Playlist in lettura. Le modifiche saranno disponibili nella fase dedicata.</string>
     <string name="library_no_results">Nessun risultato per questa ricerca o questi filtri.</string>
     <string name="library_clear_search">Cancella ricerca</string>
     <string name="library_selected">Selezionati: %1$d</string>

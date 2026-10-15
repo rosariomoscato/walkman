@@ -101,6 +101,14 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 - Compact/medium: player scrollabile con coda in sheet; da 840dp **di contenuto disponibile**: player e coda in due pannelli, scroll indipendenti con altezza finita per LazyColumn. I tasti si dispongono su più righe. La mini-bar rispetta gli inset laterali Android in landscape. Temi classico/scuro/sistema: materiali della macchina fissi, superfici esterne dal tema.
 - Verifiche automatiche: 3 test contrasto per testi/icone, etichetta per ID, semantica di trasporto/seek/coda/cover, IT/EN, dump con font 200% e viewport tablet. La piccola icona sulla cover occupa un target 56dp. **TalkBack, percezione aptica/clic e approvazione visiva sul Motorola restano controlli manuali aperti W06-T06**. Le misure di colore degli screenshot non sostituiscono una review visiva/manuale completa.
 
+### Incremento W07 — playlist, preferiti, testi e cronologia
+
+- Playlist: creazione dalla tab Playlist, aggiunta brani/album dalla selezione multipla tramite scelta della destinazione o nuova playlist. Dettaglio con rinomina/eliminazione (conferma), menu per occorrenza Sposta su/giù/Rimuovi e azioni accessibili; nessun drag implicito. Playlist di altri utenti o readonly in sola lettura con motivo esplicito. Errori inline, senza riportare messaggi grezzi del server.
+- Preferiti: **cuore pieno/vuoto**, mai stelle o valutazioni. Stato attivo nel colore primary del tema, descrizione Aggiungi/Rimuovi dai preferiti e target 48dp. Header album/artista e righe brani; la Panoramica riflette gli aggiornamenti Room dopo ACK.
+- Coda: azioni Nome della mixtape e Salva coda come playlist in FlowRow. Il salvataggio conserva l'ordine mostrato, incluso shuffle e duplicati, con nota nel dialog. Nome nel titolo coda ed etichetta cassetta: origine playlist omogenea, altrimenti nome scelto, poi album noto omogeneo/Mixtape. Campo vuoto o Rimuovi nome torna all'etichetta derivata; nuova coda azzera il nome, modifiche della stessa coda lo mantengono.
+- Player: Dettagli brano apre sheet scrollabile con dati reali (artista/album/anno/genere/formato/bitrate/durata), testo statico o righe sincronizzate evidenziate e seguite dalla posizione del player. Cache per profilo, testo assente/errore espliciti e Riprova; nessun testo di esempio in app.
+- Cronologia dalla Panoramica: ultimi 30 eventi locali con titolo/artista/data e stato attesa/ACK server; retry manuale. Palette e tipografia preesistenti. Testi sincronizzati automatizzati con fixture; testo reale non sincronizzato verificato in sheet su emulatore. TalkBack e review sul telefono delle nuove superfici restano nella checklist privata W07.
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

@@ -7,6 +7,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -21,6 +24,7 @@ fun HomeSections(model: LibraryViewModel, onAlbum: (String) -> Unit, onArtist: (
     val profile by model.activeProfile.collectAsStateWithLifecycle()
     val playback by Graph.playback.state.collectAsStateWithLifecycle()
     val home = if (cached.profileId == profile?.id) cached else HomeContent()
+    var historyOpen by remember(profile?.id) { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize()) {
         item { SectionHeader(stringResource(R.string.home_continue)) }
         item {
@@ -38,12 +42,17 @@ fun HomeSections(model: LibraryViewModel, onAlbum: (String) -> Unit, onArtist: (
             AlbumRow(album, cover = { CoverArt(model, album.coverArt, 56.dp) }) { onAlbum(album.id) }
         }
         item { SectionHeader(stringResource(R.string.home_recent_played)) }
+        item { TextButton(onClick = { historyOpen = true }) { Text(stringResource(R.string.listening_history)) } }
         if (home.played.isEmpty()) item { HomeEmpty(R.string.home_section_empty) }
         items(home.played, key = { "played:${it.id}" }) { album -> AlbumRow(album) { onAlbum(album.id) } }
         item { SectionHeader(stringResource(R.string.home_favorites)) }
         if (home.favoriteAlbums.isEmpty() && home.favoriteSongs.isEmpty() && home.favoriteArtists.isEmpty()) item { HomeEmpty(R.string.home_section_empty) }
-        items(home.favoriteAlbums, key = { "favoriteAlbum:${it.id}" }) { album -> AlbumRow(album) { onAlbum(album.id) } }
-        items(home.favoriteSongs, key = { "favoriteSong:${it.id}" }) { SongRow(it) }
+        items(home.favoriteAlbums, key = { "favoriteAlbum:${it.id}" }) { album ->
+            AlbumRow(album, onToggleFavorite = { model.toggleAlbumFavorite(album.profileId, album.id, album.starred == null) }) { onAlbum(album.id) }
+        }
+        items(home.favoriteSongs, key = { "favoriteSong:${it.id}" }) { song ->
+            SongRow(song, onToggleFavorite = { model.toggleSongFavorite(song) })
+        }
         items(home.favoriteArtists, key = { "favoriteArtist:${it.id}" }) { artist ->
             TextButton(onClick = { onArtist(artist.id) }, modifier = Modifier.fillMaxWidth()) { Text(artist.name) }
         }
@@ -53,6 +62,9 @@ fun HomeSections(model: LibraryViewModel, onAlbum: (String) -> Unit, onArtist: (
         item { SectionHeader(stringResource(R.string.library_tab_playlists)) }
         if (home.playlists.isEmpty()) item { HomeEmpty(R.string.home_section_empty) }
         items(home.playlists, key = { "playlist:${it.id}" }) { PlaylistRow(it, { onPlaylist(it.id) }) }
+    }
+    if (historyOpen) profile?.id?.let { id ->
+        com.walktape.app.ui.components.ListeningHistorySheet(id) { historyOpen = false }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.walktape.app.core.db
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -14,6 +15,7 @@ data class QueueStateEntity(
     val repeatMode: Int,
     val shuffle: Boolean,
     val updatedAt: Long,
+    @ColumnInfo(defaultValue = "NULL") val mixtapeName: String? = null,
 )
 
 @Entity(tableName = "queue_entry", primaryKeys = ["profileId", "position"],

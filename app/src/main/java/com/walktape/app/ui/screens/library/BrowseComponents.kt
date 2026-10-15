@@ -51,11 +51,25 @@ fun LibraryFilters(model: LibraryViewModel) {
 }
 
 @Composable
-fun PlaylistItems(items: LazyPagingItems<Any>, profileId: Long, onOpen: (String) -> Unit) {
+fun PlaylistItems(items: LazyPagingItems<Any>, profileId: Long, model: LibraryViewModel, onOpen: (String) -> Unit) {
+    val busy by model.playlistBusy.collectAsStateWithLifecycle()
+    var newDialogOpen by remember { mutableStateOf(false) }
     LazyColumn(Modifier.fillMaxSize()) {
+        item {
+            TextButton(onClick = { newDialogOpen = true }, enabled = !busy,
+                modifier = Modifier.padding(start = 8.dp)) {
+                Text(stringResource(R.string.playlist_new))
+            }
+        }
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
             (items[index] as? PlaylistEntity)?.takeIf { it.profileId == profileId }?.let { PlaylistRow(it) { onOpen(it.id) } }
         }
+    }
+    if (newDialogOpen) {
+        NewPlaylistDialog(busy, onDismiss = { newDialogOpen = false }, onCreate = { name ->
+            newDialogOpen = false
+            model.createPlaylist(name)
+        })
     }
 }
 

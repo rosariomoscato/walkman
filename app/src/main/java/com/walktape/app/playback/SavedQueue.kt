@@ -20,6 +20,8 @@ data class SavedQueue(
     val repeatMode: Int,
     val shuffle: Boolean,
     val updatedAt: Long,
+    /** User-chosen label for a mixed queue; playlist-origin queues keep their own name. */
+    val mixtapeName: String? = null,
 ) {
     fun isValid(): Boolean {
         if (profileId <= 0 || positionMs < 0 || repeatMode !in 0..2) return false

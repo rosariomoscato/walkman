@@ -50,6 +50,19 @@ class FakeLibraryDao : LibraryDao {
     override suspend fun songsByIds(profileId: Long, ids: List<String>): List<SongEntity> =
         ids.mapNotNull { songs[profileId to it] }
     override suspend fun artist(profileId: Long, id: String): ArtistEntity? = artists[profileId to id]
+    override fun observeArtist(profileId: Long, id: String): Flow<ArtistEntity?> = MutableStateFlow(artists[profileId to id])
+    override suspend fun setSongStarred(profileId: Long, id: String, timestamp: String?): Int {
+        val row = songs[profileId to id] ?: return 0
+        songs[profileId to id] = row.copy(starred = timestamp); return 1
+    }
+    override suspend fun setAlbumStarred(profileId: Long, id: String, timestamp: String?): Int {
+        val row = albums[profileId to id] ?: return 0
+        albums[profileId to id] = row.copy(starred = timestamp); return 1
+    }
+    override suspend fun setArtistStarred(profileId: Long, id: String, timestamp: String?): Int {
+        val row = artists[profileId to id] ?: return 0
+        artists[profileId to id] = row.copy(starred = timestamp); return 1
+    }
     override fun observeGenreSongs(profileId: Long, genre: String): Flow<List<SongEntity>> =
         MutableStateFlow(songs.values.filter { it.profileId == profileId && it.genre == genre })
 

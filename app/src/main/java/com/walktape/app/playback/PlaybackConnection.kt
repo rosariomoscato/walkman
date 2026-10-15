@@ -48,6 +48,7 @@ class PlaybackConnection(private val context: Context) {
     private val mutableState = MutableStateFlow(PlaybackSnapshot())
     val state = mutableState.asStateFlow()
     private var ticker: Job? = null
+    private var namingJob: Job? = null
     private var pendingPlay: Job? = null
     private val editMutex = Mutex()
     private val editJobs = mutableSetOf<Job>()
@@ -83,6 +84,7 @@ class PlaybackConnection(private val context: Context) {
                     ticker = scope.launch {
                         while (isActive) { delay(500); if (state.value.hasMedia) refresh() }
                     }
+                    namingJob = scope.launch { Graph.queueNaming.collect { refresh() } }
                 }
             }
 
@@ -109,6 +111,8 @@ class PlaybackConnection(private val context: Context) {
         editJobs.clear()
         ticker?.cancel()
         ticker = null
+        namingJob?.cancel()
+        namingJob = null
         _controller.value?.removeListener(playerListener)
         _controller.value = null
         requestFailure = null
@@ -145,6 +149,7 @@ class PlaybackConnection(private val context: Context) {
                 return@launch
             }
             requestFailure = null
+            Graph.queueNaming.value = null // a fresh queue starts unlabeled
             mediaController.shuffleModeEnabled = false
             mediaController.setMediaItems(songs.map { songMediaItem(it, queueOrigin) }, safeIndex, 0)
             mediaController.prepare()
@@ -207,6 +212,7 @@ class PlaybackConnection(private val context: Context) {
                 requestFailure = PlaybackFailure.REQUEST; refresh(); return@withLock
             }
             if (player.mediaItemCount == 0) {
+                Graph.queueNaming.value = null // starting a queue from scratch is a new mixtape
                 player.shuffleModeEnabled = false
                 player.setMediaItems(songs.map(::songMediaItem), 0, 0)
                 player.prepare()
@@ -406,6 +412,9 @@ class PlaybackConnection(private val context: Context) {
             failure = if (player?.playerError != null) PlaybackFailure.PLAYBACK else requestFailure,
             coverArtId = player?.currentMediaItem?.mediaMetadata?.extras?.getString(QueueIdentity.COVER_ART),
             queueOriginName = queueOriginCache,
+            songId = player?.currentMediaItem?.mediaMetadata?.extras?.getString(QueueIdentity.SONG),
+            mixtapeName = Graph.queueNaming.value,
+            profileId = player?.currentMediaItem?.localConfiguration?.uri?.pathSegments?.firstOrNull()?.toLongOrNull(),
         )
     }
 

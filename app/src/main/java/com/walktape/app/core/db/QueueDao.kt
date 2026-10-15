@@ -52,10 +52,10 @@ interface QueueDao {
         require(rows.map { it.shufflePosition }.sorted() == rows.indices.toList())
         val queue = SavedQueue(profileId, rows.map { SavedQueueItem(it.entryId, it.songId, it.title,
             it.artist, it.album, it.durationMs, it.originName) }, rows.sortedBy { it.shufflePosition }.map { it.entryId },
-            state.currentId, state.positionMs, state.repeatMode, state.shuffle, state.updatedAt)
+            state.currentId, state.positionMs, state.repeatMode, state.shuffle, state.updatedAt, state.mixtapeName)
         require(queue.isValid())
         return queue
     }
 }
 
-fun SavedQueue.toState() = QueueStateEntity(profileId, currentId, positionMs, repeatMode, shuffle, updatedAt)
+fun SavedQueue.toState() = QueueStateEntity(profileId, currentId, positionMs, repeatMode, shuffle, updatedAt, mixtapeName)

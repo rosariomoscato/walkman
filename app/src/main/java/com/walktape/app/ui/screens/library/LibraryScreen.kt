@@ -17,6 +17,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.LibraryMusic
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Checkbox
@@ -85,7 +87,11 @@ fun LibraryScreen(
     val selection by viewModel.selection.collectAsStateWithLifecycle()
     val queueBusy by viewModel.queueBusy.collectAsStateWithLifecycle()
     val queueError by viewModel.queueError.collectAsStateWithLifecycle()
+    val playlistBusy by viewModel.playlistBusy.collectAsStateWithLifecycle()
+    val playlistError by viewModel.playlistError.collectAsStateWithLifecycle()
+    val favoriteError by viewModel.favoriteError.collectAsStateWithLifecycle()
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    var addDialogOpen by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().semantics { testTagsAsResourceId = true }) {
         Text(
@@ -97,6 +103,11 @@ fun LibraryScreen(
             profile == null -> NoProfileState(onOpenProfiles)
             else -> {
                 SyncBanner(progress, state?.takeIf { it.profileId == profile?.id }?.let { it.artistCount to it.songCount }, viewModel::sync, viewModel::cancelSync)
+                if (favoriteError) {
+                    Text(stringResource(R.string.favorite_failed),color = MaterialTheme.colorScheme.error,modifier = Modifier.padding(horizontal = 16.dp))
+                    TextButton(onClick = viewModel::dismissFavoriteError) { Text(stringResource(R.string.action_cancel)) }
+                }
+                if (playlistError && selection.isEmpty()) MutationErrorLine(true, viewModel::dismissPlaylistError)
                 SearchAndSort(
                     query = query,
                     onQuery = viewModel::setQuery,
@@ -137,10 +148,14 @@ fun LibraryScreen(
                                     LibraryViewModel.QueueInsert.APPEND, items.itemSnapshotList.items) }, enabled = !queueBusy) {
                                     Text(stringResource(R.string.selection_add_to_queue))
                                 }
+                                TextButton(onClick = { addDialogOpen = true }, enabled = !queueBusy && !playlistBusy) {
+                                    Text(stringResource(R.string.selection_add_to_playlist))
+                                }
                             }
-                            if (queueBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
+                            if (queueBusy || playlistBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                             if (queueError) Text(stringResource(R.string.selection_queue_unavailable),
                                 color = MaterialTheme.colorScheme.error)
+                            if (playlistError) MutationErrorLine(true, viewModel::dismissPlaylistError)
                         }
                     }
                 }
@@ -154,12 +169,23 @@ fun LibraryScreen(
                         LibraryTab.ARTISTS -> ArtistItems(items, viewModel, onOpenArtist)
                         LibraryTab.SONGS -> SongItems(items, viewModel)
                         LibraryTab.GENRES -> GenreItems(items, profile!!.id, onOpenGenre)
-                        LibraryTab.PLAYLISTS -> PlaylistItems(items, profile!!.id, onOpenPlaylist)
+                        LibraryTab.PLAYLISTS -> PlaylistItems(items, profile!!.id, viewModel, onOpenPlaylist)
                         LibraryTab.SEARCH -> SearchItems(items, profile!!.id, onOpenAlbum, onOpenArtist, onOpenGenre, onOpenPlaylist)
                     }
                 }
             }
         }
+    }
+    if (addDialogOpen) {
+        AddToPlaylistDialog(
+            model = viewModel,
+            busy = playlistBusy,
+            onChoose = { playlistId, newName ->
+                addDialogOpen = false
+                viewModel.addSelectionToPlaylist(playlistId, newName, items.itemSnapshotList.items)
+            },
+            onDismiss = { addDialogOpen = false },
+        )
     }
 }
 
@@ -310,7 +336,10 @@ private fun AlbumItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel,
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AlbumRow(album: AlbumEntity, selected: Boolean = false, selectionMode: Boolean = false,
-             onSelect: (() -> Unit)? = null, cover: @Composable () -> Unit = {}, onClick: () -> Unit) {
+             onSelect: (() -> Unit)? = null, cover: @Composable () -> Unit = {},
+             onToggleFavorite: (() -> Unit)? = null, onClick: () -> Unit) {
+    val favoriteLabel = stringResource(
+        if (album.starred == null) R.string.favorite_add else R.string.favorite_remove)
     Row(
         Modifier
             .fillMaxWidth()
@@ -331,6 +360,16 @@ fun AlbumRow(album: AlbumEntity, selected: Boolean = false, selectionMode: Boole
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+        }
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    if (album.starred == null) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                    contentDescription = favoriteLabel,
+                    tint = if (album.starred == null) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         Text(durationLabel(album.duration), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -363,7 +402,8 @@ private fun SongItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel) 
     LazyColumn(Modifier.fillMaxSize(), state = libraryListState(items)) {
         items(count = items.itemCount, key = items.itemKey(::libraryItemKey)) { index ->
             (items[index] as? SongEntity)?.takeIf { it.profileId == profile?.id }?.let { song ->
-                SongRow(song, song.id in selection, selection.isNotEmpty(), { viewModel.toggleSelection(song.id) })
+                SongRow(song, song.id in selection, selection.isNotEmpty(), { viewModel.toggleSelection(song.id) },
+                    onToggleFavorite = { viewModel.toggleSongFavorite(song) })
             }
         }
     }
@@ -371,7 +411,10 @@ private fun SongItems(items: LazyPagingItems<Any>, viewModel: LibraryViewModel) 
 
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-fun SongRow(song: SongEntity, selected: Boolean = false, selectionMode: Boolean = false, onSelect: (() -> Unit)? = null) {
+fun SongRow(song: SongEntity, selected: Boolean = false, selectionMode: Boolean = false,
+            onSelect: (() -> Unit)? = null, onToggleFavorite: (() -> Unit)? = null) {
+    val favoriteLabel = stringResource(
+        if (song.starred == null) R.string.favorite_add else R.string.favorite_remove)
     Row(
         Modifier.fillMaxWidth()
             .testTag("library-song-${song.id}")
@@ -388,6 +431,16 @@ fun SongRow(song: SongEntity, selected: Boolean = false, selectionMode: Boolean 
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1, overflow = TextOverflow.Ellipsis
             )
+        }
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.size(48.dp)) {
+                Icon(
+                    if (song.starred == null) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                    contentDescription = favoriteLabel,
+                    tint = if (song.starred == null) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         Text(durationLabel(song.duration), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)

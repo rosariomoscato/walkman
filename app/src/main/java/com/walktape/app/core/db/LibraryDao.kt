@@ -116,6 +116,19 @@ interface LibraryDao {
     @Query("SELECT * FROM artist WHERE profileId = :profileId AND id = :id LIMIT 1")
     suspend fun artist(profileId: Long, id: String): ArtistEntity?
 
+    @Query("SELECT * FROM artist WHERE profileId = :profileId AND id = :id")
+    fun observeArtist(profileId: Long, id: String): Flow<ArtistEntity?>
+
+    /** Targeted starred updates keep optimistic toggles cheap between full syncs. */
+    @Query("UPDATE song SET starred=:timestamp WHERE profileId=:profileId AND id=:id")
+    suspend fun setSongStarred(profileId: Long, id: String, timestamp: String?): Int
+
+    @Query("UPDATE album SET starred=:timestamp WHERE profileId=:profileId AND id=:id")
+    suspend fun setAlbumStarred(profileId: Long, id: String, timestamp: String?): Int
+
+    @Query("UPDATE artist SET starred=:timestamp WHERE profileId=:profileId AND id=:id")
+    suspend fun setArtistStarred(profileId: Long, id: String, timestamp: String?): Int
+
     @Query("SELECT * FROM song WHERE profileId = :profileId AND genre = :genre ORDER BY album COLLATE NOCASE, discNumber, track")
     fun observeGenreSongs(profileId: Long, genre: String): Flow<List<SongEntity>>
 

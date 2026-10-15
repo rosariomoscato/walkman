@@ -77,7 +77,7 @@ internal fun CassetteWindow(
     onOpenCover: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val label = cassetteLabel(state.queue, state.queueOriginName)
+    val label = cassetteLabel(state.queue, state.queueOriginName, state.mixtapeName)
     Column(
         modifier
             .fillMaxWidth()
@@ -106,7 +106,8 @@ private fun CassetteBody(
         }, state.artist)
     } else stringResource(R.string.cassette_empty)
     val labelText = when (label?.kind) {
-        CassetteLabel.Kind.MIXTAPE -> stringResource(R.string.cassette_label_mixtape)
+        CassetteLabel.Kind.MIXTAPE ->
+            label.text ?: stringResource(R.string.cassette_label_mixtape)
         CassetteLabel.Kind.ALBUM, CassetteLabel.Kind.PLAYLIST -> label.text.orEmpty()
         null -> ""
     }

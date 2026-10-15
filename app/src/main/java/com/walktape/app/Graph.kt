@@ -10,12 +10,21 @@ import com.walktape.app.core.profiles.CredentialVault
 import com.walktape.app.core.profiles.ProfileRepository
 import com.walktape.app.core.library.CoverArtStore
 import com.walktape.app.core.library.LibrarySync
+import com.walktape.app.core.library.LyricsRepository
 import com.walktape.app.core.library.PlaylistIndex
+import com.walktape.app.core.library.PlaylistRepository
+import com.walktape.app.core.library.StarRepository
 import com.walktape.app.playback.PlaybackConnection
 import com.walktape.app.playback.QueueStore
 import com.walktape.app.playback.AudioOutputMonitor
 import com.walktape.app.playback.ContinuationSuggestion
+import com.walktape.app.playback.ScrobbleSender
+import com.walktape.app.playback.ListeningStore
 import com.walktape.app.playback.SleepTimer
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
 @Suppress("StaticFieldLeak")
@@ -46,10 +55,32 @@ object Graph {
     val playbackTimer = SleepTimer()
     val suggestion = ContinuationSuggestion()
 
+    /** User label for the active profile's current mixed queue; persisted with the queue itself. */
+    val queueNaming = MutableStateFlow<String?>(null)
+    val scrobbleSender: ScrobbleSender by lazy {
+        ScrobbleSender(database.scrobbleDao(), { id -> profiles.clientFor(id) },
+            CoroutineScope(SupervisorJob() + Dispatchers.IO))
+    }
+    val listeningStore: ListeningStore by lazy { ListeningStore(database.scrobbleDao()) { scrobbleSender.trigger() } }
+
     fun client(address: ServerAddress, credentials: Credentials) = OpenSubsonicClient(address, credentials)
 
     fun librarySync() = LibrarySync(database.libraryDao(), clientProvider = { id -> profiles.clientFor(id) },
         playlistIndex = PlaylistIndex(database.browseDao()))
+
+    fun playlistRepository() = playlists
+
+    private val favorites by lazy { StarRepository(database.libraryDao(),
+        clientProvider = { id -> profiles.clientFor(id) }) }
+    fun starRepository() = favorites
+
+    private val playlists by lazy { PlaylistRepository(database.browseDao(),
+        clientProvider = { id -> profiles.clientFor(id) },
+        ownerProvider = { id -> database.profileDao().get(id)?.username })
+    }
+
+    fun lyricsRepository() = LyricsRepository(database.lyricsDao(),
+        clientProvider = { id -> profiles.clientFor(id) })
 
     @Synchronized
     fun coverArtStore(profileId: Long): CoverArtStore = coverStores.getOrPut(profileId) {

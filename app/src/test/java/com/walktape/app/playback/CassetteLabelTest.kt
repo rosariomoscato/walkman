@@ -8,6 +8,13 @@ class CassetteLabelTest {
 
     private fun entry(album: String?) = PlaybackQueueEntry("e", "m", "Title", "Artist", album, albumId = album)
 
+    @Test fun customNameLabelsTheQueueButPlaylistOriginRemainsAuthoritative() {
+        val queue = listOf(entry("Album"), entry("Album"))
+        assertEquals(CassetteLabel(CassetteLabel.Kind.MIXTAPE,"Named mix"), cassetteLabel(queue,null," Named mix "))
+        assertEquals(CassetteLabel(CassetteLabel.Kind.PLAYLIST,"Playlist"), cassetteLabel(queue,"Playlist","Named mix"))
+        assertNull(cassetteLabel(emptyList(),null,"Named mix"))
+    }
+
     @Test fun sameTitleWithDifferentAlbumIdsIsStillMixed() {
         val a = entry("Greatest Hits")
         assertEquals(CassetteLabel.Kind.MIXTAPE,

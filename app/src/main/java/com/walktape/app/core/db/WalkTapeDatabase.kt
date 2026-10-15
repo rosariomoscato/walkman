@@ -11,8 +11,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
     entities = [ProfileEntity::class, ArtistEntity::class, AlbumEntity::class,
         SongEntity::class, GenreEntity::class, LibraryStateEntity::class,
         PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class,
-        QueueStateEntity::class, QueueEntryEntity::class],
-    version = 6,
+        QueueStateEntity::class, QueueEntryEntity::class,
+        ScrobbleEventEntity::class, LyricsEntity::class, ListeningStateEntity::class],
+    version = 7,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -21,6 +22,8 @@ abstract class WalkTapeDatabase : RoomDatabase() {
     abstract fun libraryDao(): LibraryDao
     abstract fun browseDao(): BrowseDao
     abstract fun queueDao(): QueueDao
+    abstract fun scrobbleDao(): ScrobbleDao
+    abstract fun lyricsDao(): LyricsDao
 
     companion object {
         val MIGRATIONS: Array<Migration> = arrayOf(object : Migration(1, 2) {
@@ -61,6 +64,15 @@ abstract class WalkTapeDatabase : RoomDatabase() {
         }, object : Migration(5, 6) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE queue_entry ADD COLUMN originName TEXT")
+            }
+        }, object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE queue_state ADD COLUMN mixtapeName TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE playlist ADD COLUMN readOnly INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `listening_state` (`profileId` INTEGER NOT NULL, `mediaId` TEXT NOT NULL, `eventId` TEXT NOT NULL, `songId` TEXT NOT NULL, `title` TEXT NOT NULL, `artist` TEXT, `album` TEXT, `playedAtMs` INTEGER NOT NULL, `listenedMs` INTEGER NOT NULL, `emitted` INTEGER NOT NULL, PRIMARY KEY(`profileId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `scrobble_event` (`profileId` INTEGER NOT NULL, `eventId` TEXT NOT NULL, `songId` TEXT NOT NULL, `title` TEXT NOT NULL, `artist` TEXT, `album` TEXT, `playedAtMs` INTEGER NOT NULL, `listenedMs` INTEGER NOT NULL, `createdAt` INTEGER NOT NULL, `sentAt` INTEGER, PRIMARY KEY(`profileId`, `eventId`), FOREIGN KEY(`profileId`) REFERENCES `profile`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_scrobble_event_profileId_sentAt` ON `scrobble_event` (`profileId`, `sentAt`)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `lyrics` (`profileId` INTEGER NOT NULL, `songId` TEXT NOT NULL, `displayArtist` TEXT, `displayTitle` TEXT, `lang` TEXT, `synced` INTEGER NOT NULL, `lines` TEXT NOT NULL, `fetchedAt` INTEGER NOT NULL, PRIMARY KEY(`profileId`, `songId`), FOREIGN KEY(`profileId`, `songId`) REFERENCES `song`(`profileId`, `id`) ON UPDATE NO ACTION ON DELETE CASCADE)")
             }
         })
 

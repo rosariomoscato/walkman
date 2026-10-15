@@ -48,4 +48,24 @@
     <string name="playback_timer_active_track">Timer attivo: fine del brano</string>
     <string name="playback_timer_active_queue">Timer attivo: fine della coda</string>
     <string name="playback_suggestion_continue">Continua con brani simili (%1$d)</string>
+    <string name="playlist_new">Nuova playlist</string>
+    <string name="playlist_name_hint">Nome della playlist</string>
+    <string name="playlist_create">Crea</string>
+    <string name="playlist_rename">Rinomina</string>
+    <string name="playlist_delete">Elimina</string>
+    <string name="playlist_delete_confirm">Eliminare "%1$s"? L\'operazione viene applicata anche sul server.</string>
+    <string name="playlist_shared_read_only">Playlist di %1$s: sola lettura.</string>
+    <string name="playlist_change_failed">Modifica non riuscita: server non raggiungibile o permesso negato.</string>
+    <string name="playlist_remove_song">Rimuovi dalla playlist</string>
+    <string name="selection_add_to_playlist">Aggiungi a playlist</string>
+    <string name="favorite_add">Aggiungi ai preferiti</string>
+    <string name="favorite_remove">Rimuovi dai preferiti</string>
+    <string name="favorite_failed">Preferito non aggiornato: server non raggiungibile o permesso negato.</string>
+    <string name="mixtape_name">Nome della mixtape</string>
+    <string name="mixtape_name_hint">Nome mostrato sull\'etichetta della cassetta</string>
+    <string name="mixtape_name_clear">Rimuovi il nome</string>
+    <string name="queue_save_playlist">Salva coda come playlist</string>
+    <string name="queue_saved_as_playlist">Coda salvata in "%1$s"</string>
+    <string name="queue_save_failed">Salvataggio della playlist non riuscito.</string>
+    <string name="action_save">Salva</string>
 </resources>

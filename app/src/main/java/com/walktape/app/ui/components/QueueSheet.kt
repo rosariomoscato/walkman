@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.foundation.layout.Box
@@ -23,14 +24,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.rememberUpdatedState
+import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.Alignment
@@ -53,7 +59,8 @@ import java.util.Locale
 /**
  * Editable queue: tap to play, remove, reorder through the row menu or accessibility actions.
  * Shuffle keeps the current track and, when switched off, restores the order saved before
- * shuffling. The same list content is embedded in the expanded player pane.
+ * shuffling. The same list content is embedded in the expanded player pane. The queue can be
+ * named (mixtape label) and saved as a server playlist in the order actually shown.
  */
 @OptIn(ExperimentalMaterial3Api::class, androidx.compose.ui.ExperimentalComposeUiApi::class)
 @Composable
@@ -71,10 +78,23 @@ fun QueueSheet(onDismiss: () -> Unit) {
 @Composable
 internal fun QueueListContent(modifier: Modifier = Modifier, maxListHeight: Dp? = 420.dp) {
     val state by Graph.playback.state.collectAsStateWithLifecycle()
+    var namingOpen by remember { mutableStateOf(false) }
+    var savingOpen by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val profiles by Graph.profiles.profiles.collectAsStateWithLifecycle(emptyList())
+    val owner = profiles.firstOrNull { it.isActive }?.id
+    LaunchedEffect(owner) { namingOpen = false; savingOpen = false }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val resources = androidx.compose.ui.platform.LocalResources.current
     Column(modifier.fillMaxWidth().semantics { testTagsAsResourceId = true }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.queue_title), style = MaterialTheme.typography.titleLarge)
+                state.mixtapeName?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             Text(stringResource(R.string.queue_count, state.queue.size),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -87,6 +107,15 @@ internal fun QueueListContent(modifier: Modifier = Modifier, maxListHeight: Dp? 
                     else MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        if (state.queue.isNotEmpty()) {
+            androidx.compose.foundation.layout.FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                modifier = Modifier.padding(bottom = 4.dp),
+            ) {
+                TextButton(onClick = { namingOpen = true }, enabled = owner != null && state.profileId == owner) { Text(stringResource(R.string.mixtape_name)) }
+                TextButton(onClick = { savingOpen = true }, enabled = owner != null && state.profileId == owner && state.canEditQueue) { Text(stringResource(R.string.queue_save_playlist)) }
+            }
+        }
         if (state.shuffleOn) Text(stringResource(R.string.queue_reorder_hint),
             style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
         if (state.queue.isEmpty()) {
@@ -95,7 +124,10 @@ internal fun QueueListContent(modifier: Modifier = Modifier, maxListHeight: Dp? 
             val listModifier = if (maxListHeight != null) Modifier.fillMaxWidth().heightIn(max = maxListHeight)
             else Modifier.fillMaxWidth()
             LazyColumn(listModifier) {
-                itemsIndexed(state.queue, key = { _, entry -> entry.entryId }) { index, entry ->
+                itemsIndexed(state.queue, key = { index, entry ->
+                    if (entry.entryId.startsWith(com.walktape.app.playback.QueueIdentity.PREFIX)) entry.entryId
+                    else "pending:$index:${entry.entryId}"
+                }) { index, entry ->
                     QueueRow(
                         entry = entry,
                         enabled = state.canEditQueue,
@@ -113,6 +145,83 @@ internal fun QueueListContent(modifier: Modifier = Modifier, maxListHeight: Dp? 
             }
         }
     }
+    if (namingOpen) {
+        MixtapeNameDialog(current = state.mixtapeName ?: "", onDismiss = { namingOpen = false }) { name ->
+            namingOpen = false
+            val capturedProfile = owner
+            scope.launch {
+                if (capturedProfile != null && Graph.database.profileDao().active()?.id == capturedProfile &&
+                    Graph.playback.state.value.profileId == capturedProfile)
+                    Graph.queueNaming.value = name?.trim()?.takeIf { it.isNotEmpty() }
+            }
+        }
+    }
+    if (savingOpen && state.queue.isNotEmpty()) {
+        SaveQueueDialog(defaultName = state.mixtapeName ?: "", onDismiss = { savingOpen = false }) { name ->
+            savingOpen = false
+            val songIds = state.queue.map { it.mediaId }
+            val capturedProfile = owner ?: return@SaveQueueDialog
+            scope.launch {
+                val profile = Graph.database.profileDao().active() ?: return@launch
+                if (profile.id != capturedProfile) return@launch
+                val error = Graph.playlistRepository().create(profile.id, name, songIds)
+                val message = if (error == null) resources.getString(R.string.queue_saved_as_playlist, name)
+                    else resources.getString(R.string.queue_save_failed)
+                android.widget.Toast.makeText(context, message, android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+}
+
+@Composable
+private fun MixtapeNameDialog(current: String, onDismiss: () -> Unit, onApply: (String?) -> Unit) {
+    var name by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.mixtape_name)) },
+        text = {
+            androidx.compose.foundation.layout.Column {
+                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.mixtape_name_hint)) },
+                    modifier = Modifier.fillMaxWidth())
+                if (current.isNotBlank()) TextButton(onClick = { onApply(null) }) {
+                    Text(stringResource(R.string.mixtape_name_clear))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onApply(name) }) { Text(stringResource(R.string.action_save)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
+}
+
+/** Saves the queue, in the order shown (the actual listening order with shuffle on). */
+@Composable
+private fun SaveQueueDialog(defaultName: String, onDismiss: () -> Unit, onSave: (String) -> Unit) {
+    var name by remember { mutableStateOf(defaultName) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.queue_save_playlist)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.queue_save_order))
+                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.playlist_name_hint)) },
+                    modifier = Modifier.fillMaxWidth())
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onSave(name.trim()) }, enabled = name.isNotBlank()) {
+                Text(stringResource(R.string.playlist_create))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) }
+        },
+    )
 }
 
 @Composable

@@ -19,4 +19,18 @@
     <string name="settings_haptics_help">Vibrazione leggera alla pressione dei tasti del lettore.</string>
     <string name="settings_key_clicks">Clic dei tasti</string>
     <string name="settings_key_clicks_help">Scatto sonoro alla pressione, se i suoni di sistema sono attivi. Inizialmente spento.</string>
+    <string name="song_details">Dettagli brano</string>
+    <string name="song_details_artist">Artista</string>
+    <string name="song_details_album">Album</string>
+    <string name="song_details_year">Anno</string>
+    <string name="song_details_genre">Genere</string>
+    <string name="song_details_format">Formato</string>
+    <string name="song_details_bitrate">Bitrate</string>
+    <string name="song_details_bitrate_value">%1$d kbps</string>
+    <string name="song_details_duration">Durata</string>
+    <string name="song_details_unavailable">Dettagli non disponibili per questo brano.</string>
+    <string name="lyrics_title">Testo</string>
+    <string name="lyrics_not_available">Nessun testo disponibile per questo brano.</string>
+    <string name="lyrics_error">Testo non caricato: server non raggiungibile.</string>
+    <string name="lyrics_current_line">Riga corrente</string>
 </resources>

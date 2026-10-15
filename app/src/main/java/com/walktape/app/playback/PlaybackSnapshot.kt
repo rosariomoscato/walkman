@@ -32,6 +32,11 @@ data class PlaybackSnapshot(
     val coverArtId: String? = null,
     /** Recorded queue origin name (e.g. the playlist that started the queue), when known. */
     val queueOriginName: String? = null,
+    /** songId of the current occurrence, for lyrics/details; never a URL or token. */
+    val songId: String? = null,
+    /** User-chosen mixtape name for the current queue, when set. */
+    val mixtapeName: String? = null,
+    val profileId: Long? = null,
 ) {
     val hasMedia: Boolean get() = itemKey != null
 }

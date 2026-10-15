@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="listening_history">Cronologia ascolti</string>
+    <string name="listening_pending">In attesa di invio al server</string>
+    <string name="listening_sent">Ricevuto dal server</string>
+    <string name="listening_retry">Riprova invio</string>
+    <string name="queue_save_order">Viene salvato l\'ordine mostrato nella coda, anche con shuffle attivo. Le copie duplicate vengono conservate.</string>
+</resources>

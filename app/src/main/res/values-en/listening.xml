@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="listening_history">Listening history</string>
+    <string name="listening_pending">Waiting to send to the server</string>
+    <string name="listening_sent">Acknowledged by the server</string>
+    <string name="listening_retry">Retry sending</string>
+    <string name="queue_save_order">Saves the order shown in the queue, including when shuffle is on. Duplicate occurrences are preserved.</string>
+</resources>

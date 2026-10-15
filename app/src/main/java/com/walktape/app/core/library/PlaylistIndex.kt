@@ -19,7 +19,8 @@ class PlaylistIndex(private val dao: BrowseDao) {
                 is ApiResult.Success -> {
                     val p = result.value.playlist
                     dao.replacePlaylist(PlaylistEntity(profileId, p.id, p.name, p.owner, p.isPublic,
-                        p.comment, p.coverArt, p.songCount, p.duration, p.created, p.changed, System.currentTimeMillis()),
+                        p.comment, p.coverArt, p.songCount, p.duration, p.created, p.changed,
+                        System.currentTimeMillis(), p.readOnly),
                         result.value.entries.mapIndexed { position, song ->
                             PlaylistEntryEntity(profileId, p.id, position, song.id, song.title,
                                 song.displayArtist?.takeIf { it.isNotBlank() } ?: song.artist,

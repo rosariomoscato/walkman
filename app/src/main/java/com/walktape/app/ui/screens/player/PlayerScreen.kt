@@ -372,14 +372,25 @@ private fun scrubTickAnchorless(delta: Long) {
 
 @Composable
 private fun PlayerSections(state: PlaybackSnapshot) {
+    var detailsOpen by remember { mutableStateOf(false) }
+    val profiles by Graph.profiles.profiles.collectAsStateWithLifecycle(emptyList())
+    val profileId = profiles.firstOrNull { it.isActive }?.id
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         if (state.hasMedia) {
             NowPlayingText(state)
+            androidx.compose.material3.TextButton(onClick = { detailsOpen = true }, enabled = state.songId != null && profileId == state.profileId) {
+                Text(stringResource(R.string.song_details))
+            }
             SeekControl(state)
             VolumeSection(state)
             HorizontalDivider()
             TimerSection(state)
             if (state.ended) SuggestionSection()
+        }
+    }
+    if (detailsOpen && profileId != null && profileId == state.profileId && state.songId != null) {
+        key(profileId, state.songId) {
+            SongDetailsSheet(profileId, state.songId) { detailsOpen = false }
         }
     }
 }

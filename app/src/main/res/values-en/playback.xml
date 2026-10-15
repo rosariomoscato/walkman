@@ -48,4 +48,24 @@
     <string name="playback_timer_active_track">Timer active: end of track</string>
     <string name="playback_timer_active_queue">Timer active: end of queue</string>
     <string name="playback_suggestion_continue">Continue with similar songs (%1$d)</string>
+    <string name="playlist_new">New playlist</string>
+    <string name="playlist_name_hint">Playlist name</string>
+    <string name="playlist_create">Create</string>
+    <string name="playlist_rename">Rename</string>
+    <string name="playlist_delete">Delete</string>
+    <string name="playlist_delete_confirm">Delete "%1$s"? This also applies on the server.</string>
+    <string name="playlist_shared_read_only">Playlist by %1$s: read-only.</string>
+    <string name="playlist_change_failed">Change failed: server unreachable or permission denied.</string>
+    <string name="playlist_remove_song">Remove from playlist</string>
+    <string name="selection_add_to_playlist">Add to playlist</string>
+    <string name="favorite_add">Add to favorites</string>
+    <string name="favorite_remove">Remove from favorites</string>
+    <string name="favorite_failed">Favorite not updated: server unreachable or permission denied.</string>
+    <string name="mixtape_name">Mixtape name</string>
+    <string name="mixtape_name_hint">Name shown on the cassette label</string>
+    <string name="mixtape_name_clear">Remove the name</string>
+    <string name="queue_save_playlist">Save queue as playlist</string>
+    <string name="queue_saved_as_playlist">Queue saved to "%1$s"</string>
+    <string name="queue_save_failed">Saving the playlist failed.</string>
+    <string name="action_save">Save</string>
 </resources>

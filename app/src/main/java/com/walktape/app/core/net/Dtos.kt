@@ -47,8 +47,17 @@ data class GenreDto(val name: String, val songCount: Int, val albumCount: Int)
 data class AlbumWithSongsDto(val album: AlbumDto, val songs: List<SongDto>)
 data class PlaylistDto(val id: String, val name: String, val owner: String?, val isPublic: Boolean,
                        val comment: String?, val coverArt: String?, val songCount: Int,
-                       val duration: Int, val created: String?, val changed: String?)
+                       val duration: Int, val created: String?, val changed: String?,
+                       val readOnly: Boolean = false)
 data class PlaylistDetailDto(val playlist: PlaylistDto, val entries: List<SongDto>)
+data class LyricsLineDto(val value: String, val startMs: Long?, val endMs: Long?)
+data class StructuredLyricsDto(
+    val displayArtist: String?,
+    val displayTitle: String?,
+    val lang: String?,
+    val synced: Boolean,
+    val lines: List<LyricsLineDto>,
+)
 
 internal fun parsePlaylist(json: JsonObject) = PlaylistDto(
     id = json.optString("id") ?: throw IllegalArgumentException(),
@@ -56,7 +65,24 @@ internal fun parsePlaylist(json: JsonObject) = PlaylistDto(
     owner = json.optString("owner"), isPublic = json.optBool("public"),
     comment = json.optString("comment"), coverArt = json.optString("coverArt"),
     songCount = json.get("songCount")?.asInt ?: throw IllegalArgumentException(),
-    duration = json.optInt("duration"), created = json.optString("created"), changed = json.optString("changed"))
+    duration = json.optInt("duration"), created = json.optString("created"), changed = json.optString("changed"),
+    readOnly = json.optBool("readonly"))
+
+internal fun parseStructuredLyrics(json: JsonObject): StructuredLyricsDto = StructuredLyricsDto(
+    displayArtist = json.optString("displayArtist"),
+    displayTitle = json.optString("displayTitle"),
+    lang = json.optString("lang"),
+    synced = json.optBool("synced"),
+    lines = json.getAsJsonArray("line")?.map { line ->
+        val obj = line.asJsonObject
+        LyricsLineDto(
+            value = obj.optString("value") ?: throw IllegalArgumentException(),
+            startMs = obj.get("start")?.takeIf { it.isJsonPrimitive }?.asLong
+                ?.minus(json.optLong("offset")),
+            endMs = obj.get("endTime")?.takeIf { it.isJsonPrimitive }?.asLong,
+        )
+    } ?: emptyList(),
+)
 
 internal fun JsonObject?.optString(name: String): String? =
     this?.get(name)?.takeIf { it.isJsonPrimitive }?.asString

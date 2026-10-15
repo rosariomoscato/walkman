@@ -1,14 +1,22 @@
 package com.walktape.app.ui.screens.library
 
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -27,7 +35,12 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 
-class PlaylistDetailViewModel(private val profileId: Long, private val id: String) : ViewModel() {
+class PlaylistDetailViewModel(
+    private val profileId: Long,
+    private val id: String,
+    private val username: String = "",
+    private val onDeleted: () -> Unit = {},
+) : ViewModel() {
     val playlist = Graph.database.browseDao().playlist(profileId, id)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val entries = Pager(PagingConfig(pageSize = 80, enablePlaceholders = false)) {
@@ -35,6 +48,51 @@ class PlaylistDetailViewModel(private val profileId: Long, private val id: Strin
     }.flow.cachedIn(viewModelScope)
     val playUnavailable = MutableStateFlow(false)
     val playBusy = MutableStateFlow(false)
+    val editBusy = MutableStateFlow(false)
+    val editError = MutableStateFlow(false)
+
+    /** Server-side write permission: own playlists only, never shared/readonly ones. */
+    fun editable(owner: String?, readOnly: Boolean): Boolean =
+        !readOnly && owner != null && owner == username
+
+    private fun runEdit(action: suspend () -> com.walktape.app.core.net.ApiError?) {
+        if (editBusy.value) return
+        val source = playlist.value ?: return
+        if (!editable(source.owner, source.readOnly)) return
+        editBusy.value = true
+        viewModelScope.launch {
+            try {
+                if (Graph.database.profileDao().active()?.id != profileId) return@launch
+                if (action() != null) editError.value = true
+            } finally { editBusy.value = false }
+        }
+    }
+
+    fun rename(newName: String) {
+        val name = newName.trim()
+        if (name.isEmpty()) return
+        runEdit { Graph.playlistRepository().rename(profileId, id, name) }
+    }
+
+    fun delete() = runEdit {
+        val error = Graph.playlistRepository().delete(profileId, id)
+        if (error == null) onDeleted()
+        error
+    }
+
+    fun removeEntry(position: Int) = runEdit {
+        Graph.playlistRepository().removeEntry(profileId, id, position)
+    }
+
+    fun moveEntry(from: Int, to: Int) {
+        if (from == to) return
+        runEdit {
+            val rows = Graph.database.browseDao().queueEntries(profileId, id)
+            if (to !in rows.indices) return@runEdit com.walktape.app.core.net.ApiError.InvalidRequest
+            val ordered = rows.toMutableList().apply { add(to, removeAt(from)) }
+            Graph.playlistRepository().reorder(profileId, id, ordered.map { it.songId })
+        }
+    }
 
     fun play(position: Int) {
         if (playBusy.value) return
@@ -59,9 +117,10 @@ class PlaylistDetailViewModel(private val profileId: Long, private val id: Strin
     }
 
     companion object {
-        fun factory(profileId: Long, id: String) = object : ViewModelProvider.Factory {
+        fun factory(profileId: Long, id: String, username: String, onDeleted: () -> Unit) = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
-            override fun <T : ViewModel> create(modelClass: Class<T>): T = PlaylistDetailViewModel(profileId, id) as T
+            override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                PlaylistDetailViewModel(profileId, id, username, onDeleted) as T
         }
     }
 }
@@ -69,48 +128,169 @@ class PlaylistDetailViewModel(private val profileId: Long, private val id: Strin
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PlaylistDetailScreen(id: String, onBack: () -> Unit,
-    libraryModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory)) {
+                         libraryModel: LibraryViewModel = viewModel(factory = LibraryViewModel.Factory)) {
     val profile by libraryModel.activeProfile.collectAsStateWithLifecycle()
     val profileId = profile?.id ?: return
     val model: PlaylistDetailViewModel = viewModel(key = "playlist:$profileId:$id",
-        factory = PlaylistDetailViewModel.factory(profileId, id))
+        factory = PlaylistDetailViewModel.factory(profileId, id, profile?.username ?: "", onBack))
     val playlist by model.playlist.collectAsStateWithLifecycle()
     val busy by model.playBusy.collectAsStateWithLifecycle()
+    val editBusy by model.editBusy.collectAsStateWithLifecycle()
+    val editError by model.editError.collectAsStateWithLifecycle()
     val unavailable by model.playUnavailable.collectAsStateWithLifecycle()
     val entries = model.entries.collectAsLazyPagingItems()
+    val editable = playlist?.let { model.editable(it.owner, it.readOnly) } ?: false
+    var renameOpen by remember { mutableStateOf(false) }
+    var deleteOpen by remember { mutableStateOf(false) }
+
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text(playlist?.name ?: stringResource(R.string.library_tab_playlists)) },
             navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = stringResource(R.string.action_back)) } })
+                contentDescription = stringResource(R.string.action_back)) } },
+            actions = {
+                if (editable) {
+                    IconButton(onClick = { renameOpen = true }, enabled = !editBusy) {
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.playlist_rename))
+                    }
+                    IconButton(onClick = { deleteOpen = true }, enabled = !editBusy) {
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.playlist_delete))
+                    }
+                }
+            })
+        if (editError) MutationErrorLine(true) { model.editError.value = false }
         LazyColumn(Modifier.fillMaxSize()) {
             item {
                 playlist?.let { p ->
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         CoverArt(libraryModel, p.coverArt, 96.dp)
                         Text(stringResource(R.string.library_album_songs, p.songCount) + " • " + durationLabel(p.duration))
-                        p.owner?.let { Text(stringResource(R.string.playlist_owner, it)) }
+                        if (!editable) {
+                            p.owner?.let { Text(stringResource(R.string.playlist_shared_read_only, it),
+                                style = MaterialTheme.typography.bodySmall) }
+                        } else {
+                            p.owner?.let { Text(stringResource(R.string.playlist_owner, it)) }
+                        }
                         p.comment?.takeIf { it.isNotBlank() }?.let { Text(it) }
-                        Text(stringResource(R.string.playlist_read_only), style = MaterialTheme.typography.bodySmall)
                         FilledTonalButton(onClick = { model.play(0) }, enabled = !busy && p.songCount > 0) {
                             Text(stringResource(R.string.player_play_playlist))
                         }
                         if (unavailable) Text(stringResource(R.string.selection_queue_unavailable))
+                        if (editBusy) LinearProgressIndicator(Modifier.fillMaxWidth())
                     }
                 }
             }
             items(count = entries.itemCount, key = entries.itemKey { it.position }) { index ->
                 entries[index]?.let { entry ->
-                    Row(Modifier.fillMaxWidth().clickable(enabled = !busy) { model.play(entry.position) }
-                        .heightIn(min = 56.dp).padding(16.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text((entry.position + 1).toString())
-                        Column(Modifier.weight(1f)) {
-                            Text(entry.title, style = MaterialTheme.typography.titleMedium)
-                            Text(listOfNotNull(entry.artist, entry.album).joinToString(" • "), style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text(durationLabel(entry.duration))
-                    }
+                    PlaylistEntryRow(
+                        position = entry.position,
+                        title = entry.title,
+                        subtitle = listOfNotNull(entry.artist, entry.album).joinToString(" • "),
+                        duration = durationLabel(entry.duration),
+                        editable = editable && !editBusy,
+                        isFirst = entry.position == 0,
+                        isLast = entry.position == entries.itemCount - 1,
+                        onClick = { model.play(entry.position) },
+                        onRemove = { model.removeEntry(entry.position) },
+                        onMove = { steps ->
+                            model.moveEntry(entry.position, (entry.position + steps))
+                        },
+                    )
                 }
             }
         }
+    }
+    if (renameOpen && playlist != null) {
+        var name by remember(playlist?.changed) { mutableStateOf(playlist?.name ?: "") }
+        AlertDialog(
+            onDismissRequest = { renameOpen = false },
+            title = { Text(stringResource(R.string.playlist_rename)) },
+            text = {
+                OutlinedTextField(value = name, onValueChange = { name = it }, singleLine = true,
+                    label = { Text(stringResource(R.string.playlist_name_hint)) },
+                    modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = {
+                TextButton(onClick = { renameOpen = false; model.rename(name) },
+                    enabled = name.isNotBlank() && !editBusy) {
+                    Text(stringResource(R.string.playlist_rename))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameOpen = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+    if (deleteOpen && playlist != null) {
+        AlertDialog(
+            onDismissRequest = { deleteOpen = false },
+            title = { Text(stringResource(R.string.playlist_delete)) },
+            text = { Text(stringResource(R.string.playlist_delete_confirm, playlist?.name ?: "")) },
+            confirmButton = {
+                TextButton(onClick = { deleteOpen = false; model.delete() }, enabled = !editBusy) {
+                    Text(stringResource(R.string.playlist_delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deleteOpen = false }) { Text(stringResource(R.string.action_cancel)) }
+            },
+        )
+    }
+}
+
+@Composable
+private fun PlaylistEntryRow(
+    position: Int,
+    title: String,
+    subtitle: String,
+    duration: String,
+    editable: Boolean,
+    isFirst: Boolean,
+    isLast: Boolean,
+    onClick: () -> Unit,
+    onRemove: () -> Unit,
+    onMove: (Int) -> Unit,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    val moveUpLabel = stringResource(R.string.queue_move_up)
+    val moveDownLabel = stringResource(R.string.queue_move_down)
+    val removeLabel = stringResource(R.string.playlist_remove_song)
+    Row(
+        Modifier.fillMaxWidth()
+            .heightIn(min = 56.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp)
+            .semantics {
+                val actions = mutableListOf<CustomAccessibilityAction>()
+                if (editable) {
+                    if (!isFirst) actions.add(CustomAccessibilityAction(moveUpLabel) { onMove(-1); true })
+                    if (!isLast) actions.add(CustomAccessibilityAction(moveDownLabel) { onMove(1); true })
+                    actions.add(CustomAccessibilityAction(removeLabel) { onRemove(); true })
+                }
+                customActions = actions
+            },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (editable) {
+            Box {
+                IconButton(onClick = { menuOpen = true }, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Filled.MoreVert, stringResource(R.string.queue_row_actions))
+                }
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    DropdownMenuItem(text = { Text(moveUpLabel) }, enabled = !isFirst,
+                        onClick = { menuOpen = false; onMove(-1) })
+                    DropdownMenuItem(text = { Text(moveDownLabel) }, enabled = !isLast,
+                        onClick = { menuOpen = false; onMove(1) })
+                    DropdownMenuItem(text = { Text(removeLabel) },
+                        onClick = { menuOpen = false; onRemove() })
+                }
+            }
+        }
+        Text((position + 1).toString())
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            if (subtitle.isNotBlank()) Text(subtitle, style = MaterialTheme.typography.bodySmall)
+        }
+        Text(duration)
     }
 }

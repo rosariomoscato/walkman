@@ -9,6 +9,8 @@
 - Registrare verifiche, risultati e limiti nel log. Non equiparare codice scritto a comportamento verificato.
 - Le wave sono incrementi di sviluppo, non riduzioni del perimetro: tutte le funzioni approvate restano nella prima versione.
 - Nuove richieste e cambi di perimetro devono essere concordati; le idee future vanno nel backlog.
+
+Manutenzione strumenti 2026-10-15: rimossa su richiesta la skill di progetto `deploy-an-app` e la relativa voce nel lockfile. Nessun cambio ai task funzionali o al punto di ripresa W07-T01.
 - Durante le wave aggiornare memoria e log, senza aspettare la fine del progetto.
 
 ## Wave 00 — Specifica e continuità
@@ -141,14 +143,18 @@ Handoff 2026-10-15: l'utente riferisce «mi sembra tutto ok» sul nuovo player e
 
 Pubblicazione successiva richiesta dall'utente: **commit `93187a8`**, W06-T01–T05, test, schema6 e handoff pubblicati su origin/main con push ordinario riuscito; SHA remoto/locale verificati identici. Lo stato locale non committato dell'handoff sopra è quindi superato dalla pubblicazione. Note dell'operazione aggiornate separatamente; prompt e checklist private rimangono ignorati, nessuna release/APK pubblicata. W06-T06 e W05-T05/T07 restano aperti.
 
-- [ ] W07-T01 — Implementare CRUD delle playlist, riordino, azioni dalla selezione multipla e rispetto delle autorizzazioni del server.
-- [ ] W07-T02 — Implementare preferiti per brani/album/artisti e sincronizzazione con Navidrome.
-- [ ] W07-T03 — Salvare la coda come playlist e supportare nome personalizzato della mixtape.
-- [ ] W07-T04 — Implementare testi disponibili sul server e dettaglio tecnico/musicale del brano.
-- [ ] W07-T05 — Implementare cronologia e comunicazione degli ascolti, con eventi offline e prevenzione dei duplicati.
+- [x] W07-T01 — Implementare CRUD delle playlist, riordino, azioni dalla selezione multipla e rispetto delle autorizzazioni del server.
+- [x] W07-T02 — Implementare preferiti per brani/album/artisti e sincronizzazione con Navidrome.
+- [x] W07-T03 — Salvare la coda come playlist e supportare nome personalizzato della mixtape.
+- [x] W07-T04 — Implementare testi disponibili sul server e dettaglio tecnico/musicale del brano.
+- [x] W07-T05 — Implementare cronologia e comunicazione degli ascolti, con eventi offline e prevenzione dei duplicati.
 - [ ] W07-T06 — Verificare le modifiche con account di test e playlist dedicate, inclusi errori e permessi insufficienti.
 
 Criterio di uscita: operazioni persistenti riscontrabili sul server, testi reali e nessun inoltro duplicato degli ascolti nei casi verificati.
+
+Incremento W07 2026-10-15: **T01–T05 implementati e verificati, T06 parziale**. Room v7 (migrazione 6→7 e schema): nome mixtape, readonly playlist, cache testi, eventi e passaggio d'ascolto durevole. CRUD/ordine/duplicati/preferiti riscontrati sul server, testo reale non sincronizzato; ultimo test UI selezione→playlist, editing, coda shuffle→playlist e guardie profilo **1/1 (152,373 s)**. JVM **84/84**, build app/androidTest e lint **0 errori/22 avvisi**. Android storage/servizio **9/9** e test aggiuntivo permessi fixture passato; recovery evento injected→ACK/playCount reali **1/1 (3,573 s)**. Regressioni W05/W06 **7/9 nella combinata + 2/2 isolate**, non suite unica verde. Corretto crash Compose per copie duplicate prima della normalizzazione UUID. Navidrome non deduplica scrobble id+time identici: limite ACK perso documentato. **T06 aperto**: rifiuto reale su playlist condivisa di un secondo account test ancora da predisporre; la fixture non lo sostituisce. Residui hardware W05/W06 invariati; checklist privata W07 e APK pronti, env temporaneo rimosso e AVD spento. Nessun commit/push/release.
+
+Riscontro utente W07 successivo: «bene, mi sembra tutto ok», con richiesta esplicita di commit e push. Riscontro generale positivo registrato, senza chiudere T06 o dedurre controlli hardware puntuali non riferiti. Pubblicazione in preparazione; stato funzionale sopra invariato.
 
 ## Wave 08 — Download e sincronizzazione offline
 

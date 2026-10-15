@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -53,6 +55,8 @@ class DetailViewModel(profileId: Long, key: String) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val artistAlbums = dao.observeArtistAlbums(profileId, key)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    val artistDetail = dao.observeArtist(profileId, key)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
     val genreSongs = Pager(PagingConfig(pageSize = 80, enablePlaceholders = false)) {
         dao.genreSongsPaging(profileId, key)
     }.flow.cachedIn(viewModelScope)
@@ -81,6 +85,7 @@ fun AlbumDetailScreen(
     )
     val album by model.albumDetail.collectAsStateWithLifecycle()
     val songs by model.albumSongs.collectAsStateWithLifecycle()
+    val favoriteError by libraryModel.favoriteError.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
@@ -89,8 +94,25 @@ fun AlbumDetailScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                 }
+            },
+            actions = {
+                album?.let { current ->
+                    val favoriteLabel = stringResource(
+                        if (current.starred == null) R.string.favorite_add else R.string.favorite_remove)
+                    IconButton(onClick = {
+                        libraryModel.toggleAlbumFavorite(current.profileId, current.id, current.starred == null)
+                    }) {
+                        Icon(
+                            if (current.starred == null) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                            contentDescription = favoriteLabel,
+                            tint = if (current.starred == null) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                }
             }
         )
+        if (favoriteError) MutationErrorLine(true, libraryModel::dismissFavoriteError)
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             item {
                 Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
@@ -125,14 +147,18 @@ fun AlbumDetailScreen(
             }
             val discs = songs.map { it.discNumber }.distinct()
             itemsIndexed(songs, key = { _, song -> song.id }) { index, song ->
-                SongDetailRow(song, discs.size > 1) { Graph.playback.playQueue(songs, index) }
+                SongDetailRow(song, discs.size > 1,
+                    onToggleFavorite = { libraryModel.toggleSongFavorite(song) }) { Graph.playback.playQueue(songs, index) }
             }
         }
     }
 }
 
 @Composable
-private fun SongDetailRow(song: SongEntity, multiDisc: Boolean, onClick: () -> Unit) {
+private fun SongDetailRow(song: SongEntity, multiDisc: Boolean,
+                          onToggleFavorite: (() -> Unit)? = null, onClick: () -> Unit) {
+    val favoriteLabel = stringResource(
+        if (song.starred == null) R.string.favorite_add else R.string.favorite_remove)
     Row(
         Modifier.fillMaxWidth()
             .heightIn(min = 48.dp)
@@ -160,6 +186,16 @@ private fun SongDetailRow(song: SongEntity, multiDisc: Boolean, onClick: () -> U
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        if (onToggleFavorite != null) {
+            IconButton(onClick = onToggleFavorite, modifier = Modifier.heightIn(min = 48.dp)) {
+                Icon(
+                    if (song.starred == null) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                    contentDescription = favoriteLabel,
+                    tint = if (song.starred == null) MaterialTheme.colorScheme.onSurfaceVariant
+                    else MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
         Text(durationLabel(song.duration), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -180,13 +216,31 @@ fun ArtistDetailScreen(
         factory = DetailViewModel.factory(profile!!.id, artistId)
     )
     val albums by model.artistAlbums.collectAsStateWithLifecycle()
+    val artist by model.artistDetail.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize()) {
         TopAppBar(
-            title = { Text(stringResource(R.string.library_tab_artists)) },
+            title = { Text(artist?.name ?: stringResource(R.string.library_tab_artists),
+                maxLines = 1, overflow = TextOverflow.Ellipsis) },
             navigationIcon = {
                 IconButton(onClick = onBack) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+            },
+            actions = {
+                artist?.let { current ->
+                    val favoriteLabel = stringResource(
+                        if (current.starred == null) R.string.favorite_add else R.string.favorite_remove)
+                    IconButton(onClick = {
+                        libraryModel.toggleArtistFavorite(current.profileId, current.id, current.starred == null)
+                    }) {
+                        Icon(
+                            if (current.starred == null) Icons.Filled.FavoriteBorder else Icons.Filled.Favorite,
+                            contentDescription = favoriteLabel,
+                            tint = if (current.starred == null) MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
         )
@@ -222,7 +276,9 @@ fun GenreDetailScreen(
         )
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             items(count = songs.itemCount, key = songs.itemKey { it.id }) { index ->
-                songs[index]?.let { SongRow(it) }
+                songs[index]?.let { song ->
+                    SongRow(song, onToggleFavorite = { libraryModel.toggleSongFavorite(song) })
+                }
             }
         }
     }

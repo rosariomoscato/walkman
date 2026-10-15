@@ -22,8 +22,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -41,6 +43,7 @@ class PlaybackService : MediaSessionService() {
     private val connection = MutableStateFlow<StreamProfile?>(null)
     private lateinit var mediaSession: MediaSession
     private lateinit var persistence: PlaybackPersistence
+    private lateinit var tracker: ScrobbleTracker
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
     override fun onCreate() {
@@ -48,6 +51,8 @@ class PlaybackService : MediaSessionService() {
         val dataSourceFactory = SubsonicStreamDataSourceFactory(
             OpenSubsonicClient.streamingHttpClient(), "WalkTape"
         ) { connection.value }
+        Graph.audioOutput.reset()
+        Graph.scrobbleSender.trigger() // deliver offline listen events as soon as possible
         Graph.audioOutput.reset()
         val player = ExoPlayer.Builder(this, Graph.audioOutput.renderers(this))
             .setDeviceVolumeControlEnabled(true)
@@ -66,6 +71,13 @@ class PlaybackService : MediaSessionService() {
         player.addListener(shuffle)
         Graph.playbackTimer.attach(player)
         player.addListener(automationListener)
+        tracker = ScrobbleTracker(player, Graph.listeningStore, scope)
+        scope.launch {
+            while (true) {
+                delay(60_000)
+                Graph.scrobbleSender.trigger()
+            }
+        }
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(PendingIntent.getActivity(this, 0,
                 Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -98,6 +110,7 @@ class PlaybackService : MediaSessionService() {
             connection.value = it
         }
         persistence.start()
+        scope.launch { connection.collectLatest { tracker.profile(it?.id) } }
         scope.launch {
             Graph.settingsRepository.settings.map { it.suggestionsEnabled }
                 .distinctUntilChanged().collect {
@@ -134,6 +147,7 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
+        tracker.close()
         persistence.close()
         scope.cancel()
         mediaSession.run {
@@ -144,6 +158,7 @@ class PlaybackService : MediaSessionService() {
             release()
         }
         Graph.audioOutput.reset()
+        Graph.scrobbleSender.trigger() // last chance to flush pending events while alive
         super.onDestroy()
     }
 }

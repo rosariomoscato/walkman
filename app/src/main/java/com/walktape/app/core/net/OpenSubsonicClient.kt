@@ -8,6 +8,7 @@ import com.google.gson.stream.JsonToken
 import kotlinx.coroutines.suspendCancellableCoroutine
 import okhttp3.Call
 import okhttp3.Callback
+import okhttp3.FormBody
 import okhttp3.HttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -137,6 +138,101 @@ class OpenSubsonicClient(
             } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
         }
 
+    /** POST form (formPost extension): repeated songId keep their order; duplicates are preserved. */
+    suspend fun createPlaylist(name: String, songIds: List<String>): ApiResult<PlaylistDetailDto> {
+        if (name.isBlank()) return ApiResult.Failure(ApiError.InvalidRequest)
+        val parameters = mutableListOf("name" to name)
+        songIds.forEach { parameters.add("songId" to it) }
+        return when (val result = requestPost("createPlaylist", parameters)) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> try {
+                val root = result.value.obj("playlist") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+                val playlist = parsePlaylist(root)
+                val entries = root.getAsJsonArray("entry")?.map { parseSong(it.asJsonObject) } ?: emptyList()
+                if (playlist.songCount != entries.size) return ApiResult.Failure(ApiError.InvalidResponse)
+                ApiResult.Success(PlaylistDetailDto(playlist, entries))
+            } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+        }
+    }
+
+    /** Rename/comment and/or edit songs. Removals by index are applied before appends. */
+    suspend fun updatePlaylist(
+        id: String,
+        name: String? = null,
+        songIdsToAdd: List<String> = emptyList(),
+        songIndexesToRemove: List<Int> = emptyList(),
+    ): ApiResult<Unit> {
+        val parameters = mutableListOf("playlistId" to id)
+        name?.let { parameters.add("name" to it) }
+        songIndexesToRemove.sorted().forEach { parameters.add("songIndexToRemove" to it.toString()) }
+        songIdsToAdd.forEach { parameters.add("songIdToAdd" to it) }
+        return when (val result = requestPost("updatePlaylist", parameters)) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> ApiResult.Success(Unit)
+        }
+    }
+
+    suspend fun deletePlaylist(id: String): ApiResult<Unit> =
+        when (val result = request("deletePlaylist", listOf("id" to id))) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> ApiResult.Success(Unit)
+        }
+
+    suspend fun star(
+        songIds: List<String> = emptyList(),
+        albumIds: List<String> = emptyList(),
+        artistIds: List<String> = emptyList(),
+    ): ApiResult<Unit> = changeStar("star", songIds, albumIds, artistIds)
+
+    suspend fun unstar(
+        songIds: List<String> = emptyList(),
+        albumIds: List<String> = emptyList(),
+        artistIds: List<String> = emptyList(),
+    ): ApiResult<Unit> = changeStar("unstar", songIds, albumIds, artistIds)
+
+    private suspend fun changeStar(
+        endpoint: String,
+        songIds: List<String>,
+        albumIds: List<String>,
+        artistIds: List<String>,
+    ): ApiResult<Unit> {
+        if (songIds.isEmpty() && albumIds.isEmpty() && artistIds.isEmpty()) {
+            return ApiResult.Failure(ApiError.InvalidRequest)
+        }
+        val parameters = mutableListOf<Pair<String, String>>()
+        songIds.forEach { parameters.add("id" to it) }
+        albumIds.forEach { parameters.add("albumId" to it) }
+        artistIds.forEach { parameters.add("artistId" to it) }
+        return when (val result = request(endpoint, parameters)) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> ApiResult.Success(Unit)
+        }
+    }
+
+    /** OpenSubsonic structured lyrics; an empty list means the server has no lyrics for the song. */
+    suspend fun lyrics(songId: String): ApiResult<List<StructuredLyricsDto>> =
+        when (val result = request("getLyricsBySongId", listOf("id" to songId))) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> try {
+                val list = result.value.obj("lyricsList") ?: return ApiResult.Failure(ApiError.InvalidResponse)
+                val structured = list.getAsJsonArray("structuredLyrics") ?: emptyList()
+                ApiResult.Success(structured.map { parseStructuredLyrics(it.asJsonObject) })
+            } catch (_: RuntimeException) { ApiResult.Failure(ApiError.InvalidResponse) }
+        }
+
+    /** Playback notification; the server does NOT deduplicate identical id+time resends (verified). */
+    suspend fun scrobble(entries: List<Pair<String, Long>>, submission: Boolean = true): ApiResult<Unit> {
+        if (entries.isEmpty()) return ApiResult.Failure(ApiError.InvalidRequest)
+        val parameters = entries.flatMap { (id, time) -> listOf("id" to id, "time" to time.toString()) }
+            .toMutableList()
+            .apply { add("submission" to submission.toString()) }
+        return when (val result = requestPost("scrobble", parameters)) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> ApiResult.Success(Unit)
+        }
+    }
+
+
     /** Binary cover art; a JSON error envelope on HTTP 200 is treated as a protocol failure. */
     suspend fun coverArt(coverArtId: String, sizePx: Int?): ApiResult<ByteArray> {
         if (coverArtId.isEmpty()) return ApiResult.Failure(ApiError.InvalidRequest)
@@ -210,6 +306,21 @@ class OpenSubsonicClient(
     internal suspend fun request(
         endpoint: String,
         parameters: List<Pair<String, String>> = emptyList(),
+    ): ApiResult<JsonObject> = execute(endpoint, parameters, asPost = false)
+
+    /**
+     * Same contract as [request] but sends parameters as a form-encoded POST body (OpenSubsonic
+     * formPost): repeated songId lists of any length stay out of the request URL.
+     */
+    internal suspend fun requestPost(
+        endpoint: String,
+        parameters: List<Pair<String, String>> = emptyList(),
+    ): ApiResult<JsonObject> = execute(endpoint, parameters, asPost = true)
+
+    private suspend fun execute(
+        endpoint: String,
+        parameters: List<Pair<String, String>>,
+        asPost: Boolean,
     ): ApiResult<JsonObject> {
         if (!endpoint.matches(Regex("[a-zA-Z][a-zA-Z0-9]*")) ||
             parameters.any { it.first in RESERVED }) return ApiResult.Failure(ApiError.InvalidRequest)
@@ -222,8 +333,12 @@ class OpenSubsonicClient(
             .addQueryParameter("v", "1.16.1")
             .addQueryParameter("c", "WalkTape")
             .addQueryParameter("f", "json")
-        parameters.forEach { (key, value) -> url.addQueryParameter(key, value) }
-        val call = http.newCall(Request.Builder().url(url.build()).header("Accept", "application/json").build())
+        if (!asPost) parameters.forEach { (key, value) -> url.addQueryParameter(key, value) }
+        val form = FormBody.Builder()
+        parameters.forEach { (key, value) -> form.add(key, value) }
+        val request = Request.Builder().url(url.build()).header("Accept", "application/json")
+        if (asPost) request.post(form.build())
+        val call = http.newCall(request.build())
         return suspendCancellableCoroutine { continuation ->
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {

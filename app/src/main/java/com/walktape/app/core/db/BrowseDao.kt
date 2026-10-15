@@ -23,6 +23,8 @@ interface BrowseDao {
     suspend fun prunePlaylists(profileId: Long, keep: List<String>)
     @Query("SELECT * FROM playlist WHERE profileId=:profileId AND id=:id")
     fun playlist(profileId: Long, id: String): Flow<PlaylistEntity?>
+    @Query("SELECT * FROM playlist WHERE profileId=:profileId AND owner=:owner AND readOnly=0 ORDER BY name COLLATE NOCASE, id")
+    fun editablePlaylists(profileId: Long, owner: String): Flow<List<PlaylistEntity>>
     @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
     fun entries(profileId: Long, id: String): PagingSource<Int, PlaylistEntryEntity>
     @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
