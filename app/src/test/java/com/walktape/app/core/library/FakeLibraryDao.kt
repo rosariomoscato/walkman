@@ -50,6 +50,23 @@ class FakeLibraryDao : LibraryDao {
     override suspend fun songsByIds(profileId: Long, ids: List<String>): List<SongEntity> =
         ids.mapNotNull { songs[profileId to it] }
     override suspend fun artist(profileId: Long, id: String): ArtistEntity? = artists[profileId to id]
+
+    // Android Auto browse windows (W10-T01)
+    override suspend fun albumsWindow(profileId: Long, limit: Int, offset: Int): List<AlbumEntity> =
+        albums.values.filter { it.profileId == profileId }
+            .sortedWith(compareBy({ it.name.lowercase() }, { it.id })).drop(offset).take(limit)
+    override suspend fun artistsWindow(profileId: Long, limit: Int, offset: Int): List<ArtistEntity> =
+        artists.values.filter { it.profileId == profileId }
+            .sortedWith(compareBy({ it.name.lowercase() }, { it.id })).drop(offset).take(limit)
+    override suspend fun songsWindow(profileId: Long, limit: Int, offset: Int): List<SongEntity> =
+        songs.values.filter { it.profileId == profileId }
+            .sortedWith(compareBy({ it.title.lowercase() }, { it.id })).drop(offset).take(limit)
+    override suspend fun song(profileId: Long, id: String): SongEntity? = songs[profileId to id]
+    override suspend fun artistAlbumsWindow(profileId: Long, artistId: String, limit: Int, offset: Int): List<AlbumEntity> =
+        albums.values.filter { it.profileId == profileId && it.artistId == artistId }
+            .drop(offset).take(limit)
+    override suspend fun artistSongs(profileId: Long, artistId: String): List<SongEntity> =
+        songs.values.filter { it.profileId == profileId && it.artistId == artistId }
     override fun observeArtist(profileId: Long, id: String): Flow<ArtistEntity?> = MutableStateFlow(artists[profileId to id])
     override suspend fun setSongStarred(profileId: Long, id: String, timestamp: String?): Int {
         val row = songs[profileId to id] ?: return 0

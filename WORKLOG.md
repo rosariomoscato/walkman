@@ -830,3 +830,152 @@ Pubblicazione eseguita:
 - Commit **278e889 — «Wave 09: crossfade continuo e ascolti overlap persistenti (T02)»**:23file,3282inserimenti/294rimozioni, schema12 e sette nuovi file compresi. Identità per-commit conforme ai precedenti, nessuna configurazione Git persistente modificata o hook saltato.
 - Push ordinario **82f0657..278e889** su origin/main riuscito; SHA locale/remoto **278e889e2d97ec036b292553d4fcb3ab97a53a36** verificati identici e working tree pulita subito dopo. Note nel successivo commit documentale.
 - Memoria/PLAN/NEXT_PROMPT aggiornati. T06 e collaudi residui differiti per disponibilità dell'utente, non chiusi; W10 non avviata. Nessuna release o pubblicazione APK, nessuna nuova build/test per la sola pubblicazione. Ulteriori commit/push solo su nuova richiesta esplicita.
+
+## 2026-10-16 — Handoff per tutta W10 Android Auto
+
+Richiesta: prompt per continuare in nuova sessione. Letti memoria, SPEC (riproduzione/Auto/offline/design/verifiche), wave10 completa del piano, voci recenti e proposta Auto storica di ARCHITECTURE. Verificati status iniziale pulito e HEAD pubblicata **3febc1d**, codice consolidamentoW09 **278e889**. Nessun codice W10 avviato o nuovo collaudo in questa attività.
+
+Preparato **NEXT_PROMPT.md W10-T01–T05**: catalogo/search/paginazione e download reali da Room, evoluzione del servizio/sessione Media3 esistente, stesso player logico/coda/bridge, comandi bidirezionali telefono/Auto, ID browse separati dagli UUID delle occorrenze, trust/isolamento e immagini senza credenziali, lifecycle e riconnessione senza autoplay. Gate awaitReady/zeroHTTP per ogni richiesta in solo offline, qualità/rappresentazioni/download condivisi e ledger overlap/ACK W09 preservati. API ufficiali effettive1.11.1 da verificare, guida sideload e test significativi, APK e checklist privata W10 con cleanup.
+
+Esplicitato che MediaBrowser sull'AVD AOSP non equivale alla proiezione Auto; DHU può richiedere telefono/Android Auto/head-unit server e la prova in auto rimane separata. Mancanza attuale del telefono non blocca i task software indipendenti e non autorizza a segnare T05 passato senza prove. W09-T06 e gli altri residui restano differiti come chiarito dall'utente: «Tutto ok» riguarda solo il primo giro breve.
+
+Precedente NEXT_PROMPT W09 conservato in **local/NEXT_PROMPT_W09_ARCHIVE_20261016.md** con intestazione di archivio, ignorato da Git; credenziali/checklist e fixture originali preservate. PLAN e PROJECT_MEMORY aggiornati a W10-T01. Nessun cambio SPEC/design, build/test o avvio emulatore richiesti per questo handoff documentale; controlli proporzionati su coerenza ID/stato, diff whitespace, percorsi e ignore. Nessun commit/push/release.
+
+## 2026-10-16 — W10 Android Auto: software verificato e preparazione collaudo
+
+Richiesta: implementare tutta W10 autonomamente, conservando player logico/coda/Roomv12 e i
+collaudi hardware W05–W09 differiti. Base **3febc1d**, codice W09 **278e889**. Git iniziale con
+PLAN/MEMORY/WORKLOG modificati per l'handoff: note, NEXT_PROMPT locale, checklist e credenziali
+preservati. Letti handoff integrale, memoria, specifica, wave10, log recente, DESIGN e architettura.
+Nessun commit/push/release richiesto o eseguito.
+
+### Implementazione W10-T01–T03
+
+- `PlaybackService` evolve in **MediaLibraryService.MediaLibrarySession** (API nested1.11.1),
+  sullo stesso `CrossfadeCoordinator.player`. Sessione/coda, ServiceShuffle, timer, focus/noisy,
+  STREAM_MUSIC, DSP, persistence e tracker sono unici; nessun motore/account/backend aggiuntivo.
+- `playback/browse/AutoBrowse.kt` e `AutoBrowseItems.kt`: root La mia musica (Album/Artisti/Brani),
+  Playlist, Download; ID stabili per profilo/tipo/risorsa codificata, separati dagli UUID
+  `queue/...` delle occorrenze. Tipi Media3, copertine contentURI e stringhe IT/EN; nessuna UI
+  Compose TPS-L2 automobilistica. Query locali in LibraryDao/BrowseDao/DownloadDao, pagine200
+  e continuazioni legacy non annidabili: **10.003brani raggiungibili in51finestre**.
+- Playlist lette a finestre per posizione; play espande selezioni complete con ordine/origine
+  e copie A/B/A. Album/playlist incompleti non riprodotti troncati come falso successo. Artisti
+  includono anche l'artista album/compilation. Ricerca locale brano/album/artista/playlist,
+  massimo500risultati/query, nessuna cache di risultati fra query/profili; query vocali legacy
+  Media3 via `RequestMetadata.searchQuery` nella stessa pipeline di risoluzione dei media.
+- Download pubblicati solo con file canonico nel profilo, COMPLETED, byte positivi e dimensione
+  coerente: non solo rigaDB/span cache. Consultazione file a finestre; snapshot ordinati anche
+  vuoti, parziali e serverMissing, conteggio disponibili/totali e play gruppo completo solo
+  se tutte le copie sono disponibili. File stale non presentati come scaricati.
+- `CoverArtProvider` read-only: caller UID app/sistema/Auto con package appartenente all'UID,
+  soltanto copertine del profilo attivo ricontrollato dopo il fetch. `CoverArtStore.file()`
+  riusa cache/gate/validazione immagini e timeout; mai URL autenticati né percorsi audio/DB.
+- Browse/search/root/rebind non preparano audio o ascolti; `awaitReady`/gate W08/W09 preservati.
+  Profilo verificato da Room e collegamento servizio prima delle risposte/coda; risposte vecchie
+  scartate. Osservazioni Room per profilo cancellate con coroutineScope/collectLatest;
+  invalidazioni aggiornano i parent osservati/subscritti senza fetch impliciti.
+- Restore/rebind senza autoplay e play esplicito della stessa occorrenza/posizione. Callback
+  resumption con barriera QueueStore/owner/profilo e riapplicazione permutazione dopo il set
+  del framework. Verificato restore→rebind→play, non una nuova kill-process/media-key cold-start.
+- Manifest con automotive_app_desc media, azioni MediaLibraryService/MediaBrowserService e
+  play-from-search. **Nessuna migrazione/dependency nuova**: Roomv12/schema1–12, Media3 1.11.1
+  e WorkManager2.12.0 conservati. SPEC invariata; ARCHITECTURE/DESIGN aggiornati.
+
+### Fonti ufficiali e compatibilità legacy
+
+Firme verificate tramite `javap` sugli AAR1.11.1 e sorgenti ufficiali:
+[MediaLibraryService](https://github.com/androidx/media/blob/1.11.1/libraries/session/src/main/java/androidx/media3/session/MediaLibraryService.java),
+[MediaSessionService](https://github.com/androidx/media/blob/1.11.1/libraries/session/src/main/java/androidx/media3/session/MediaSessionService.java),
+[OkHttpDataSource](https://github.com/androidx/media/blob/1.11.1/libraries/datasource_okhttp/src/main/java/androidx/media3/datasource/okhttp/OkHttpDataSource.java).
+Root legacy: future completato suIO, non tramite post al main potenzialmente bloccato.
+
+**Difetto reale individuato dal test framework legacy**: onGetSession rifiutava il placeholder
+del primo bind. La prima correzione sulla stringa descritta dal javadoc non bastava: runtime1.11.1
+usa **uid=-1 e `ControllerInfo.LEGACY_CONTROLLER_PACKAGE_NAME`** (`android.media.session.MediaController`).
+Ora solo quel placeholder negativo ottiene il binder prima dell'identificazione; **onConnect
+filtra il client reale**: UID app, framework trusted, gearhead con package→UID verificato.
+Non si accettano controller esterni genericamente. Tracce diagnostiche temporanee rimosse;
+root+subscribe con framework MediaBrowser ora passano anche nella suite finale.
+
+### Verifiche e failure intermedi
+
+- Gradle PowerShell/JAVA_HOME JBR, `"-Dkotlin.compiler.execution.strategy=in-process"`,
+  --max-workers=2. Primo errore tool ChildProcess.kill seguito da invocazioni con esito
+  Gradle esplicito, senza presumere successo. Corrette firme nested/callback3-arg, coroutine
+  receiver/suspend, fakeDAO e costante voice MediaStore durante le compilazioni iniziali.
+- Primo lint Auto: **MissingIntentFilterForMediaSearch**. Dichiarata l'azione e verificata
+  la risoluzione vera via RequestMetadata, non un presunto intent voice nel callback media-button.
+  Nessuna baseline lint introdotta. Finale app/androidTest/test/lint **BUILD SUCCESSFUL (7m56s)**,
+  **137/137 JVM**, zero failure/error/skip, con RealServerTest e RealWave07ApiTest opt-in;
+  **lint0errori/33avvisi** (suggerimentiKTX/plurali aggiuntivi rispetto ai29precedenti).
+- JVM inizialmente non compilati per nuovi metodiDAO mancanti nei fake (vecchi report129 non
+  contati come nuova verifica). Successiva136con3failure: slash codificati rifiutati e NUL
+  accettato dal parser; corretti e aggiunti controlli overflow/continuazioni. Finale137 sopra.
+- AVD walktape_aosp headless/swiftshader, runtime2048MiB/2core; boot molto lento. Primo install
+  durante package-manager non pronto lasciava APK vecchio: ClassNotFound del test nuovo;
+  reinstallati entrambi con Success e **precompilati speed** prima della strumentazione.
+- Prime W10: failure sulla pagina negativa rifiutata dal **client** MediaBrowser (clamp resta
+  testatoJVM) e timeout restore fixture. Un rerun isolato ha avuto anche login fixtureFailure;
+  adottato dispatcher per endpoint invece di risposte enqueue fragili, senza attribuire una
+  causa worker/server reale non dimostrata. Il restore isolato era già corretto.
+- **Race della fixture**: il primo profilo viene attivato automaticamente; con servizio già
+  vivo il seed della coda poteva essere superato da un salvataggio vuoto. Il solo stopService
+  non garantiva distruzione immediata. Ora seed su profilo **inattivo**, parkingProfile attivo,
+  flush e attivazione esplicita. Nessun cambio al motore audio/aumento timeout per mascherarlo.
+- W10 finale sull'APK consegnato: **6/6 Android,78,603s**, zero failure/skip:
+  Wave10AutoBrowseTest4 + Wave10RealBrowserTest1 + Wave10LegacyBrowserTest1. Comprende root/
+  children/item/search, query consecutive, 10.003brani, UUID/copie/origini/shuffle/repeat e
+  secondo controller telefono, file stale escluso, gruppi vuoti/parziali, cambio A→B/comando
+  vecchio rifiutato, offline con contatore di **tutti** gli endpoint fermo (cover cached/
+  uncached/foreign), restore/rebind senza richieste/audio. Framework legacy senza profilo
+  mostra setup onesto senza deadlock. MP3/FLAC Navidrome reali riprodotti via ID browse e
+  richiesta vocale Media3 risolta/suonata. WAV/PNG sintetici restano fixture, non server/hardware.
+- Regressione W05/W08: **26scoperti,24passati+2skip opt-in,zero falliti,217,268s**: focus/duck/
+  noisy/media keys, timer, restore, DataSource, coda/migrazioni, cache/download originale reale,
+  sync/conflitto playlist test reale poi ripulita, worker e servizio offline. Seed/verify
+  processo separato W05 sono assumption skip, anche se il runner stampa `OK (26tests)`.
+- W09 combinata27 iniziale: **25passati/2falliti,305,5s**, audiofxState inatteso nell'offline
+  dopo le altre suite e timeout incoming-audible reale. Entrambi poi passati isolati
+  (**28,133s/82,716s**), senza cambi audio. Non è una suite27/27 verde. Sull'APK conclusivo:
+  **12/12,117,878s** Handover/OverlapStorage/Service/Scrobble, **1/1offline,27,83s** e
+  **1/1handover reale,85,352s** in esecuzioni separate. Promozione, overlap/ACK, timer e zeroHTTP
+  preservati. Non sommate prove intermedie/versioni diverse come una combinata unica.
+
+### Blocchi W10-T04/T05, consegna e cleanup
+
+**T01–T03 [x] nei percorsi software disponibili; T04/T05 [ ]**. Guide developer.android.com
+Auto/DHU non raggiungibili via WebFetch (transporterror); browser strumenti senza eseguibile
+Chrome, nessuna installazione globale fatta. API consultate su fonti ufficiali sopra, ma
+Unknown sources W01 non presentato come verifica corrente dell'APK W10 sul launcher.
+
+`sdkmanager --list_installed`: **DHU/extras;google;auto non installato**; adb mostrava solo AVD,
+nessun telefono fisico. DHU con head-unit server richiede Android Auto sul telefono; nessuna
+proiezione/auto reale effettuata. Mancano abilitazione APK, launcher, assistente/rotella/touch,
+copertine suhead-unit e matrice fisica Wi-Fi/mobile/VPN/USB-wireless. Guida **docs/ANDROID_AUTO.md**
+con passaggi consultati/storici/preparati/eseguiti distinti, checklist **local/PHONE_TESTS_W10.md**.
+
+APK debug standard SHA256 **A57F561527FCD1D641D9198E68876393CD665F6D999BC25A8AE56F819A5A3DBB**.
+PLAN/MEMORY/NEXT_PROMPT/ARCHITECTURE/DESIGN aggiornati; handoff iniziale conservato sotto lo stato
+corrente in NEXT_PROMPT. ChecklistW05–W09 preservate. Env e fixtureMP3/FLAC AVD rimossi con
+`w10-temporary-files-absent`, marker queue-process-test.ids assente, nessun forward presente/creato.
+**AVD spento e adb vuoto**. Rimossa solo la directory temporanea nota m3session con estrazioniAAR
+nel temp approvato (assenza verificata), originali local/test-server.env/fixture locali intatti.
+Ignore di segreti/APK/NEXT_PROMPT e checklistW05–W10 confermati. Nessun commit/push/release.
+
+Prossima azione: **W10-T04 abilitazione APK sul Motorola, poi T05 DHU/auto reale** seguendo
+guida/checklist quando il telefono è disponibile. W09-T06 e residui W05–W08 restano differiti,
+senza nuove attestazioni hardware dedotte dal primo giro W09 positivo.
+
+Controllo finale: `git diff --check` senza errori (solo avvisi LF→CRLF), HEAD3febc1d invariata,
+ignore privati confermati, adb ancora vuoto. Working tree W10 lasciato locale non committato.
+
+## 2026-10-16 — Pubblicazione W10 richiesta dall'utente
+
+Richiesta esplicita «fai commit e push». Ispezionati status, diff applicativo/documentale,
+nuovi file, ultimi10commit e remoto/tracking; fetch origin riuscito, divergenza iniziale0/0
+su3febc1d. File intenzionali W10 e note dell'handoff precedente preservati; verificato ignore
+di env, APK, NEXT_PROMPT e checklist private. Stage limitato a codice/test/risorse/documenti W10.
+Nessuna modifica applicativa o nuova build per la sola pubblicazione; restano validi gli esiti
+137JVM, lint0/33, suiteW10 finale6/6 e regressioni sopra. T04/T05/hardware restano aperti.
+Esito commit/push registrato dopo l'operazione; nessuna release richiesta.

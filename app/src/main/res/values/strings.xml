@@ -37,4 +37,16 @@
     <string name="diagnostics_export">Esporta</string>
     <string name="diagnostics_copied">Rapporto copiato</string>
     <string name="diagnostics_export_subject">WalkTape — rapporto diagnostico</string>
+
+    <string name="auto_category_albums">Album</string>
+    <string name="auto_more">Altri risultati</string>
+    <string name="auto_category_artists">Artisti</string>
+    <string name="auto_category_songs">Brani</string>
+    <string name="auto_category_playlists">Playlist</string>
+    <string name="auto_category_downloads">Download</string>
+    <string name="auto_category_downloaded_songs">Brani scaricati</string>
+    <string name="auto_download_status">%1$d/%2$d disponibili offline</string>
+    <string name="auto_snapshot_missing">Snapshot conservato; playlist assente sul server</string>
+    <string name="auto_setup_title">Configura WalkTape sul telefono</string>
+    <string name="auto_setup_body">Aggiungi un profilo Navidrome nell\'app per sfogliare la tua musica.</string>
 </resources>

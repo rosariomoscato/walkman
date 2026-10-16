@@ -41,6 +41,21 @@ interface DownloadDao {
     @Query("SELECT * FROM download WHERE profileId=:profileId ORDER BY createdAt, songId")
     suspend fun downloadsOnce(profileId: Long): List<DownloadEntity>
 
+    @Query("SELECT * FROM download WHERE profileId=:profileId AND status='COMPLETED' ORDER BY title COLLATE NOCASE, songId")
+    suspend fun completedAll(profileId: Long): List<DownloadEntity>
+
+    @Query("SELECT * FROM download WHERE profileId=:profileId AND status='COMPLETED' ORDER BY title COLLATE NOCASE, songId LIMIT :limit OFFSET :offset")
+    suspend fun completedWindow(profileId: Long, limit: Int, offset: Int): List<DownloadEntity>
+
+    @Query("SELECT COUNT(*) FROM download WHERE profileId=:profileId AND status='COMPLETED'")
+    suspend fun completedCount(profileId: Long): Int
+
+    @Query("SELECT * FROM download WHERE profileId=:profileId AND status='COMPLETED' AND songId IN (:songIds)")
+    suspend fun completedFor(profileId: Long, songIds: List<String>): List<DownloadEntity>
+
+    @Query("SELECT * FROM download_group WHERE profileId=:profileId ORDER BY name, origin")
+    suspend fun groupsOnce(profileId: Long): List<DownloadGroupEntity>
+
     @Query("SELECT * FROM download WHERE profileId=:profileId AND status='COMPLETED' ORDER BY createdAt DESC, songId LIMIT 8")
     fun completedDownloads(profileId: Long): Flow<List<DownloadEntity>>
 

@@ -116,6 +116,26 @@ interface LibraryDao {
     @Query("SELECT * FROM artist WHERE profileId = :profileId AND id = :id LIMIT 1")
     suspend fun artist(profileId: Long, id: String): ArtistEntity?
 
+    // --- Android Auto browse (W10-T01): synchronous windows over the stored index ---
+
+    @Query("SELECT * FROM album WHERE profileId = :profileId ORDER BY name COLLATE NOCASE, id LIMIT :limit OFFSET :offset")
+    suspend fun albumsWindow(profileId: Long, limit: Int, offset: Int): List<AlbumEntity>
+
+    @Query("SELECT * FROM artist WHERE profileId = :profileId ORDER BY name COLLATE NOCASE, id LIMIT :limit OFFSET :offset")
+    suspend fun artistsWindow(profileId: Long, limit: Int, offset: Int): List<ArtistEntity>
+
+    @Query("SELECT * FROM song WHERE profileId = :profileId ORDER BY title COLLATE NOCASE, id LIMIT :limit OFFSET :offset")
+    suspend fun songsWindow(profileId: Long, limit: Int, offset: Int): List<SongEntity>
+
+    @Query("SELECT * FROM song WHERE profileId = :profileId AND id = :id LIMIT 1")
+    suspend fun song(profileId: Long, id: String): SongEntity?
+
+    @Query("SELECT * FROM album WHERE profileId = :profileId AND artistId = :artistId ORDER BY year IS NULL, year, name COLLATE NOCASE, id LIMIT :limit OFFSET :offset")
+    suspend fun artistAlbumsWindow(profileId: Long, artistId: String, limit: Int, offset: Int): List<AlbumEntity>
+
+    @Query("SELECT * FROM song s WHERE profileId = :profileId AND (artistId = :artistId OR EXISTS (SELECT 1 FROM album a WHERE a.profileId=s.profileId AND a.id=s.albumId AND a.artistId=:artistId)) ORDER BY album COLLATE NOCASE, discNumber, track, id")
+    suspend fun artistSongs(profileId: Long, artistId: String): List<SongEntity>
+
     @Query("SELECT * FROM artist WHERE profileId = :profileId AND id = :id")
     fun observeArtist(profileId: Long, id: String): Flow<ArtistEntity?>
 

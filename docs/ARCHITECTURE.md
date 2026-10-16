@@ -214,6 +214,57 @@ Vincoli registrati:
 - Osservazione server aggiuntiva: transcode **generato** può ignorare Range/essere chunked200; transcode **completo nella cache del server** può rispondere206 con Content-Range coerente. Non significa che sia sicuro concatenare localmente frammenti rigenerati: resta la policy conservativa W09 originali cachati/ridotti completi nei download.
 - **T02 chiuso; T06 hardware aperto**: Motorola/Bluetooth, route, risposta e clipping dopo audiofx, batteria/interruzioni reali/ascolto fisico non attestati dalle fixture. Fonte API aggiuntiva: [AudioFocusManager1.11.1](https://github.com/androidx/media/blob/1.11.1/libraries/common/src/main/java/androidx/media3/common/audio/AudioFocusManager.java).
 
+## Incremento W10 — Android Auto (2026-10-16)
+
+- `PlaybackService` evolve in **MediaLibraryService**, con una sola `MediaLibrarySession`
+  sul medesimo `CrossfadeCoordinator.player` logico. Nessun motore/coda/sessione musicale
+  secondari; W09, focus, timer, persistenza e tracker restano i proprietari precedenti.
+- Root con tre rami: **La mia musica** (Album/Artisti/Brani), **Playlist**, **Download**.
+  `AutoBrowseIds` usa ID stabili `wtb/<profilo>/<tipo>/<risorsa codificata>`, separati dagli
+  UUID `queue/...` assegnati a ogni occorrenza dal servizio quando entra in coda.
+  Play di album/artista/playlist espande i dati locali ordinati, con origine delle playlist
+  e A/B/A conservati. Se una selezione strutturale è incompleta il play non la tronca in silenzio.
+- Query Room paginated per catalogo/playlist; finestre da 200. Per browser legacy che
+  richiedono tutti i figli, ID di continuazione non annidabili portano ad **Altri risultati**.
+  Nessuna risposta Binder contiene tutta la raccolta: test su 10.003 brani in 51 finestre.
+  I download vengono controllati sui file canonici dentro il profilo (stato COMPLETED,
+  byte positivi e dimensione coerente), non su span cache o sola riga DB. Gruppi vuoti,
+  snapshot con duplicati, parziali e serverMissing rimangono distinguibili.
+- Ricerca locale unificata (brano/album/artista/playlist), massimo 500 risultati per query;
+  query diverse vengono risolte nuovamente, senza cache di risultati fra profili/controller.
+  Il bridge legacy playFromSearch di Media3 passa `RequestMetadata.searchQuery` alla stessa
+  pipeline di risoluzione dei media. La voce reale dell'assistente richiede il collaudo Auto.
+- Future root/browse completati su IO: il root legacy non può dipendere dal looper main
+  bloccato dal bind. Mutazioni del player e notifiche rimangono sul main; le query aspettano
+  `networkGate.awaitReady()`. Profilo attivo verificato da Room e dal collegamento del servizio;
+  risposte ritardate al cambio profilo scartate. Osservazioni Room del profilo sono cancellate
+  con `collectLatest`/`coroutineScope`; invalidazioni notificano i parent consultati/subscritti.
+- **Compat legacy e trust**: Media3 1.11.1 chiama `onGetSession` durante il bind con
+  `uid=-1` e `ControllerInfo.LEGACY_CONTROLLER_PACKAGE_NAME` (`android.media.session.MediaController`).
+  Solo quel segnaposto negativo può ottenere il binder senza identità reale. Il filtro effettivo
+  è anche in `Callback.onConnect`: UID app, controller framework trusted oppure Android Auto
+  (`com.google.android.projection.gearhead`) con appartenenza package→UID verificata via PackageManager.
+  Non si accettano genericamente controller esterni. La prima bozza rifiutava il placeholder:
+  il test framework MediaBrowser ha individuato il mancato bind prima del collaudo DHU.
+- `CoverArtProvider` esporta soltanto immagini della cache del profilo attivo via URI content,
+  con controllo caller UID/package, artId hashato internamente e ricontrollo profilo dopo il fetch.
+  Nessun URL autenticato/percorso audio/DB esposto. `CoverArtStore.file()` riusa cache/validazione
+  immagini/gate offline; fetch copertine limitato nel tempo, zero HTTP se Solo offline.
+- Restore/rebind restano senza autoplay. La callback resumption esplicita riusa la coda corrente
+  o salvata e reinstalla la permutazione dopo il set del framework; nessun nuovo tracker/browser
+  accredita tempo. Verificato il percorso effettivo restore→rebind→play esplicito; una kill del
+  processo per media-key/resumption e le richieste concorrenti di una head unit vera restano prove ulteriori.
+- Manifest: descrittore `automotive_app_desc` media, azioni MediaLibraryService e legacy
+  MediaBrowserService oltre alla precedente MediaSessionService; dichiarato play-from-search.
+  Nessuna UI Compose/Activity automobilistica custom e nessun cambiamento a Room **v12**,
+  alle migrazioni/schema o alle dipendenze (Media3 **1.11.1**, WorkManager **2.12.0**).
+- Guida operativa e fonti: **docs/ANDROID_AUTO.md**. Verificati gli artefatti e i sorgenti
+  ufficiali [MediaLibraryService 1.11.1](https://github.com/androidx/media/blob/1.11.1/libraries/session/src/main/java/androidx/media3/session/MediaLibraryService.java)
+  e [MediaSessionService 1.11.1](https://github.com/androidx/media/blob/1.11.1/libraries/session/src/main/java/androidx/media3/session/MediaSessionService.java).
+  Il javadoc del servizio descrive il bind placeholder; il valore concreto è confermato dal
+  test sul runtime 1.11.1. Le guide developer.android.com non raggiungibili, il DHU assente
+  nell'SDK e nessun telefono fisico collegato lasciano **T04/T05 aperti**.
+
 ## Controlli non eseguiti nella wave 01 (registro storico)
 
 - Prove su emulatore e telefono (nessun AVD/dispositivo collegato in wave 01).

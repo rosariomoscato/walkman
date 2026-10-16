@@ -8,6 +8,7 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.common.Timeline
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.MediaSession
 import com.walktape.app.Graph
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -36,6 +37,13 @@ class PlaybackPersistence(
     private var profileJob: Job? = null
     private var tickJob: Job? = null
     private var namingJob: Job? = null
+
+    /**
+     * Permutation to reinstall after an explicit playback resumption: the session framework
+     * re-sets the canonical item list (Android Auto "play"), which drops the native shuffle
+     * order. Must be read/installed on the player's application thread.
+     */
+    private var pendingResumptionTraversal: Pair<List<String>, Boolean>? = null
 
     fun start() {
         player.addListener(this)
@@ -104,6 +112,7 @@ class PlaybackPersistence(
         timeline = null
         cachedItems = emptyList()
         cachedTraversal = emptyList()
+        pendingResumptionTraversal = null
         Graph.queueNaming.value = null
         if (id == null) { changing = false; return }
         val stored = store.load(id) // FIFO barrier: includes final saves from the old service.
@@ -140,6 +149,50 @@ class PlaybackPersistence(
         player.pause()
         Graph.queueNaming.value = queue.mixtapeName
         // Deliberately no prepare/play: restoring metadata must work offline without HTTP/audio.
+    }
+
+    /**
+     * Explicit user play with an empty/paused player (Android Auto resumption, W10-T02).
+     * The saved queue — or the queue already restored on the player — is returned to the
+     * session framework, which will set the items and start playback. The exact persisted
+     * shuffle permutation is reinstalled by [reapplyResumptionShuffle] right after that set.
+     */
+    suspend fun resumeForExplicitPlay(profileId: Long): MediaSession.MediaItemsWithStartPosition? {
+        if (changing || owner != profileId || Graph.database.profileDao().active()?.id != profileId) return null
+        if (player.mediaItemCount > 0) {
+            capturePlayerTraversalForResumption()
+            return itemsWithStart()
+        }
+        if (Graph.database.profileDao().active()?.id != profileId) return null
+        val stored = store.load(profileId) ?: return null
+        if (changing || owner != profileId || Graph.database.profileDao().active()?.id != profileId) return null
+        restore(stored)
+        if (player.mediaItemCount == 0) return null
+        pendingResumptionTraversal = stored.traversal to stored.shuffle
+        return itemsWithStart()
+    }
+
+    /** Player-thread call after the framework re-set the resumption items. */
+    fun reapplyResumptionShuffle() {
+        val pending = pendingResumptionTraversal ?: return
+        pendingResumptionTraversal = null
+        shuffle.restore(pending.first, pending.second)
+    }
+
+    private fun itemsWithStart(): MediaSession.MediaItemsWithStartPosition =
+        MediaSession.MediaItemsWithStartPosition(
+            (0 until player.mediaItemCount).map { player.getMediaItemAt(it) },
+            player.currentMediaItemIndex, player.currentPosition.coerceAtLeast(0))
+
+    private fun capturePlayerTraversalForResumption() {
+        if (!player.shuffleModeEnabled) { pendingResumptionTraversal = null; return }
+        val traversal = mutableListOf<String>()
+        var index = player.currentTimeline.getFirstWindowIndex(true)
+        while (index != C.INDEX_UNSET && traversal.size < player.mediaItemCount) {
+            traversal.add(player.getMediaItemAt(index).mediaId)
+            index = player.currentTimeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, true)
+        }
+        pendingResumptionTraversal = traversal to true
     }
 
     fun close() {

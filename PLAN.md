@@ -217,11 +217,38 @@ Criterio di uscita: impostazioni audio realmente operative, suono pulito predefi
 
 Dipendenze: wave 08 e 09.
 
-- [ ] W10-T01 — Esporre catalogo, playlist, download e ricerca alla sessione compatibile Android Auto.
-- [ ] W10-T02 — Implementare navigazione e comandi secondo i vincoli Android Auto, senza replicare la scocca TPS-L2 in auto.
-- [ ] W10-T03 — Gestire connessione assente, cambio rete e continuità tra telefono e auto.
+Handoff2026-10-16: richiesto il prompt per sviluppare tutta W10 nella nuova sessione; salvato NEXT_PROMPT completo e archiviato il precedente W09 in local/ (ignorati). Ripresa **W10-T01 → T05** sulla HEAD pubblicata3febc1d/codiceW09278e889, Roomv12. Funzioni W08/W09 disponibili; W09-T06 hardware e residui W05–W08 esplicitamente differiti dall'utente, non superati e non blocchi generici del lavoro software indipendente W10. Riutilizzare servizio/sessione/bridge e proprietario logico del player, zeroHTTP offline; distinguere MediaBrowserAVD, DHU e auto reale. Nessun codice/taskW10 avviato o segnato completo in questo handoff, nessun nuovo commit/push richiesto.
+
+- [x] W10-T01 — Esporre catalogo, playlist, download e ricerca alla sessione compatibile Android Auto.
+- [x] W10-T02 — Implementare navigazione e comandi secondo i vincoli Android Auto, senza replicare la scocca TPS-L2 in auto.
+- [x] W10-T03 — Gestire connessione assente, cambio rete e continuità tra telefono e auto.
 - [ ] W10-T04 — Documentare e verificare l'abilitazione di APK esterni al Play Store nell'ambiente di test.
 - [ ] W10-T05 — Verificare con gli strumenti Auto disponibili e con prove dell'utente in auto, registrando separatamente gli esiti.
+
+Incremento2026-10-16: **T01–T03 implementati e verificati nei percorsi software disponibili**.
+Unico MediaLibraryService/sessione sul player logico W09, root La mia musica/Playlist/Download,
+finestre e continuazioni legacy (10.003 brani), ricerca locale e richieste vocali Media3,
+ID per profilo risolti in UUID di coda, playlist A/B/A e origini, download con file realmente
+completi e snapshot vuoti/parziali/serverMissing, immagini content autorizzate e gate offline.
+Il bind legacy placeholder è distinto dal trust in onConnect; corretto grazie al test framework.
+Nessuna nuova dipendenza o migrazione: Roomv12/Media3 1.11.1/WorkManager 2.12.0 invariati.
+
+Build finale app/androidTest + **137/137 JVM** con API reali opt-in, lint **0errori/33avvisi**.
+**W10 finale6/6 Android (78,603s)**: MediaBrowser moderno e framework legacy, MP3/FLAC Navidrome
+reali e richiesta vocale Media3, offlinezeroHTTP/copertine, profili, restore/rebind senza autoplay,
+comandi condivisi/shuffle/repeat/copie, paginazione completa. Non è proiezione Android Auto.
+Regressioni separate: **24passati+2skip opt-in (217,268s)** W05/W08; W09 combinata27 con
+25passati/2falliti poi entrambi passati isolati; infine sull'APK conclusivo **12/12 (117,878s)**
+handover/overlap/servizio/ascolti, **1/1 offline (27,83s)** e **1/1 handover reale (85,352s)**.
+Dettagli/failure intermedi nel WORKLOG; nessuna somma presentata come suite unica verde.
+
+**T04/T05 restano aperti**: guida sideload/DHU in `docs/ANDROID_AUTO.md`, checklist privata
+`local/PHONE_TESTS_W10.md`; manca verifica effettiva Unknown sources/launcher, DHU e auto reale,
+voce dell'assistente, copertine/head unit e matrice fisica Wi-Fi/mobile/VPN/scollegamenti.
+SDK senza DHU e nessun telefono collegato; guide developer.android.com non raggiungibili in questa
+sessione, API verificate sui sorgenti ufficiali 1.11.1. Le verifiche hardware di T03 confluiscono
+in T05, non sono dichiarate superate. Residui W05–W09 e checklist precedenti preservati.
+APK debug aggiornato; temporanei rimossi, AVD spento. Nessun commit/push/release.
 
 Criterio di uscita: percorso di ascolto in auto verificato; eventuale prova hardware mancante resta un blocco esplicito.
 

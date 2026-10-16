@@ -1,13 +1,50 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-16 (consolidamento T02 pubblicato; primo giro positivo, collaudo hardware residuo differito; W10 non avviata).
+Ultimo aggiornamento: 2026-10-16 (W10-T01–T03 software verificato; T04/T05 sideload/DHU/auto aperti).
 
-## Punto corrente — W09-T06: primo riscontro positivo, controlli hardware specifici aperti
+## Punto corrente — W10-T04/T05: abilitazione APK e collaudo Auto
+
+- **W10-T01–T03 [x]** per implementazione e contratto software verificato; **T04/T05 [ ]**.
+  `PlaybackService` ora MediaLibraryService con una sola MediaLibrarySession sul player logico
+  W09. Root La mia musica (Album/Artisti/Brani), Playlist e Download; ID browse per profilo,
+  UUID per occorrenza, origini/duplicati, ricerca locale (max500), pagine200 e continuazioni
+  legacy su10.003brani. Copertine content autorizzate, file download verificati, snapshot
+  vuoti/parziali/serverMissing. Nessuna modifica schema/deps: **Roomv12, Media3 1.11.1,
+  WorkManager 2.12.0**. Continuano focus/timer/volume/DSP e ascolti precedenti.
+- **Trust legacy**: il primo bind usa uid=-1 e `ControllerInfo.LEGACY_CONTROLLER_PACKAGE_NAME`;
+  solo quel placeholder ottiene il binder; autorizzazione reale anche in onConnect (UID app,
+  trusted framework o gearhead con package→UID verificato). Non tornare al solo filtro
+  onGetSession della bozza: impediva il collegamento del browser framework.
+- Verifiche finali: build app/androidTest, **137/137 JVM**, lint **0/33**; **W10 Android6/6,
+  78,603s** (moderno/legacy, server realeMP3/FLAC, query vocaleMedia3, profili, copie/shuffle,
+  offlinezeroHTTP e restore/rebind/play). Regressioni W05/W08 **24passati+2skip opt-in,
+  217,268s**. W09: prima27→25passati/2falliti, entrambi poi verdi isolati; conclusivo12/12
+  più1offline+1handoverreale su esecuzioni separate. Non sommare come suite unica.
+- **Prossima azione precisa**: leggere `docs/ANDROID_AUTO.md` e `local/PHONE_TESTS_W10.md`;
+  quando disponibile il Motorola, verificare la procedura corrente Unknown sources/launcher,
+  installare il pacchetto SDK DHU e usare il vero head-unit server Android Auto, poi collaudo
+  in auto (rete Wi-Fi/mobile/VPN, scollegamenti, controlli e assistente). Ora nessun telefono
+  collegato/DHU installato; guide developer.android.com non raggiungibili, API consultate
+  dai sorgenti ufficiali1.11.1. MediaBrowserAVD non è DHU né auto reale. T04/T05 rimangono aperti.
+- APK standard SHA256 **A57F561527FCD1D641D9198E68876393CD665F6D999BC25A8AE56F819A5A3DBB**.
+  Guida/architettura/design/piano/log aggiornati, checklistW10 aggiunta e precedenti preservate.
+  Env/fixture temporanei AVD rimossi e assenza verificata, nessun forward creato, marker
+  processo assente, AVD spento e adb vuoto. Credenziali originali ignorate intatte.
+- Base pubblicata **3febc1d**, codiceW09 **278e889**; tutte le modifiche W10 sono locali,
+  con note handoff preesistenti preservate. **L'utente ha ora richiesto commit e push**:
+  pubblicazione W10 in corso, nessuna release richiesta. Ulteriori pubblicazioni solo su richiesta.
+  W09-T06 e residui W05–W08 restano differiti, non superati. Primo giro W09 positivo invariato.
+
+## Handoff iniziale W10 — storico, superato dall'incremento sopra
+
+- L'utente chiede il prompt per continuare in una nuova sessione. Preparato **NEXT_PROMPT.md per tutta W10**, punto di partenza **W10-T01**, poiT02–T05 (catalogo/search Auto, navigazione/comandi, rete/offline/continuità, sideload e verifiche). HEAD pubblicata **3febc1d**, codice consolidamento W09 **278e889**. Working tree inizialmente pulita; questa attività aggiunge solo handoff/note locali, nessun codice W10 avviato o task segnato completo, nessun nuovo commit/push autorizzato.
+- **Prossima azione precisa nella nuova sessione**: leggere integralmente NEXT_PROMPT e wave10, verificare le API MediaLibraryService/MediaLibrarySession1.11.1/Auto ufficiali e implementare W10-T01 sullo stesso player logico/servizio/bridge. Proseguire autonomamente conT02–T05 nei percorsi disponibili, senza aspettare il collaudo hardware differito. AVD MediaBrowser è test del contratto, non DHU/auto reale; documentare prerequisiti telefonici mancanti senza bloccare le funzioni indipendenti. Conservare T06 e residui precedenti aperti.
+- Prompt W09 precedente archiviato integralmente in **local/NEXT_PROMPT_W09_ARCHIVE_20261016.md**, ignorato come NEXT_PROMPT e checklist. Prevale il nuovo handoff W10; niente ritorno a schema11 o vecchio completeSwap con seek.
 
 - **T01–T05 completati; T06 aperto**. Consolidamento T02 e verifiche automatiche locali su82f0657: player logico stabile, promozione senza seek/ricaricamento, focus unico e clock overlap durevole con **Room v12**, migrazione11→12/schema12. Il vecchio stato T02 parziale sotto è storico; non ripristinare completeSwap con seek né lo schema11.
 - Verifiche dell'incremento:129/129JVM, build app/androidTest, lint0errori/29avvisi; finale27/27Android (26W09+ScrobbleService),276,661s. Regressioni aggiuntive27/27core,3/3UI,7passati+2skip opt-in servizio/focus/restore in esecuzioni separate. Esiti e correzioni nel WORKLOG e ARCHITECTURE.
 - **Riscontro utente 2026-10-16: «Tutto ok»**, in risposta al primo giro breve proposto (suono/crossfade/comandi/effetti/offline). Registrato come riscontro generale positivo, senza inventare esiti puntuali, route, versioneAndroid o misure. Non chiude automaticamente T06 o i residui W05–W08.
-- L'utente precisa che «Tutto ok riguarda primo giro» e rinvia il resto perché adesso non può. **Collaudo hardware residuo differito**, non superato: timer15min/schermo spento, interruzioni/pausa manuale, Bluetooth/cuffie/cambio route, risposta/clipping audiofx, batteria/accessibilità. Concordato l'ordine proposto: salvare W09, poi proseguire con W10 indipendente dai collaudi differiti. La richiesta corrente «bene, fai commit e push» autorizza la pubblicazione, non avvia W10 in questa attività.
+- L'utente precisa che «Tutto ok riguarda primo giro» e rinvia il resto perché adesso non può. **Collaudo hardware residuo differito**, non superato: timer15min/schermo spento, interruzioni/pausa manuale, Bluetooth/cuffie/cambio route, risposta/clipping audiofx, batteria/accessibilità. Concordato salvare W09 e proseguire con W10 indipendente dai collaudi differiti; pubblicazione eseguita come sotto. La richiesta attuale prepara il prompt, senza avviare l'implementazione.
 - **Pubblicato su richiesta esplicita** in **278e889 — Wave 09: crossfade continuo e ascolti overlap persistenti (T02)**,23file/3282inserimenti/294rimozioni. Push ordinario82f0657..278e889 riuscito; SHA locale/remoto `278e889e2d97ec036b292553d4fcb3ab97a53a36` identici, working tree pulita subito dopo. Note di pubblicazione nel successivo commit documentale. Nuovi commit/push soltanto su nuova richiesta; nessuna release.
 - APK standard SHA256 **CE703DD677FB758DB104379B055B29BB0414D0263D5234123B24C5CF7C2CBE1B**, checklist privata `local/PHONE_TESTS_W09.md` e precedenti preservate. AVD spento, copie env/fixture temporanee rimosse nell'incremento precedente; credenziali, APK, checklist e NEXT_PROMPT esclusi dalla pubblicazione.
 

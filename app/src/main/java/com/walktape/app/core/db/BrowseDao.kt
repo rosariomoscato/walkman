@@ -33,6 +33,8 @@ interface BrowseDao {
     fun entries(profileId: Long, id: String): PagingSource<Int, PlaylistEntryEntity>
     @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position")
     suspend fun queueEntries(profileId: Long, id: String): List<PlaylistEntryEntity>
+    @Query("SELECT * FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id ORDER BY position LIMIT :limit OFFSET :offset")
+    suspend fun queueEntriesWindow(profileId: Long, id: String, limit: Int, offset: Int): List<PlaylistEntryEntity>
 
     @RawQuery(observedEntities = [AlbumEntity::class, SongEntity::class, LocalAudioEntity::class])
     fun albums(query: SupportSQLiteQuery): PagingSource<Int, AlbumEntity>
@@ -47,6 +49,14 @@ interface BrowseDao {
     @RawQuery(observedEntities = [ArtistEntity::class, AlbumEntity::class, SongEntity::class,
         GenreEntity::class, PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class])
     fun search(query: SupportSQLiteQuery): PagingSource<Int, BrowseResult>
+
+    /** Android Auto browse/search (W10-T01): the same unified search as a bounded window. */
+    @Query("SELECT * FROM playlist WHERE profileId=:profileId ORDER BY name COLLATE NOCASE, id LIMIT :limit OFFSET :offset")
+    suspend fun playlistsWindow(profileId: Long, limit: Int, offset: Int): List<PlaylistEntity>
+
+    @RawQuery(observedEntities = [ArtistEntity::class, AlbumEntity::class, SongEntity::class,
+        GenreEntity::class, PlaylistEntity::class, PlaylistEntryEntity::class, LocalAudioEntity::class])
+    suspend fun searchWindow(query: SupportSQLiteQuery): List<BrowseResult>
 
     @Query("SELECT * FROM album WHERE profileId=:profileId ORDER BY created DESC, id LIMIT 8")
     fun recentAlbums(profileId: Long): Flow<List<AlbumEntity>>
@@ -68,6 +78,10 @@ interface BrowseDao {
     fun years(profileId: Long): Flow<List<Int>>
     @Query("SELECT COUNT(*) FROM playlist WHERE profileId=:profileId")
     suspend fun playlistCount(profileId: Long): Int
+
+    /** Coarse change signal for browse notifications (W10): count plus last rewrite. */
+    @Query("SELECT COUNT(*) || ':' || COALESCE(MAX(fetchedAt),0) FROM playlist WHERE profileId=:profileId")
+    fun playlistFingerprint(profileId: Long): Flow<String>
     @Query("SELECT COUNT(*) FROM playlist_entry WHERE profileId=:profileId AND playlistId=:id")
     suspend fun entryCount(profileId: Long, id: String): Int
     @Query("DELETE FROM playlist WHERE profileId=:profileId")

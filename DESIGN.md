@@ -122,6 +122,17 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 - Slider con descrizione accessibile, durata in frazioni di secondo e range reali. Se il sistema non fornisce gli effetti la UI mostra indisponibilità; nessuna banda dimostrativa. Dettagli brano: qualità/formato osservato e ReplayGain tag/assenza neutra, distinti dai metadati originali dell'indice.
 - Prove automatiche del player W06 ripetute; TalkBack, adattività e resa sonora sul telefono delle nuove impostazioni ancora da collaudare con `local/PHONE_TESTS_W09.md`. Crossfade funzionale ma T02 aperto sui limiti di handover/attribuzione overlap, descritti in ARCHITECTURE/WORKLOG.
 
+## Incremento W10 — interfaccia Android Auto
+
+- UI disegnata dalla piattaforma Auto, senza riprodurre la scocca TPS-L2. Root: La mia musica,
+  Playlist, Download; Album/Artisti/Brani dentro La mia musica. Nomi categoria IT/EN e metadati
+  reali con tipi Media3 per album, artista, playlist e musica.
+- Finestre grandi tramite Altri risultati; download con conteggio disponibili/totali e stato
+  snapshot conservato se la playlist è assente sul server. Setup sul telefono quando il profilo
+  manca; vuoti onesti e nessuna riproduzione provocata da browse/riconnessione.
+- Palette, player Compose e token TPS-L2 invariati. Layout effettivo head unit, lingua, voce,
+  rotella/touch e visualizzazione copertine in proiezione richiedono ancora DHU/auto reale.
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

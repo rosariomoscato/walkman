@@ -35,13 +35,25 @@ object BrowseQueries {
     }
 
     fun search(profileId: Long, filter: LibraryFilter): SupportSQLiteQuery {
+        val (sql, args) = searchSql(profileId, filter)
+        return SimpleSQLiteQuery(sql, args.toTypedArray())
+    }
+
+    /** Android Auto search (W10-T01): unified search with an explicit result window. */
+    fun searchWindow(profileId: Long, filter: LibraryFilter, limit: Int, offset: Int): SupportSQLiteQuery {
+        require(limit > 0 && offset >= 0)
+        val (sql, args) = searchSql(profileId, filter)
+        return SimpleSQLiteQuery("$sql LIMIT ? OFFSET ?", (args + listOf(limit, offset)).toTypedArray())
+    }
+
+    private fun searchSql(profileId: Long, filter: LibraryFilter): Pair<String, List<Any>> {
         val args = mutableListOf<Any>()
         val branches = BrowseKind.entries.map { kind ->
             val (where, values) = conditions(kind, profileId, filter)
             args.addAll(values)
             "SELECT '${kind.name}' AS kind,e.profileId,e.id,e.${kind.title} AS title,${kind.subtitle?.let { "e.$it" } ?: "NULL"} AS subtitle FROM ${kind.table} e WHERE $where"
         }
-        return SimpleSQLiteQuery(branches.joinToString(" UNION ALL ") + " ORDER BY title COLLATE NOCASE,kind,id", args.toTypedArray())
+        return branches.joinToString(" UNION ALL ") + " ORDER BY title COLLATE NOCASE,kind,id" to args
     }
 
     private fun conditions(kind: BrowseKind, profileId: Long, filter: LibraryFilter): Pair<String, List<Any>> {

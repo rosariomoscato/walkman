@@ -76,6 +76,21 @@ class FakeDownloadDao : DownloadDao {
     override fun downloads(profileId: Long): Flow<List<DownloadEntity>> =
         rows.map { it.values.filter { r -> r.profileId == profileId } }
 
+    // Android Auto browse windows (W10-T01)
+    private fun completed(profileId: Long) = rows.value.values
+        .filter { it.profileId == profileId && it.status == "COMPLETED" }
+    override suspend fun completedWindow(profileId: Long, limit: Int, offset: Int): List<DownloadEntity> =
+        completed(profileId).sortedWith(compareBy({ it.title.lowercase() }, { it.songId }))
+            .drop(offset).take(limit)
+    override suspend fun completedCount(profileId: Long): Int = completed(profileId).size
+    override suspend fun completedAll(profileId: Long): List<DownloadEntity> =
+        completed(profileId).sortedWith(compareBy({ it.title.lowercase() }, { it.songId }))
+    override suspend fun completedFor(profileId: Long, songIds: List<String>): List<DownloadEntity> =
+        completed(profileId).filter { it.songId in songIds }
+    override suspend fun groupsOnce(profileId: Long): List<DownloadGroupEntity> =
+        groupRows.value.values.filter { it.profileId == profileId }
+            .sortedWith(compareBy({ it.name }, { it.origin }))
+
     override suspend fun downloadsOnce(profileId: Long): List<DownloadEntity> =
         rows.value.values.filter { it.profileId == profileId }.sortedWith(compareBy({ it.createdAt }, { it.songId }))
 
@@ -243,6 +258,8 @@ class FakeBrowseDao : BrowseDao {
     override suspend fun queueEntries(profileId: Long, id: String): List<PlaylistEntryEntity> =
         entries.value.values.filter { it.profileId == profileId && it.playlistId == id }
             .sortedBy { it.position }
+    override suspend fun queueEntriesWindow(profileId: Long, id: String, limit: Int, offset: Int): List<PlaylistEntryEntity> =
+        queueEntries(profileId, id).drop(offset).take(limit)
 
     override fun albums(query: SupportSQLiteQuery): PagingSource<Int, AlbumEntity> =
         throw UnsupportedOperationException()
@@ -256,6 +273,15 @@ class FakeBrowseDao : BrowseDao {
         throw UnsupportedOperationException()
     override fun search(query: SupportSQLiteQuery): PagingSource<Int, BrowseResult> =
         throw UnsupportedOperationException()
+
+    // Android Auto browse/search (W10-T01)
+    override suspend fun playlistsWindow(profileId: Long, limit: Int, offset: Int): List<PlaylistEntity> =
+        playlists.value.values.filter { it.profileId == profileId }
+            .sortedWith(compareBy({ it.name.lowercase() }, { it.id })).drop(offset).take(limit)
+    override suspend fun searchWindow(query: SupportSQLiteQuery): List<BrowseResult> =
+        throw UnsupportedOperationException()
+    override fun playlistFingerprint(profileId: Long): Flow<String> =
+        playlists.map { list -> "${list.values.count { it.profileId == profileId }}:${list.values.filter { it.profileId == profileId }.maxOfOrNull { it.fetchedAt } ?: 0}" }
 
     override fun recentAlbums(profileId: Long): Flow<List<AlbumEntity>> = MutableStateFlow(emptyList())
     override fun playedAlbums(profileId: Long): Flow<List<AlbumEntity>> = MutableStateFlow(emptyList())

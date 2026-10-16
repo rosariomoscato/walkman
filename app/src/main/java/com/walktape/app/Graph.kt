@@ -76,6 +76,9 @@ object Graph {
 
     fun app(): Context = appContext
 
+    /** True once [init] has run; late-initialised singletons must not be touched before. */
+    fun ready(): Boolean = ::database.isInitialized && ::profiles.isInitialized && ::settingsRepository.isInitialized
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     /** Latest device settings for non-suspend providers (cover/cache limits). */
