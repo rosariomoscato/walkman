@@ -1,10 +1,10 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-15 (incremento W09 locale; T01/T03/T04/T05 verificati, T02/T06 parziali; residui precedenti conservati).
+Ultimo aggiornamento: 2026-10-16 (pubblicazione W09 richiesta dall'utente; T01/T03/T04/T05 verificati, T02/T06 parziali; residui precedenti conservati).
 
-## Punto corrente — W09-T02, poi T06; incremento locale non pubblicato
+## Punto corrente — W09-T02, poi T06; incremento pubblicato
 
-- **T01/T03/T04/T05 [x], T02/T06 [ ]**. W09 non è conclusa e nessun requisito è stato rimosso. Codice locale sulla HEAD0902d82/codiceW08b90b9f3, nessun commit/push/release richiesto o eseguito. Note precedenti preservate.
+- **T01/T03/T04/T05 [x], T02/T06 [ ]**. W09 non è conclusa e nessun requisito è stato rimosso. Su successiva richiesta esplicita «fai commit e push», codice/test/schema11/documenti pubblicati in **c1cddd9 — Wave 09: qualità e DSP, crossfade parziale (T01/T03-T05)**:43file,4907inserimenti/83rimozioni. Push ordinario riuscito, SHA locale/remoto `c1cddd98effa7131eb38b7378a171de84fef9f35` verificati identici. Note della pubblicazione nel successivo commit documentale; nessuna release. Note precedenti preservate, nuovi commit/push soltanto su nuova richiesta.
 - **Room v11**: migrazione10→11 e schema11 esportato. Qualità per profilo (originale Wi-Fi/download, Opus mobile/download opt-in), rappresentazione nei file e URL/chiavi distinte; nessun riuso frammenti transcode senza ETag/Range affidabile. Originali cachati, ridotti completi nei download e sempre locali prioritari. Fallback raw solo fresh-open, cambio codec a offset rifiutato; URI cache/sessione logica senza credenziali. Default e gate awaitReady W08 preservati.
 - ReplayGain ID3/Vorbis effettivi, album/brano/off, assenza neutra e picchi/clamp; cassetta hiss/wow/flutter con bypass byte-exact e toggle runtime. EQ/BassBoost audiofx su sessionId condiviso, controllo/route indisponibile espliciti e rilascio. Preferenze DSP dispositivo DataStore, qualità rete Room per profilo, UI IT/EN accessibile. Suono pulito predefinito, STREAM_MUSIC invariato.
 - **T02 parziale reale**: seam PCM MP3/LAME e FLAC verificato; overlap crossfade operativo misurato, timer durante overlap ferma entrambi i deck e preload senza doppio ascolto. Però `CrossfadeCoordinator.completeSwap` fa seek sul principale e rilascia l'ausiliario: handover non ancora attestato continuo su tutte le sorgenti. Il tracker principale non accredita ancora il tempo udibile iniziale entrante durante overlap. Occorre consolidare il motore logico e l'attribuzione durevole, non solo aumentare timeout dei test.

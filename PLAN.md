@@ -197,6 +197,8 @@ Incremento W09 2026-10-15: **T01/T03/T04/T05 implementati e verificati; T02/T06 
 
 **T02 resta aperto**: gapless MP3/LAME e FLAC verificato sul seam PCM e crossfade con due ramp reali, ma handover al principale via seek può rebufferizzare; attribuzione durevole del tempo entrante durante l'overlap ancora da completare. **T06 aperto** per questi residui, matrice completa con effetti/focus/transizioni e risposta/clipping audiofx/Bluetooth sul Motorola non misurati. Nessuna nuova prova hardware. APK debug e checklist `local/PHONE_TESTS_W09.md` pronti; env/fixture temporanei AVD rimossi con assenza verificata, AVD spento. W05–W08 residui invariati, nessun commit/push/release.
 
+Pubblicazione successiva su richiesta esplicita: **c1cddd9 — Wave 09: qualità e DSP, crossfade parziale (T01/T03-T05)**,43file; push origin/main riuscito e SHA locale/remoto verificati identici. Note nel successivo commit documentale. Stato funzionale invariato (T02/T06 aperti); APK, credenziali, checklist private e NEXT_PROMPT esclusi, nessuna release.
+
 Criterio di uscita: impostazioni audio realmente operative, suono pulito predefinito e limiti delle combinazioni documentati e concordati.
 
 ## Wave 10 — Android Auto

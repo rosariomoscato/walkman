@@ -771,3 +771,11 @@ Stato incremento: in corso. Env/fixture temporanei AVD da rimuovere alla fine, A
 - Consegna: APK debug standard SHA256 **1573D341579EF5634355DC388E6B9E05D856828DFB848BA38CCEFC9C3D205F06**, `local/PHONE_TESTS_W09.md` pronta (checklist precedenti intatte). PLAN/MEMORY/NEXT_PROMPT/DESIGN/ARCHITECTURE aggiornati. Copie AVD env, fixtureMP3/FLAC e dumpUI noti rimosse; shell ha confermato **w09-temporary-files-absent**. `emu kill` riuscito, verifica adb vuoto nel controllo conclusivo. Originale `local/test-server.env` e tutte le checklist ignorati/preservati; fixture locali sintetiche conservate come output riproducibile ignorato. Nessun commit/push/release.
 
 Prossimo intervento: **W09-T02** motore/handover continuo e attribuzione overlap, quindi chiusura matrice T06; non passare a W10 assumendo W09 completa.
+
+## 2026-10-16 — Pubblicazione W09 su richiesta esplicita
+
+Richiesta dell'utente: «fai commit e push». Ispezionati status, diff completo, nuovi file, ultimi10commit, remoto e tracking; fetch origin riuscito, divergenza iniziale0/0 su0902d82. Stage limitato ai43file intenzionali W09 (codice/test/schema11/UI/documenti/script fixture). Diff staged senza errori di whitespace; percorsi privati/artefatti e pattern di chiavi/token controllati senza riscontri. Env originale, NEXT_PROMPT, APK e checklist W05–W09 ignorati ed esclusi. Nessuna nuova modifica applicativa o build per la sola pubblicazione.
+
+- Commit **c1cddd9 — «Wave 09: qualità e DSP, crossfade parziale (T01/T03-T05)»**:43file,4907inserimenti/83rimozioni; identità per-commit conforme al repository, nessuna configurazione Git persistente modificata o hook saltato.
+- Push ordinario **0902d82..c1cddd9** su origin/main riuscito; SHA locale/remoto **c1cddd98effa7131eb38b7378a171de84fef9f35** identici, working tree pulita subito dopo. Note della pubblicazione nel successivo commit documentale.
+- T02/T06 restano parziali; criteri e limiti tecnici/hardware invariati. Test e hash APK dell'incremento precedente conservati; nessuna release o pubblicazione dell'APK. PLAN/MEMORY/NEXT_PROMPT aggiornati; nuovi commit/push dopo questa pubblicazione soltanto su nuova richiesta.
