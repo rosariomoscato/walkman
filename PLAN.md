@@ -209,6 +209,8 @@ Riscontro successivo utente2026-10-16: **«Tutto ok»** dopo il primo giro breve
 
 Chiarimento successivo: il riscontro riguarda il **primo giro**, il resto è differito per indisponibilità dell'utente. Proposto e concordato salvare il consolidamento W09 e procedere poi allo sviluppo indipendente W10, conservando T06/residui hardware aperti. Richiesta esplicita corrente di commit/push; nessuna implementazione W10 avviata nella pubblicazione.
 
+Consolidamento pubblicato su richiesta in **278e889 — Wave 09: crossfade continuo e ascolti overlap persistenti (T02)** (23file); push origin/main riuscito e SHA locale/remoto verificati identici. Note nel successivo commit documentale; T06 hardware rimane differito, nessuna release e nessun avvio W10.
+
 Criterio di uscita: impostazioni audio realmente operative, suono pulito predefinito e limiti delle combinazioni documentati e concordati.
 
 ## Wave 10 — Android Auto

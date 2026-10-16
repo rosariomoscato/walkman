@@ -1,6 +1,6 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-16 (T02 completato e parte automatica T06 verificata; incremento locale, collaudo hardware e residui precedenti aperti).
+Ultimo aggiornamento: 2026-10-16 (consolidamento T02 pubblicato; primo giro positivo, collaudo hardware residuo differito; W10 non avviata).
 
 ## Punto corrente — W09-T06: primo riscontro positivo, controlli hardware specifici aperti
 
@@ -8,7 +8,8 @@ Ultimo aggiornamento: 2026-10-16 (T02 completato e parte automatica T06 verifica
 - Verifiche dell'incremento:129/129JVM, build app/androidTest, lint0errori/29avvisi; finale27/27Android (26W09+ScrobbleService),276,661s. Regressioni aggiuntive27/27core,3/3UI,7passati+2skip opt-in servizio/focus/restore in esecuzioni separate. Esiti e correzioni nel WORKLOG e ARCHITECTURE.
 - **Riscontro utente 2026-10-16: «Tutto ok»**, in risposta al primo giro breve proposto (suono/crossfade/comandi/effetti/offline). Registrato come riscontro generale positivo, senza inventare esiti puntuali, route, versioneAndroid o misure. Non chiude automaticamente T06 o i residui W05–W08.
 - L'utente precisa che «Tutto ok riguarda primo giro» e rinvia il resto perché adesso non può. **Collaudo hardware residuo differito**, non superato: timer15min/schermo spento, interruzioni/pausa manuale, Bluetooth/cuffie/cambio route, risposta/clipping audiofx, batteria/accessibilità. Concordato l'ordine proposto: salvare W09, poi proseguire con W10 indipendente dai collaudi differiti. La richiesta corrente «bene, fai commit e push» autorizza la pubblicazione, non avvia W10 in questa attività.
-- APK standard SHA256 **CE703DD677FB758DB104379B055B29BB0414D0263D5234123B24C5CF7C2CBE1B**, checklist privata `local/PHONE_TESTS_W09.md` e precedenti preservate. AVD spento, copie env/fixture temporanee rimosse nell'incremento precedente. Codice locale non committato, nessun nuovo commit/push/release autorizzato.
+- **Pubblicato su richiesta esplicita** in **278e889 — Wave 09: crossfade continuo e ascolti overlap persistenti (T02)**,23file/3282inserimenti/294rimozioni. Push ordinario82f0657..278e889 riuscito; SHA locale/remoto `278e889e2d97ec036b292553d4fcb3ab97a53a36` identici, working tree pulita subito dopo. Note di pubblicazione nel successivo commit documentale. Nuovi commit/push soltanto su nuova richiesta; nessuna release.
+- APK standard SHA256 **CE703DD677FB758DB104379B055B29BB0414D0263D5234123B24C5CF7C2CBE1B**, checklist privata `local/PHONE_TESTS_W09.md` e precedenti preservate. AVD spento, copie env/fixture temporanee rimosse nell'incremento precedente; credenziali, APK, checklist e NEXT_PROMPT esclusi dalla pubblicazione.
 
 ## Baseline precedente W09-T02 parziale — storico, superato dal punto corrente
 

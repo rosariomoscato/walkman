@@ -823,3 +823,10 @@ Aggiornati PLAN, memoria corrente, NEXT_PROMPT e nota della checklist privata, s
 L'utente chiarisce «Tutto ok riguarda primo giro» e rimanda le prove residue perché ora non può. Conservati T06 e residui W05–W08 aperti. Proposto l'ordine commit/push W09, poi sviluppo indipendente W10 e collaudo congiunto successivo; l'utente risponde «bene, fai commit e push». Questa attività esegue la pubblicazione richiesta, senza avviare W10.
 
 Preflight: status/diff/nuovi file e ultimi10commit ispezionati; origine/tracking origin/main su82f0657, fetch riuscito e divergenza0/0. Modifiche corrispondenti al consolidamento T02, schema12/migrazione, test e documentazione; file privati/checklist/APK/NEXT_PROMPT ignorati e preservati. Nessuna modifica applicativa o nuova build per la sola pubblicazione; restano valide le verifiche dell'incremento (129JVM, finale27Android, lint0/29) e i relativi limiti hardware. Esito commit/push registrato dopo l'esecuzione.
+
+Pubblicazione eseguita:
+
+- Stage limitato ai23file intenzionali, diff staged senza errori di whitespace, controllo percorsi privati/artefatti e pattern di chiavi/token senza riscontri. Nessun segreto, APK o checklist privata incluso.
+- Commit **278e889 — «Wave 09: crossfade continuo e ascolti overlap persistenti (T02)»**:23file,3282inserimenti/294rimozioni, schema12 e sette nuovi file compresi. Identità per-commit conforme ai precedenti, nessuna configurazione Git persistente modificata o hook saltato.
+- Push ordinario **82f0657..278e889** su origin/main riuscito; SHA locale/remoto **278e889e2d97ec036b292553d4fcb3ab97a53a36** verificati identici e working tree pulita subito dopo. Note nel successivo commit documentale.
+- Memoria/PLAN/NEXT_PROMPT aggiornati. T06 e collaudi residui differiti per disponibilità dell'utente, non chiusi; W10 non avviata. Nessuna release o pubblicazione APK, nessuna nuova build/test per la sola pubblicazione. Ulteriori commit/push solo su nuova richiesta esplicita.
