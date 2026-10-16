@@ -250,6 +250,12 @@ sessione, API verificate sui sorgenti ufficiali 1.11.1. Le verifiche hardware di
 in T05, non sono dichiarate superate. Residui W05–W09 e checklist precedenti preservati.
 APK debug aggiornato; temporanei rimossi, AVD spento. Nessun commit/push/release.
 
+Pubblicazione successiva su richiesta esplicita: **109b652 — Wave 10: Android Auto, catalogo
+e continuità (T01-T03)**,27file. Push ordinario su origin/main riuscito e SHA locale/remoto
+identici; working tree pulita subito dopo. Note nel successivo commit documentale. T04/T05
+e collaudi hardware restano aperti; APK/credenziali/checklist/NEXT_PROMPT ignorati ed esclusi,
+nessuna release. Nessuna nuova build per la sola pubblicazione.
+
 Criterio di uscita: percorso di ascolto in auto verificato; eventuale prova hardware mancante resta un blocco esplicito.
 
 ## Wave 11 — Impostazioni, backup e aggiornamenti

@@ -30,9 +30,12 @@ Ultimo aggiornamento: 2026-10-16 (W10-T01–T03 software verificato; T04/T05 sid
   Guida/architettura/design/piano/log aggiornati, checklistW10 aggiunta e precedenti preservate.
   Env/fixture temporanei AVD rimossi e assenza verificata, nessun forward creato, marker
   processo assente, AVD spento e adb vuoto. Credenziali originali ignorate intatte.
-- Base pubblicata **3febc1d**, codiceW09 **278e889**; tutte le modifiche W10 sono locali,
-  con note handoff preesistenti preservate. **L'utente ha ora richiesto commit e push**:
-  pubblicazione W10 in corso, nessuna release richiesta. Ulteriori pubblicazioni solo su richiesta.
+- **W10 pubblicata su richiesta esplicita** nel commit **109b652 — Wave 10: Android Auto,
+  catalogo e continuità (T01-T03)**,27file/2463inserimenti/75rimozioni, note handoff preservate.
+  Push ordinario3febc1d..109b652 riuscito; SHA locale/remoto
+  `109b65218cf07ad3fe3f217a7c54e88fc0139d28` identici e working tree pulita subito dopo.
+  Note della pubblicazione nel successivo commit documentale. Nessuna release o APK pubblicato;
+  nuovi commit/push soltanto su nuova richiesta. CodiceW09 precedente278e889.
   W09-T06 e residui W05–W08 restano differiti, non superati. Primo giro W09 positivo invariato.
 
 ## Handoff iniziale W10 — storico, superato dall'incremento sopra

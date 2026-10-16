@@ -979,3 +979,18 @@ di env, APK, NEXT_PROMPT e checklist private. Stage limitato a codice/test/risor
 Nessuna modifica applicativa o nuova build per la sola pubblicazione; restano validi gli esiti
 137JVM, lint0/33, suiteW10 finale6/6 e regressioni sopra. T04/T05/hardware restano aperti.
 Esito commit/push registrato dopo l'operazione; nessuna release richiesta.
+
+Pubblicazione eseguita:
+
+- Stage limitato ai27file intenzionali W10 (codice/test/risorse/documenti); `git diff --cached
+  --check` senza errori. Verificati percorsi privati/artefatti e pattern di chiavi/token/password
+  senza riscontri nello stage; nessuna credenziale/APK/checklist privata inclusa.
+- Commit **109b652 — «Wave 10: Android Auto, catalogo e continuità (T01-T03)»**:
+  27file,2463inserimenti/75rimozioni. Identità per-commit conforme ai precedenti, nessuna
+  configurazione Git persistente modificata e nessun hook saltato.
+- Push ordinario **3febc1d..109b652** su origin/main riuscito. SHA locale/remoto
+  **109b65218cf07ad3fe3f217a7c54e88fc0139d28** verificati identici con ls-remote; working tree
+  pulita subito dopo. Note della pubblicazione nel presente aggiornamento documentale.
+- PLAN/MEMORY/NEXT_PROMPT aggiornati. T04/T05 e residui hardware invariati; nessuna release
+  o pubblicazione APK, nessuna nuova build per la sola operazione Git. File privati preservati.
+  Ulteriori commit/push successivi a questa pubblicazione soltanto su nuova richiesta esplicita.
