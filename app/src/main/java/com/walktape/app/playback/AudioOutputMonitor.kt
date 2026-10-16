@@ -16,9 +16,8 @@ class AudioOutputMonitor {
 
     /**
      * W09 renderers factory: the sink runs the configured build hook (audio processors
-     * for ReplayGain/tape). The main deck wraps its sink with the gain monitor; the
-     * secondary crossfade decks keep a plain sink so the diagnostic reflects the
-     * session player only.
+     * for ReplayGain/tape). Each logical-player deck can wrap its sink with this monitor.
+     * It records the last actual sink write, not public player volume or STREAM_MUSIC.
      */
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun renderers(context: Context, sinkHook: (DefaultAudioSink.Builder) -> DefaultAudioSink.Builder = { it },

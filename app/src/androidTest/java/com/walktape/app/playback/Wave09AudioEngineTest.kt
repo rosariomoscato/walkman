@@ -145,16 +145,18 @@ class Wave09AudioEngineTest {
         val captureB = CapturingAudioOutput()
         val engineA = TestAudioEngine(context, captureA)
         val deckEngine = { TestAudioEngine(context, captureB).newPlayer() }
-        val main = engineA.newPlayer()
+        val initial = engineA.newPlayer()
+        lateinit var main: androidx.media3.exoplayer.ExoPlayer
         var coordinator: CrossfadeCoordinator? = null
         try {
             withContext(Dispatchers.Main) {
+                coordinator = CrossfadeCoordinator(kotlinx.coroutines.CoroutineScope(
+                    kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate), initial,
+                    deckBuilder = deckEngine, enabled = { true }, durationMs = { 2_000 })
+                main = coordinator!!.player
                 main.setMediaItems(listOf(MediaItem.fromUri(android.net.Uri.fromFile(fileA)),
                     MediaItem.fromUri(android.net.Uri.fromFile(fileB))))
                 main.prepare()
-                coordinator = CrossfadeCoordinator(kotlinx.coroutines.CoroutineScope(
-                    kotlinx.coroutines.SupervisorJob() + Dispatchers.Main.immediate), main,
-                    deckBuilder = deckEngine, enabled = { true }, durationMs = { 2_000 })
                 coordinator!!.start()
                 main.play()
             }
@@ -168,6 +170,10 @@ class Wave09AudioEngineTest {
             awaitTrue("second item advanced past the fade window") {
                 withContext(Dispatchers.Main) { main.currentPosition > 1_500 }
             }
+            val handoverPosition = withContext(Dispatchers.Main) { main.currentPosition }
+            delay(750)
+            assertTrue(withContext(Dispatchers.Main) { main.currentPosition >= handoverPosition + 500 })
+            assertEquals("incoming output must never be recreated at handover", 1, captureB.outputCreations)
             withContext(Dispatchers.Main) { main.pause(); coordinator!!.release(); main.release() }
 
             assertFalse(captureA.failed)
@@ -191,13 +197,13 @@ class Wave09AudioEngineTest {
             val pairings = captureA.allChunks.mapNotNull { outChunk ->
                 // AudioTrack release discards queued-but-not-played frames. They are
                 // captured for diagnostics, but must not contribute to overlap energy.
-                if (outChunk.projectedPlayoutNanos >= captureB.releasedAtNanos - 100_000_000)
+                if (outChunk.projectedPlayoutNanos >= minOf(captureA.releasedAtNanos, captureB.releasedAtNanos) - 100_000_000)
                     return@mapNotNull null
                 val inChunk = captureB.allChunks.minByOrNull {
                     kotlin.math.abs(it.projectedPlayoutNanos - outChunk.projectedPlayoutNanos)
                 } ?: return@mapNotNull null
                 val delta = kotlin.math.abs(inChunk.projectedPlayoutNanos - outChunk.projectedPlayoutNanos)
-                if (inChunk.projectedPlayoutNanos >= captureB.releasedAtNanos - 100_000_000)
+                if (inChunk.projectedPlayoutNanos >= minOf(captureA.releasedAtNanos, captureB.releasedAtNanos) - 100_000_000)
                     return@mapNotNull null
                 if (delta > 60_000_000) return@mapNotNull null
                 val aLevel = rms(outChunk.pcm)

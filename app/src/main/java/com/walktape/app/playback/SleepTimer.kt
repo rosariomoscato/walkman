@@ -32,12 +32,24 @@ class SleepTimer {
     private val mutable = MutableStateFlow(State())
     val state = mutable.asStateFlow()
     /** True only when advancing to the next item cannot pass an armed stop boundary. */
-    fun allowsOverlap(): Boolean {
+    fun allowsOverlap(mediaItemIndex: Int? = null): Boolean {
         val attachedPlayer = player ?: return false
         return when (val mode = mutable.value.mode) {
             null, Mode.DURATION -> true
             Mode.TRACK -> false
-            else -> boundaryRemainingMs(attachedPlayer, mode) == null
+            else -> {
+                // Pure query: do not overwrite the watcher's outgoing lastBoundary
+                // when a native AUTO callback has already moved the physical cursor.
+                val timeline = attachedPlayer.currentTimeline
+                val index = mediaItemIndex ?: attachedPlayer.currentMediaItemIndex
+                if (timeline.isEmpty || index !in 0 until attachedPlayer.mediaItemCount) false
+                else {
+                    val next = timeline.getNextWindowIndex(index, Player.REPEAT_MODE_OFF, attachedPlayer.shuffleModeEnabled)
+                    next != C.INDEX_UNSET && (mode == Mode.QUEUE ||
+                        (attachedPlayer.getMediaItemAt(index).mediaMetadata.extras?.getString(ALBUM_ID) == albumId &&
+                            attachedPlayer.getMediaItemAt(next).mediaMetadata.extras?.getString(ALBUM_ID) == albumId))
+                }
+            }
         }
     }
     private var player: Player? = null

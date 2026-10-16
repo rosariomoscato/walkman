@@ -15,9 +15,36 @@ interface ScrobbleDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun putListeningState(state: ListeningStateEntity)
 
+    @Query("SELECT * FROM overlap_listening_state WHERE profileId=:profileId")
+    suspend fun overlapState(profileId: Long): OverlapListeningStateEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun putOverlapState(state: OverlapListeningStateEntity)
+
+    @Query("DELETE FROM overlap_listening_state WHERE profileId=:profileId")
+    suspend fun deleteOverlap(profileId: Long)
+
+    @Transaction
+    suspend fun recordOverlap(state: ListeningStateEntity, event: ScrobbleEventEntity?) {
+        putOverlapState(state.asOverlap())
+        if (event != null) {
+            insert(event)
+            markAlbumPlayed(event.profileId, event.songId, java.time.Instant.ofEpochMilli(event.playedAtMs).toString())
+        }
+    }
+
+    @Transaction
+    suspend fun promoteOverlap(state: ListeningStateEntity, outgoingSnapshot: String?) {
+        putListeningState(state)
+        putOverlapState(state.asOverlap(promoted = true, outgoingSnapshot = outgoingSnapshot))
+    }
+
     @Transaction
     suspend fun record(state: ListeningStateEntity, event: ScrobbleEventEntity?) {
         putListeningState(state)
+        val receipt = overlapState(state.profileId)
+        if (receipt?.promoted == true && receipt.mediaId == state.mediaId)
+            putOverlapState(state.asOverlap(promoted = true, outgoingSnapshot = receipt.outgoingSnapshot))
         if (event != null) {
             insert(event)
             markAlbumPlayed(event.profileId, event.songId, java.time.Instant.ofEpochMilli(event.playedAtMs).toString())

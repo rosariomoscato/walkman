@@ -1,8 +1,18 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-16 (pubblicazione W09 richiesta dall'utente; T01/T03/T04/T05 verificati, T02/T06 parziali; residui precedenti conservati).
+Ultimo aggiornamento: 2026-10-16 (T02 completato e parte automatica T06 verificata; incremento locale, collaudo hardware e residui precedenti aperti).
 
-## Punto corrente — W09-T02, poi T06; incremento pubblicato
+## Punto corrente — W09-T06: primo riscontro positivo, controlli hardware specifici aperti
+
+- **T01–T05 completati; T06 aperto**. Consolidamento T02 e verifiche automatiche locali su82f0657: player logico stabile, promozione senza seek/ricaricamento, focus unico e clock overlap durevole con **Room v12**, migrazione11→12/schema12. Il vecchio stato T02 parziale sotto è storico; non ripristinare completeSwap con seek né lo schema11.
+- Verifiche dell'incremento:129/129JVM, build app/androidTest, lint0errori/29avvisi; finale27/27Android (26W09+ScrobbleService),276,661s. Regressioni aggiuntive27/27core,3/3UI,7passati+2skip opt-in servizio/focus/restore in esecuzioni separate. Esiti e correzioni nel WORKLOG e ARCHITECTURE.
+- **Riscontro utente 2026-10-16: «Tutto ok»**, in risposta al primo giro breve proposto (suono/crossfade/comandi/effetti/offline). Registrato come riscontro generale positivo, senza inventare esiti puntuali, route, versioneAndroid o misure. Non chiude automaticamente T06 o i residui W05–W08.
+- L'utente precisa che «Tutto ok riguarda primo giro» e rinvia il resto perché adesso non può. **Collaudo hardware residuo differito**, non superato: timer15min/schermo spento, interruzioni/pausa manuale, Bluetooth/cuffie/cambio route, risposta/clipping audiofx, batteria/accessibilità. Concordato l'ordine proposto: salvare W09, poi proseguire con W10 indipendente dai collaudi differiti. La richiesta corrente «bene, fai commit e push» autorizza la pubblicazione, non avvia W10 in questa attività.
+- APK standard SHA256 **CE703DD677FB758DB104379B055B29BB0414D0263D5234123B24C5CF7C2CBE1B**, checklist privata `local/PHONE_TESTS_W09.md` e precedenti preservate. AVD spento, copie env/fixture temporanee rimosse nell'incremento precedente. Codice locale non committato, nessun nuovo commit/push/release autorizzato.
+
+## Baseline precedente W09-T02 parziale — storico, superato dal punto corrente
+
+**Incremento autorizzato in corso 2026-10-16 — task W09-T02**, poi verifiche automatiche T06. Baseline82f0657, working tree inizialmente pulita. In implementazione player logico stabile/promozione deck senza seek e stato overlap durevole; nessun nuovo commit/push autorizzato. I risultati seguenti sono la baseline precedente fino all'aggiornamento finale.
 
 - **T01/T03/T04/T05 [x], T02/T06 [ ]**. W09 non è conclusa e nessun requisito è stato rimosso. Su successiva richiesta esplicita «fai commit e push», codice/test/schema11/documenti pubblicati in **c1cddd9 — Wave 09: qualità e DSP, crossfade parziale (T01/T03-T05)**:43file,4907inserimenti/83rimozioni. Push ordinario riuscito, SHA locale/remoto `c1cddd98effa7131eb38b7378a171de84fef9f35` verificati identici. Note della pubblicazione nel successivo commit documentale; nessuna release. Note precedenti preservate, nuovi commit/push soltanto su nuova richiesta.
 - **Room v11**: migrazione10→11 e schema11 esportato. Qualità per profilo (originale Wi-Fi/download, Opus mobile/download opt-in), rappresentazione nei file e URL/chiavi distinte; nessun riuso frammenti transcode senza ETag/Range affidabile. Originali cachati, ridotti completi nei download e sempre locali prioritari. Fallback raw solo fresh-open, cambio codec a offset rifiutato; URI cache/sessione logica senza credenziali. Default e gate awaitReady W08 preservati.
@@ -132,6 +142,7 @@ Il punto di ripresa precedente seguente è storico, superato dall'incremento W07
 
 - D35 — W09 qualità: raw originale di default; Opus esplicito a bitrate scelto solo su cellulare/download opt-in. Nessuna cache a frammenti del transcode senza validatore/Range affidabile; copie ridotte complete nei download. Fallback raw solo fresh-open, URI cache/sessione logica. Motivo/esiti nel WORKLOG W09.
 - D36 — W09 DSP: preferenze audio di dispositivo, processori PCM nella chain del sink con bypass byte-exact, audiofx su sessione condivisa. Crossfade nel servizio unico ancora parziale sui punti documentati; non confondere i test dei ramp con continuità del handover né capture PCM con risposta hardware.
+- D37 — Supera la parte crossfade parziale di D36: player logico ExoPlayer stabile con instradamento della API pubblica, promozione del deck udibile senza seek, focus unico esterno ai deck e ledger overlap Roomv12 con ricevuta di promozione. Testare l'indice uscente nei confini timer; mantenere distinti stato logico, inviluppi/ducking e volume Android. Riferimenti: WORKLOG e ARCHITECTURE incremento2026-10-16.
 
 - Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman` (nome cartella locale invariato); repository GitHub rinominato dall'utente in `rosariomoscato/walktape`, remote `origin` = https://github.com/rosariomoscato/walktape.git, branch `main` tracciato. Remote aggiornato e accesso verificato il 2026-10-13. Identità per-commit: `Rosario Moscato <53149348+rosariomoscato@users.noreply.github.com>` (config non persistita).
 - Shell: Windows PowerShell 5.1. Usare `npx.cmd`; `Range` header via `[System.Net.HttpWebRequest]::AddRange`; redirect `>` di binari corrompe i file (usare `adb pull`).

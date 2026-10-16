@@ -51,9 +51,13 @@ class Wave09RealQualityTest {
                 }
                 http.newCall(Request.Builder().url(client.streamUrl(dto.id, randomSalt(), "opus", 96))
                     .header("Range", "bytes=1024-").build()).execute().use { response ->
-                    assertEquals(200, response.code)
+                    // Navidrome can serve an already-complete server-side transcode
+                    // cache with Range; uncached generated streams ignore Range.
+                    assertTrue(response.code == 200 || response.code == 206)
                     assertTrue(response.header("Content-Type").orEmpty().contains("ogg"))
-                    assertNull(response.header("Content-Range"))
+                    if (response.code == 206)
+                        assertTrue(response.header("Content-Range").orEmpty().startsWith("bytes 1024-"))
+                    else assertNull(response.header("Content-Range"))
                 }
                 val song = dto.toSongEntity(profile)
                 store.enqueueSongs(profile, listOf(song), "single")

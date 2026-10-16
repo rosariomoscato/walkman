@@ -54,12 +54,12 @@ class PlaybackService : MediaSessionService() {
     @Volatile private var completedDownloads: Map<String, Pair<File, Boolean>> = emptyMap()
     private var skipStreak = 0
 
-    /** W09 DSP of the main deck; the secondary deck builds its own fresh pair per fade. */
-    private val mainGain = com.walktape.app.playback.dsp.ReplayGainProcessor()
-    private val mainTape = com.walktape.app.playback.dsp.TapeProcessor()
-    private var secondaryGain: com.walktape.app.playback.dsp.ReplayGainProcessor? = null
-    private var secondaryTape: com.walktape.app.playback.dsp.TapeProcessor? = null
-    private var lastSecondaryTags = com.walktape.app.playback.dsp.ReplayGainParser.Tags()
+    private data class DeckAudio(
+        val gain: com.walktape.app.playback.dsp.ReplayGainProcessor,
+        val tape: com.walktape.app.playback.dsp.TapeProcessor,
+        var tags: com.walktape.app.playback.dsp.ReplayGainParser.Tags = com.walktape.app.playback.dsp.ReplayGainParser.Tags(),
+    )
+    private val deckAudio = java.util.IdentityHashMap<ExoPlayer, DeckAudio>()
     private lateinit var crossfade: CrossfadeCoordinator
 
     override fun onCreate() {
@@ -101,77 +101,64 @@ class PlaybackService : MediaSessionService() {
             .setUsage(C.USAGE_MEDIA)
             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
             .build()
-        val player = ExoPlayer.Builder(this,
-            Graph.audioOutput.renderers(this, sinkHook = { builder ->
-                builder.setAudioProcessors(arrayOf(mainGain, mainTape))
-            }, monitor = true))
-            .setDeviceVolumeControlEnabled(true)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
-            .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ true)
-            .setHandleAudioBecomingNoisy(true)
-            .setWakeMode(C.WAKE_MODE_LOCAL)
-            .build()
-        if (audioSessionId > 0) {
-            player.setAudioSessionId(audioSessionId)
+        fun buildDeck(): ExoPlayer {
+            val audio = DeckAudio(com.walktape.app.playback.dsp.ReplayGainProcessor(),
+                com.walktape.app.playback.dsp.TapeProcessor())
+            audio.gain.enabled = Graph.currentSettings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
+            audio.tape.enabled = Graph.currentSettings.tapeEffectEnabled
+            val deck = ExoPlayer.Builder(this,
+                Graph.audioOutput.renderers(this, sinkHook = { builder ->
+                    builder.setAudioProcessors(arrayOf(audio.gain, audio.tape))
+                }, monitor = true))
+                .setDeviceVolumeControlEnabled(true)
+                .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+                .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ false)
+                .setHandleAudioBecomingNoisy(true)
+                .setWakeMode(C.WAKE_MODE_LOCAL)
+                .build()
+            if (audioSessionId > 0) deck.setAudioSessionId(audioSessionId)
+            deckAudio[deck] = audio
+            deck.addListener(object : Player.Listener {
+                override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                    audio.tags = com.walktape.app.playback.dsp.ReplayGainParser.parse(
+                        tracks.groups.firstOrNull { it.getTrackFormat(0).sampleMimeType?.startsWith("audio/") == true }
+                            ?.getTrackFormat(0)?.metadata)
+                    applyReplayGainTags(audio.gain, audio.tags)
+                    if (::crossfade.isInitialized && crossfade.activeDeck === deck) publishReplayGain(audio)
+                }
+            })
+            return deck
         }
+        crossfade = CrossfadeCoordinator(scope, buildDeck(), ::buildDeck,
+            enabled = { Graph.currentSettings.crossfadeEnabled },
+            durationMs = { Graph.currentSettings.crossfadeDurationMs },
+            transitionAllowed = { index -> Graph.playbackTimer.allowsOverlap(index) },
+            report = { Graph.crossfadeStatus.value = it },
+            deckReleased = { deckAudio.remove(it) })
+        val player = crossfade.player
+        crossfade.attachFocus(LogicalAudioFocus(this, musicAttributes,
+            crossfade::onFocusCommand, crossfade::onDucking))
         val shuffle = ServiceShuffle(player)
         player.addListener(shuffle)
         Graph.playbackTimer.attach(player)
         player.addListener(automationListener)
         player.addListener(unavailableListener)
         player.addListener(qualityListener)
-        player.addListener(replayGainListener(mainGain, mainDeck = true))
-        tracker = ScrobbleTracker(player, Graph.listeningStore, scope)
-        // W09-T02: the secondary crossfade deck shares the data source, the session and
-        // the DSP wiring, but never owns focus, queue or scrobbles.
-        crossfade = CrossfadeCoordinator(scope, player,
-            deckBuilder = {
-                val gain = com.walktape.app.playback.dsp.ReplayGainProcessor()
-                gain.enabled = Graph.currentSettings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
-                val tape = com.walktape.app.playback.dsp.TapeProcessor()
-                secondaryGain = gain
-                secondaryTape = tape
-                lastSecondaryTags = com.walktape.app.playback.dsp.ReplayGainParser.Tags()
-                tape.enabled = Graph.currentSettings.tapeEffectEnabled
-                val deck = ExoPlayer.Builder(this,
-                    Graph.audioOutput.renderers(this, sinkHook = { builder ->
-                        builder.setAudioProcessors(arrayOf(gain, tape))
-                    }, monitor = false))
-                    .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
-                    .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ false)
-                    .setHandleAudioBecomingNoisy(false)
-                    .setWakeMode(C.WAKE_MODE_LOCAL)
-                    .build()
-                if (audioSessionId > 0) {
-                    deck.setAudioSessionId(audioSessionId)
-                }
-                deck.addListener(replayGainListener(gain, mainDeck = false))
-                deck
-            },
-            enabled = { Graph.currentSettings.crossfadeEnabled },
-            durationMs = { Graph.currentSettings.crossfadeDurationMs },
-            transitionAllowed = { Graph.playbackTimer.allowsOverlap() },
-            focusGain = {
-                val volume = player.volume
-                if (volume > 0f) ((Graph.audioOutput.outputGain.value ?: volume) / volume).coerceIn(0f, 1f)
-                else 0f
-            },
-            report = { Graph.crossfadeStatus.value = it },
-        )
+        tracker = ScrobbleTracker(player, Graph.listeningStore, scope,
+            mainAudible = { player.isPlaying && crossfade.activeDeck.volume > 0f })
+        crossfade.overlap = { deck, audible -> tracker.overlap(deck, audible) }
+        crossfade.promoting = tracker::promoteOverlap
+        crossfade.cancelOverlap = tracker::cancelOverlap
         crossfade.start()
         Graph.systemEffects.attach(audioSessionId)
         scope.launch {
             Graph.settingsRepository.settings.collect { settings ->
-                mainTape.enabled = settings.tapeEffectEnabled
-                mainGain.enabled = settings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
-                secondaryTape?.enabled = settings.tapeEffectEnabled
-                secondaryGain?.let { processor ->
-                    processor.enabled = settings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
-                    applyReplayGainTags(processor, lastSecondaryTags, settings.replayGainMode)
+                deckAudio.values.toList().forEach { audio ->
+                    audio.tape.enabled = settings.tapeEffectEnabled
+                    audio.gain.enabled = settings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
+                    applyReplayGainTags(audio.gain, audio.tags, settings.replayGainMode)
                 }
-                // Re-derive the gain of the current track when the mode changes.
-                applyReplayGainTags(mainGain,
-                    lastMainTags ?: com.walktape.app.playback.dsp.ReplayGainParser.Tags(), settings.replayGainMode)
+                deckAudio[crossfade.activeDeck]?.let { publishReplayGain(it, settings.replayGainMode) }
                 Graph.systemEffects.apply(settings.equalizerEnabled,
                     Graph.systemEffects.sanitizeBandLevelsCsv(settings.equalizerBands),
                     settings.bassBoostEnabled, settings.bassBoostStrength)
@@ -249,9 +236,12 @@ class PlaybackService : MediaSessionService() {
         persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) {
             if (it == null) {
                 Graph.playbackTimer.cancel(); Graph.suggestion.reset(); Graph.playbackQuality.reset()
-                lastMainTags = null
-                mainGain.targetGainDb = 0f
-                mainGain.tagPeak = null
+                crossfade.resetForProfile()
+                deckAudio[crossfade.activeDeck]?.let {
+                    it.tags = com.walktape.app.playback.dsp.ReplayGainParser.Tags()
+                    it.gain.targetGainDb = 0f
+                    it.gain.tagPeak = null
+                }
             }
             connection.value = it
         }
@@ -349,45 +339,27 @@ class PlaybackService : MediaSessionService() {
                 }
             }
             Graph.playbackQuality.observed(songId, mime, bitrate)
+            deckAudio[crossfade.activeDeck]?.let { publishReplayGain(it) }
         }
     }
-
-    /** Last ReplayGain tags of the main deck, to re-derive the gain when the mode changes. */
-    @Volatile private var lastMainTags: com.walktape.app.playback.dsp.ReplayGainParser.Tags? = null
-
-    /** W09-T03: reads the tags the extractor really exposed and sets the deck's gain. */
-    private fun replayGainListener(processor: com.walktape.app.playback.dsp.ReplayGainProcessor,
-        mainDeck: Boolean): Player.Listener =
-        object : Player.Listener {
-            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
-                var metadata: androidx.media3.common.Metadata? = null
-                for (group in tracks.groups) {
-                    val format = group.getTrackFormat(0)
-                    if (format.sampleMimeType?.startsWith("audio/") == true) {
-                        metadata = format.metadata
-                        break
-                    }
-                }
-                val tags = com.walktape.app.playback.dsp.ReplayGainParser.parse(metadata)
-                if (mainDeck) lastMainTags = tags else lastSecondaryTags = tags
-                applyReplayGainTags(processor, tags)
-            }
-        }
 
     private fun applyReplayGainTags(processor: com.walktape.app.playback.dsp.ReplayGainProcessor,
         tags: com.walktape.app.playback.dsp.ReplayGainParser.Tags,
         mode: com.walktape.app.core.settings.ReplayGainMode = Graph.currentSettings.replayGainMode) {
         processor.targetGainDb = com.walktape.app.playback.dsp.ReplayGainParser.selectGainDb(tags, mode)
         processor.tagPeak = com.walktape.app.playback.dsp.ReplayGainParser.selectPeak(tags, mode)
-        if (processor === mainGain) {
+    }
+
+    private fun publishReplayGain(audio: DeckAudio,
+        mode: com.walktape.app.core.settings.ReplayGainMode = Graph.currentSettings.replayGainMode) {
+            val tags = audio.tags
             val present = when (mode) {
                 com.walktape.app.core.settings.ReplayGainMode.OFF -> false
                 com.walktape.app.core.settings.ReplayGainMode.TRACK -> tags.trackGainDb != null
                 com.walktape.app.core.settings.ReplayGainMode.ALBUM -> tags.albumGainDb != null || tags.trackGainDb != null
             }
             Graph.replayGainInfo.value = com.walktape.app.playback.dsp.ReplayGainParser.Info(
-                mode, present, processor.targetGainDb)
-        }
+                mode, present, audio.gain.targetGainDb)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =

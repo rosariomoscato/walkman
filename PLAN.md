@@ -187,7 +187,7 @@ Dipendenze: wave 08; ricerca audio wave 01.
 Handoff 2026-10-15: l'utente richiede il prompt per implementare tutta W09 in una nuova sessione. Salvato NEXT_PROMPT.md completo (locale ignorato), ripresa W09-T01 → T06 dalla HEAD pubblicata 0902d82/codice W08 b90b9f3 e Room v10. Funzioni W08-T01–T06 disponibili; W08-T07, W07-T06 e collaudi hardware W05/W06 rimangono aperti e documentati, senza bloccare genericamente i task indipendenti W09. Ricerca W01 da verificare sulle API/versioni effettive, non considerata implementazione del DSP. Nessun task W09 avviato o segnato completo in questo handoff, nessun nuovo commit/push richiesto.
 
 - [x] W09-T01 — Implementare qualità per rete/profilo, download originali o ridotti e comportamento quando il transcoding manca.
-- [ ] W09-T02 — Implementare gapless e crossfade regolabile inizialmente spento.
+- [x] W09-T02 — Implementare gapless e crossfade regolabile inizialmente spento.
 - [x] W09-T03 — Implementare ReplayGain album/brano, inizialmente spento, e gestione dei metadati mancanti.
 - [x] W09-T04 — Implementare equalizzatore e rinforzo bassi opzionali, inizialmente spenti.
 - [x] W09-T05 — Implementare effetto cassetta opzionale con lieve fruscio e oscillazione, inizialmente spento.
@@ -198,6 +198,16 @@ Incremento W09 2026-10-15: **T01/T03/T04/T05 implementati e verificati; T02/T06 
 **T02 resta aperto**: gapless MP3/LAME e FLAC verificato sul seam PCM e crossfade con due ramp reali, ma handover al principale via seek può rebufferizzare; attribuzione durevole del tempo entrante durante l'overlap ancora da completare. **T06 aperto** per questi residui, matrice completa con effetti/focus/transizioni e risposta/clipping audiofx/Bluetooth sul Motorola non misurati. Nessuna nuova prova hardware. APK debug e checklist `local/PHONE_TESTS_W09.md` pronti; env/fixture temporanei AVD rimossi con assenza verificata, AVD spento. W05–W08 residui invariati, nessun commit/push/release.
 
 Pubblicazione successiva su richiesta esplicita: **c1cddd9 — Wave 09: qualità e DSP, crossfade parziale (T01/T03-T05)**,43file; push origin/main riuscito e SHA locale/remoto verificati identici. Note nel successivo commit documentale. Stato funzionale invariato (T02/T06 aperti); APK, credenziali, checklist private e NEXT_PROMPT esclusi, nessuna release.
+
+Incremento autorizzato 2026-10-16 su82f0657: **T02 completato**, parte automatica T06 verificata. Player logico ExoPlayer stabile nello stesso servizio/sessione/bridge; il deck già udibile diventa attivo senza seek/prepare/riapertura della sorgente o ricreazione dell'output. Preload silenzioso fino a10s prima della finestra; fade limitato per brani brevi, fallback nativo se il successore non è pronto. Focus unico Media3 su thread dedicato, volume pubblico/timer separato da ducking e inviluppi. **Room v12**, migrazione11→12/schema12 e stato overlap con eventId/ACK e ricevute di promozione per crash fra listening e coda; prefisso udibile conservato anche nelle modifiche della coda. Corretta race del timer album con query pura sul confine uscente.
+
+Verifiche: build app/androidTest e **129/129 JVM**, lint **0errori/29avvisi**; suite finale **27/27 Android,276,661s** (26W09+regressioneScrobbleService), zero skip/failure. Include passaggi server reali MP3→FLAC, FLAC→MP3, originale→Opus senza riapertura dell'entrante; capture decoder/output e continuità della posizione; timer/focus/seek/skip/rimozioni/shuffle/repeat/duplicati, clock udibile/pausa/ACK/restore, effetti combinati, offline con zeroHTTP, migrazioni e persistenza. Regressioni aggiuntive: **27/27 storage/download/sync,66,222s**, **3/3 UIW06–W07,160,139s**, **7passati+2skip opt-in servizio/focus/restoreW05,365,513s**, in esecuzioni separate. Fallimenti intermedi e correzioni registrati nel WORKLOG.
+
+**T06 resta aperto per Motorola/Bluetooth, cambi route, risposta/clipping dopo audiofx, batteria e ascolto fisico**; nessuna nuova attestazione hardware o chiusura dei residui W05–W08. APK debug e checklist privata W09 aggiornati; nessun nuovo commit/push/release autorizzato in questo incremento. Nessun requisito SPEC rimosso.
+
+Riscontro successivo utente2026-10-16: **«Tutto ok»** dopo il primo giro breve di collaudo proposto. Esito generale positivo registrato; nessuna attestazione puntuale di route, timer prolungato, chiamate o misure. T06 e residui precedenti restano aperti fino alla conferma dei controlli specifici; nessuna nuova attività W10 o pubblicazione avviata.
+
+Chiarimento successivo: il riscontro riguarda il **primo giro**, il resto è differito per indisponibilità dell'utente. Proposto e concordato salvare il consolidamento W09 e procedere poi allo sviluppo indipendente W10, conservando T06/residui hardware aperti. Richiesta esplicita corrente di commit/push; nessuna implementazione W10 avviata nella pubblicazione.
 
 Criterio di uscita: impostazioni audio realmente operative, suono pulito predefinito e limiti delle combinazioni documentati e concordati.
 

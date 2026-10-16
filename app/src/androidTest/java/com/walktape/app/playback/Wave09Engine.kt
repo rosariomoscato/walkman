@@ -27,8 +27,14 @@ import java.nio.ByteOrder
 @UnstableApi
 class CapturingAudioOutput : AudioOutputProvider, AudioOutput {
 
+    class Epoch(var startNanos: Long = 0L)
     class Chunk(val dispositionUs: Long, val frames: Long, val pcm: ShortArray,
-        val projectedPlayoutNanos: Long)
+        private val fallbackNanos: Long, private val epoch: Epoch,
+        private val startFrame: Long, private val rate: Int) {
+        // Prepared-but-paused buffers must be aligned to PLAY, not their earlier WRITE.
+        val projectedPlayoutNanos: Long get() = if (epoch.startNanos == 0L) fallbackNanos
+            else epoch.startNanos + startFrame * 1_000_000_000L / rate
+    }
 
     private val lock = Any()
     private val chunks = ArrayList<Chunk>()
@@ -39,10 +45,13 @@ class CapturingAudioOutput : AudioOutputProvider, AudioOutput {
     private var flushedFrames = 0L
     private var baseUs = 0L
     private var playStartedNanos = -1L
+    private var epoch = Epoch()
     @Volatile private var outputVolume = 1f
     @Volatile var releasedAtNanos = Long.MAX_VALUE
         private set
     @Volatile var failed = false
+        private set
+    @Volatile var outputCreations = 0
         private set
 
     val allChunks: List<Chunk> get() = synchronized(lock) { ArrayList(chunks) }
@@ -80,9 +89,11 @@ class CapturingAudioOutput : AudioOutputProvider, AudioOutput {
     }
 
     override fun getAudioOutput(config: AudioOutputProvider.OutputConfig): AudioOutput {
+        outputCreations++
         releasedAtNanos = Long.MAX_VALUE
         flush()
         synchronized(lock) { playStartedNanos = -1L }
+        epoch = Epoch()
         return this
     }
     override fun addListener(listener: AudioOutputProvider.Listener) = Unit
@@ -92,7 +103,10 @@ class CapturingAudioOutput : AudioOutputProvider, AudioOutput {
     // --- AudioOutput ---
 
     override fun play() {
-        synchronized(lock) { if (playStartedNanos < 0) playStartedNanos = System.nanoTime() }
+        synchronized(lock) {
+            if (playStartedNanos < 0) playStartedNanos = System.nanoTime()
+            if (epoch.startNanos == 0L) epoch.startNanos = android.os.SystemClock.elapsedRealtimeNanos()
+        }
     }
 
     override fun pause() {
@@ -123,7 +137,8 @@ class CapturingAudioOutput : AudioOutputProvider, AudioOutput {
                             copy[at++] = ((scaled.toInt() shr 8) and 0xff).toByte()
                         }
                         chunks.add(Chunk(dispositionUs, frames.toLong(), toShorts(copy),
-                            android.os.SystemClock.elapsedRealtimeNanos() + maxOf(0, aheadUs) * 1000))
+                            android.os.SystemClock.elapsedRealtimeNanos() + maxOf(0, aheadUs) * 1000,
+                            epoch, writtenFrames - flushedFrames, sampleRate))
                         writtenFrames += frames
                         buffer.position(buffer.limit())
                         return true
@@ -191,6 +206,7 @@ class TestAudioEngine(
     private val capture: CapturingAudioOutput,
     private val gain: ReplayGainProcessor = ReplayGainProcessor(),
     private val tape: TapeProcessor = TapeProcessor(),
+    private val sources: androidx.media3.datasource.DataSource.Factory = FileDataSource.Factory(),
 ) {
     fun newPlayer(): ExoPlayer {
         val renderers = object : DefaultRenderersFactory(context) {
@@ -205,7 +221,7 @@ class TestAudioEngine(
             }
         }
         return ExoPlayer.Builder(context, renderers)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(FileDataSource.Factory()))
+            .setMediaSourceFactory(DefaultMediaSourceFactory(sources))
             .build()
     }
 

@@ -14,8 +14,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         QueueStateEntity::class, QueueEntryEntity::class,
         ScrobbleEventEntity::class, LyricsEntity::class, ListeningStateEntity::class,
         DownloadEntity::class, DownloadOriginEntity::class,
-        PendingOpEntity::class, ProfileSettingsEntity::class, DownloadGroupEntity::class],
-    version = 11,
+        PendingOpEntity::class, ProfileSettingsEntity::class, DownloadGroupEntity::class,
+        OverlapListeningStateEntity::class],
+    version = 12,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -104,6 +105,10 @@ abstract class WalkTapeDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE profile_settings ADD COLUMN downloadReduced INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE download ADD COLUMN representation TEXT NOT NULL DEFAULT 'ORIGINAL'")
                 db.execSQL("ALTER TABLE download ADD COLUMN qualityKbps INTEGER DEFAULT NULL")
+            }
+        }, object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS overlap_listening_state (profileId INTEGER NOT NULL, mediaId TEXT NOT NULL, eventId TEXT NOT NULL, songId TEXT NOT NULL, title TEXT NOT NULL, artist TEXT, album TEXT, playedAtMs INTEGER NOT NULL, listenedMs INTEGER NOT NULL, emitted INTEGER NOT NULL, promoted INTEGER NOT NULL, outgoingSnapshot TEXT DEFAULT NULL, PRIMARY KEY(profileId), FOREIGN KEY(profileId) REFERENCES profile(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
             }
         })
 
