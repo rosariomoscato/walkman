@@ -23,6 +23,14 @@ class SettingsRepository(private val context: Context) {
     private val keyClicksKey = booleanPreferencesKey("key_clicks_enabled")
     private val audioCacheLimitKey = longPreferencesKey("audio_cache_limit_bytes")
     private val coverCacheLimitKey = longPreferencesKey("cover_cache_limit_bytes")
+    private val crossfadeEnabledKey = booleanPreferencesKey("crossfade_enabled")
+    private val crossfadeDurationKey = longPreferencesKey("crossfade_duration_ms")
+    private val replayGainModeKey = stringPreferencesKey("replay_gain_mode")
+    private val equalizerEnabledKey = booleanPreferencesKey("equalizer_enabled")
+    private val equalizerBandsKey = stringPreferencesKey("equalizer_bands")
+    private val bassBoostEnabledKey = booleanPreferencesKey("bass_boost_enabled")
+    private val bassBoostStrengthKey = longPreferencesKey("bass_boost_strength")
+    private val tapeEffectKey = booleanPreferencesKey("tape_effect_enabled")
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { prefs ->
         AppSettings(
@@ -35,6 +43,18 @@ class SettingsRepository(private val context: Context) {
             keyClicksEnabled = prefs[keyClicksKey] ?: false,
             audioCacheLimitBytes = prefs[audioCacheLimitKey] ?: AppSettings.DEFAULT_AUDIO_CACHE_BYTES,
             coverCacheLimitBytes = prefs[coverCacheLimitKey] ?: AppSettings.DEFAULT_COVER_CACHE_BYTES,
+            crossfadeEnabled = prefs[crossfadeEnabledKey] ?: false,
+            crossfadeDurationMs = (prefs[crossfadeDurationKey] ?: AppSettings.DEFAULT_CROSSFADE_MS.toLong())
+                .toInt().coerceIn(AppSettings.MIN_CROSSFADE_MS, AppSettings.MAX_CROSSFADE_MS),
+            replayGainMode = prefs[replayGainModeKey]?.let { stored ->
+                ReplayGainMode.entries.firstOrNull { it.name == stored }
+            } ?: ReplayGainMode.OFF,
+            equalizerEnabled = prefs[equalizerEnabledKey] ?: false,
+            equalizerBands = prefs[equalizerBandsKey] ?: "",
+            bassBoostEnabled = prefs[bassBoostEnabledKey] ?: false,
+            bassBoostStrength = (prefs[bassBoostStrengthKey] ?: AppSettings.DEFAULT_BASS_STRENGTH.toLong())
+                .toInt().coerceIn(AppSettings.MIN_BASS_STRENGTH, AppSettings.MAX_BASS_STRENGTH),
+            tapeEffectEnabled = prefs[tapeEffectKey] ?: false,
             loaded = true
         )
     }
@@ -77,6 +97,41 @@ class SettingsRepository(private val context: Context) {
         context.settingsStore.edit { prefs ->
             prefs[keyClicksKey] = enabled
         }
+    }
+
+    suspend fun setCrossfadeEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs -> prefs[crossfadeEnabledKey] = enabled }
+    }
+
+    suspend fun setCrossfadeDurationMs(ms: Int) {
+        require(ms in AppSettings.MIN_CROSSFADE_MS..AppSettings.MAX_CROSSFADE_MS)
+        context.settingsStore.edit { prefs -> prefs[crossfadeDurationKey] = ms.toLong() }
+    }
+
+    suspend fun setReplayGainMode(mode: ReplayGainMode) {
+        context.settingsStore.edit { prefs -> prefs[replayGainModeKey] = mode.name }
+    }
+
+    suspend fun setEqualizerEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs -> prefs[equalizerEnabledKey] = enabled }
+    }
+
+    suspend fun setEqualizerBands(csv: String) {
+        require(csv.length <= 512)
+        context.settingsStore.edit { prefs -> prefs[equalizerBandsKey] = csv }
+    }
+
+    suspend fun setBassBoostEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs -> prefs[bassBoostEnabledKey] = enabled }
+    }
+
+    suspend fun setBassBoostStrength(strength: Int) {
+        require(strength in AppSettings.MIN_BASS_STRENGTH..AppSettings.MAX_BASS_STRENGTH)
+        context.settingsStore.edit { prefs -> prefs[bassBoostStrengthKey] = strength.toLong() }
+    }
+
+    suspend fun setTapeEffectEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs -> prefs[tapeEffectKey] = enabled }
     }
 
     suspend fun setLibrarySort(key: String, sort: String) {

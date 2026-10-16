@@ -12,6 +12,14 @@ enum class DownloadStatus { QUEUED, RUNNING, PAUSED, COMPLETED, FAILED }
 enum class DownloadError { NETWORK, SPACE, NOT_FOUND, FORBIDDEN, CANCELLED, INVALID }
 
 /**
+ * Which bytes a download file holds (W09-T01). The `download` endpoint always returns
+ * the original; reduced copies come from the transcoding `stream` endpoint and can
+ * never be resumed with Range (the real server ignores Range on transcodes and sends
+ * no strong validator), so they restart from zero after any interruption.
+ */
+enum class DownloadRepresentation { ORIGINAL, REDUCED }
+
+/**
  * One audio file per (profile, song): the same file can be referenced by any number of
  * origins (single, album, playlist) without extra copies. The metadata snapshot keeps a
  * single download playable when the song disappears from the server or from the index.
@@ -48,6 +56,10 @@ data class DownloadEntity(
     val lastError: String?,
     val attempts: Int,
     @ColumnInfo(defaultValue = "0") val serverMissing: Boolean = false,
+    /** Bytes representation of this file; existing rows keep ORIGINAL. */
+    @ColumnInfo(defaultValue = "ORIGINAL") val representation: String = DownloadRepresentation.ORIGINAL.name,
+    /** Bitrate requested for REDUCED copies; null for originals. */
+    @ColumnInfo(defaultValue = "NULL") val qualityKbps: Int? = null,
 )
 
 /** Membership of a download: "single", "album:<id>" or "playlist:<id>". */
@@ -119,4 +131,10 @@ data class ProfileSettingsEntity(
     @ColumnInfo(defaultValue = "0") val offlineOnly: Boolean = false,
     /** Automatically skip unavailable songs during offline playback; signalled in the UI. */
     @ColumnInfo(defaultValue = "1") val skipUnavailable: Boolean = true,
+    /** Stream a reduced (server-transcoded) representation on metered networks. */
+    @ColumnInfo(defaultValue = "0") val mobileReduced: Boolean = false,
+    /** Target bitrate of the reduced representation in kbps. */
+    @ColumnInfo(defaultValue = "192") val reducedBitRate: Int = 192,
+    /** Also download reduced copies instead of originals when enabled. */
+    @ColumnInfo(defaultValue = "0") val downloadReduced: Boolean = false,
 )

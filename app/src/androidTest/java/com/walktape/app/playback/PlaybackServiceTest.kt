@@ -566,7 +566,20 @@ class PlaybackServiceTest {
         return null
     }
 
-    private fun clickUi(predicate: (AccessibilityNodeInfo) -> Boolean) = performClick(awaitUi(predicate))
+    private fun clickUi(predicate: (AccessibilityNodeInfo) -> Boolean) {
+        val deadline = System.currentTimeMillis() + 30_000
+        do {
+            var clickable = awaitUi(predicate)
+            while (!clickable.isClickable && clickable.parent != null) clickable = clickable.parent
+            clickable.performAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SHOW_ON_SCREEN.id)
+            // Compose can replace a node between lookup and action on a track change.
+            // Retry from a fresh tree; the actual controller assertions below still
+            // require the real UI action to have reached the service.
+            if (clickable.isEnabled && clickable.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return
+            Thread.sleep(250)
+        } while (System.currentTimeMillis() < deadline)
+        throw AssertionError("Playback UI control did not accept click")
+    }
 
     private fun awaitProgress(description: String): AccessibilityNodeInfo {
         val predicate: (AccessibilityNodeInfo) -> Boolean = { node ->

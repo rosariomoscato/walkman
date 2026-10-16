@@ -4,6 +4,7 @@ import com.walktape.app.core.db.BrowseDao
 import com.walktape.app.core.db.DownloadEntity
 import com.walktape.app.core.db.DownloadError
 import com.walktape.app.core.db.DownloadOriginEntity
+import com.walktape.app.core.db.DownloadRepresentation
 import com.walktape.app.core.db.DownloadStatus
 import com.walktape.app.core.db.LibraryDao
 import com.walktape.app.core.db.DownloadDao
@@ -13,6 +14,7 @@ import com.walktape.app.core.db.LocalAudioEntity
 import com.walktape.app.core.db.SongEntity
 import com.walktape.app.core.net.OpenSubsonicClient
 import com.walktape.app.core.net.randomSalt
+import com.walktape.app.playback.reducedExtension
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -27,6 +29,13 @@ import java.net.UnknownHostException
 import java.security.MessageDigest
 import javax.net.ssl.SSLException
 
+/** Bytes representation picked for newly enqueued downloads (W09-T01). */
+data class DownloadChoice(val representation: DownloadRepresentation, val kbps: Int?) {
+    companion object {
+        val ORIGINAL_ONLY = DownloadChoice(DownloadRepresentation.ORIGINAL, null)
+    }
+}
+
 /**
  * Persistent download state and file transfer for one process; all state lives in Room so
  * progress, pause/resume and cancellation survive process death and reboots. One audio file
@@ -39,6 +48,8 @@ class DownloadStore(
     private val profileDirectory: (Long) -> File,
     private val clientProvider: suspend (Long) -> OpenSubsonicClient?,
     private val commitLocal: suspend (suspend () -> Unit) -> Unit = { it() },
+    /** Representation used when a brand new download row is created (W09-T01). */
+    private val choiceFor: (Long) -> DownloadChoice = { DownloadChoice.ORIGINAL_ONLY },
 ) {
 
     /** Outcomes of a single transfer attempt; the worker maps them to retry/stop decisions. */
@@ -115,14 +126,19 @@ class DownloadStore(
             val existing = downloadDao.download(profileId, entry.songId)
             when {
                 existing == null -> {
-                    val row = if (song != null) newRow(profileId, song, now) else DownloadEntity(
-                        profileId = profileId, songId = entry.songId,
-                        status = DownloadStatus.QUEUED.name, relativePath = null, bytes = 0,
-                        totalBytes = -1, title = entry.title, artist = entry.artist,
-                        album = entry.album, albumId = null, coverArt = null,
-                        duration = entry.duration, suffix = null, contentType = null,
-                        serverSize = -1, createdAt = now, completedAt = null, updatedAt = now,
-                        lastError = null, attempts = 0)
+                    val row = if (song != null) newRow(profileId, song, now) else {
+                        val choice = choiceFor(profileId)
+                        DownloadEntity(
+                            profileId = profileId, songId = entry.songId,
+                            status = DownloadStatus.QUEUED.name, relativePath = null, bytes = 0,
+                            totalBytes = -1, title = entry.title, artist = entry.artist,
+                            album = entry.album, albumId = null, coverArt = null,
+                            duration = entry.duration, suffix = null, contentType = null,
+                            serverSize = -1, createdAt = now, completedAt = null, updatedAt = now,
+                            lastError = null, attempts = 0,
+                            representation = choice.representation.name,
+                            qualityKbps = choice.kbps.takeIf { choice.representation == DownloadRepresentation.REDUCED })
+                    }
                     downloadDao.upsertDownload(row)
                     queued++
                 }
@@ -229,7 +245,10 @@ class DownloadStore(
         var requeued = 0
         metadata.values.forEach { song ->
             val row = downloadDao.download(profileId, song.id) ?: return@forEach
+            // Only original copies can be compared with the server file size: reduced
+            // transcodes legitimately differ from it.
             val differs = song.size > 0 && row.status == DownloadStatus.COMPLETED.name &&
+                row.representation == DownloadRepresentation.ORIGINAL.name &&
                 row.serverSize in 1..Long.MAX_VALUE && row.serverSize != song.size
             if (differs) {
                 row.relativePath?.let { path ->
@@ -315,13 +334,15 @@ class DownloadStore(
         }
         val dir = File(profileDirectory(profileId), MUSIC_DIR).apply { mkdirs() }
         val part = partFile(profileId, songId, current) ?: return@withContext Outcome.Permanent(DownloadError.INVALID)
+        val reduced = current.representation == DownloadRepresentation.REDUCED.name
         val validatorFile = File(part.path + ".validator")
-        val validator = validatorFile.takeIf { it.isFile }?.let {
-            HttpResume.strongEtag(it.readText())
-        }
+        val validator = if (reduced) null
+            else validatorFile.takeIf { it.isFile }?.let { HttpResume.strongEtag(it.readText()) }
         // Without a strong representation validator it is safer to restart than splice
         // audio from different versions of an original after a process/network restart.
-        if (part.isFile && validator == null) part.delete()
+        // Reduced transcodes never have one (verified on the real server), so they
+        // always restart from zero; Range is not even attempted.
+        if (part.isFile && (validator == null || reduced)) part.delete()
         val resumeFrom = if (part.isFile && part.length() > 0) part.length() else 0L
         val rangeEnd = if (resumeFrom > 0) resumeFrom - 1 else -1L
 
@@ -331,7 +352,13 @@ class DownloadStore(
         }
 
         val salt = randomSalt()
-        val url = client.downloadUrl(songId, salt)
+        val url = if (reduced) {
+            // The only native path to reduced copies: the transcoding stream endpoint
+            // (download always returns the original, D17).
+            client.streamUrl(songId, salt, format = "opus", maxBitRate = current.qualityKbps ?: 192)
+        } else {
+            client.downloadUrl(songId, salt)
+        }
         val request = Request.Builder().url(url).apply {
             if (rangeEnd >= 0) header("Range", "bytes=$resumeFrom-")
             if (rangeEnd >= 0 && validator != null) header("If-Range", validator)
@@ -433,7 +460,7 @@ class DownloadStore(
         }
         val expectedTotal = when {
             total > 0 -> total
-            row.totalBytes > 0 -> row.totalBytes
+            row.totalBytes > 0 && row.representation == DownloadRepresentation.ORIGINAL.name -> row.totalBytes
             else -> -1L
         }
         if (expectedTotal > 0 && ensureSpace(part.parentFile!!, (expectedTotal - offset).coerceAtLeast(0))) {
@@ -466,7 +493,8 @@ class DownloadStore(
                         return if (stored.status == DownloadStatus.PAUSED.name) Outcome.Paused else Outcome.Cancelled
                     }
                     if (downloadDao.checkpoint(profileId, songId, offset, expectedTotal,
-                            stored.relativePath ?: relativePathFor(songId, row), now) == 0)
+                            if (row.representation == DownloadRepresentation.REDUCED.name) null
+                            else stored.relativePath ?: relativePathFor(songId, row), now) == 0)
                         return statusOnStop(profileId, songId)
                     onBytes(offset, expectedTotal)
                 }
@@ -487,7 +515,12 @@ class DownloadStore(
                 lastError = null, updatedAt = System.currentTimeMillis()))
             return Outcome.Transient
         }
-        val relative = relativePathFor(songId, row)
+        val relative = if (row.representation == DownloadRepresentation.REDUCED.name) {
+            // The transcoded container extension comes from what the server actually sent.
+            "$MUSIC_DIR/${safeName(songId)}-opus-r${row.qualityKbps ?: 192}.${reducedExtension(type)}"
+        } else {
+            relativePathFor(songId, row)
+        }
         val final = File(profileDirectory(profileId).canonicalFile, relative)
         val canonical = final.canonicalFile
         if (!canonical.path.startsWith(profileDirectory(profileId).canonicalFile.path + File.separator)) {
@@ -496,28 +529,36 @@ class DownloadStore(
             return Outcome.Permanent(DownloadError.INVALID)
         }
         canonical.parentFile?.mkdirs()
-        canonical.delete()
-        if (!part.renameTo(canonical)) {
-            return Outcome.Transient
-        }
-        validatorFile.delete()
         val extractor = android.media.MediaExtractor()
+        var actualMime: String? = null
         val valid = try {
-            extractor.setDataSource(canonical.path)
+            extractor.setDataSource(part.path)
             (0 until extractor.trackCount).any {
-                extractor.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME)?.startsWith("audio/") == true
+                val mime = extractor.getTrackFormat(it).getString(android.media.MediaFormat.KEY_MIME)
+                if (mime?.startsWith("audio/") == true) { actualMime = mime; true } else false
             }
         } catch (_: Exception) { false }
         finally { extractor.release() }
         if (!valid) {
-            canonical.delete()
+            part.delete()
             fail(profileId, songId, stored, DownloadError.INVALID)
             return Outcome.Permanent(DownloadError.INVALID)
         }
+        // The existing valid file is never removed before validation of its replacement.
+        if (!part.renameTo(canonical)) return Outcome.Transient
+        validatorFile.delete()
         val now = System.currentTimeMillis()
         var completed = false
         commitLocal {
             if (downloadDao.complete(profileId, songId, canonical.length(), relative, now) > 0) {
+                downloadDao.download(profileId, songId)?.let { completedRow ->
+                    val originalFallback = row.representation == DownloadRepresentation.REDUCED.name &&
+                        actualMime != "audio/opus" && actualMime != "audio/ogg"
+                    downloadDao.updateExisting(completedRow.copy(contentType = actualMime,
+                        suffix = reducedExtension(type),
+                        representation = if (originalFallback) DownloadRepresentation.ORIGINAL.name
+                            else row.representation))
+                }
                 browseDao.insertLocalAudio(LocalAudioEntity(profileId, songId, relative, canonical.length()))
                 completed = true
             }
@@ -553,17 +594,27 @@ class DownloadStore(
         stats.availableBytes > needed + SPACE_MARGIN
     } catch (_: IllegalArgumentException) { true }
 
-    private fun newRow(profileId: Long, song: SongEntity, now: Long) = DownloadEntity(
-        profileId = profileId, songId = song.id, status = DownloadStatus.QUEUED.name,
-        relativePath = null, bytes = 0,
-        totalBytes = song.size.takeIf { it > 0 } ?: -1,
-        title = song.title, artist = song.displayArtist ?: song.artist, album = song.album,
-        albumId = song.albumId, coverArt = song.coverArt, duration = song.duration,
-        suffix = song.suffix, contentType = song.contentType, serverSize = song.size,
-        createdAt = now, completedAt = null, updatedAt = now, lastError = null, attempts = 0)
+    private fun newRow(profileId: Long, song: SongEntity, now: Long): DownloadEntity {
+        val choice = choiceFor(profileId)
+        return DownloadEntity(
+            profileId = profileId, songId = song.id, status = DownloadStatus.QUEUED.name,
+            relativePath = null, bytes = 0,
+            // The original size only predicts the transfer for ORIGINAL downloads;
+            // transcodes are chunked with unknown length until the response ends.
+            totalBytes = song.size.takeIf { it > 0 && choice.representation == DownloadRepresentation.ORIGINAL } ?: -1,
+            title = song.title, artist = song.displayArtist ?: song.artist, album = song.album,
+            albumId = song.albumId, coverArt = song.coverArt, duration = song.duration,
+            suffix = song.suffix, contentType = song.contentType, serverSize = song.size,
+            createdAt = now, completedAt = null, updatedAt = now, lastError = null, attempts = 0,
+            representation = choice.representation.name,
+            qualityKbps = choice.kbps.takeIf { choice.representation == DownloadRepresentation.REDUCED })
+    }
 
     private fun partFile(profileId: Long, songId: String, row: DownloadEntity): File? {
         val root = profileDirectory(profileId).canonicalFile
+        if (row.representation == DownloadRepresentation.REDUCED.name) {
+            return File(root, "$MUSIC_DIR/${safeName(songId)}-opus-r${row.qualityKbps ?: 192}.part")
+        }
         return File(root, "${MUSIC_DIR}/${File(relativePathFor(songId, row)).name}.part")
     }
 

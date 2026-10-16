@@ -24,7 +24,7 @@ interface DownloadDao {
     suspend fun reconcileServerPresence(profileId: Long)
 
     @Query("UPDATE download SET bytes=:bytes,totalBytes=:total,relativePath=:path,updatedAt=:now WHERE profileId=:profileId AND songId=:songId AND status='RUNNING'")
-    suspend fun checkpoint(profileId: Long, songId: String, bytes: Long, total: Long, path: String, now: Long): Int
+    suspend fun checkpoint(profileId: Long, songId: String, bytes: Long, total: Long, path: String?, now: Long): Int
 
     @Query("UPDATE download SET status='COMPLETED',bytes=:bytes,totalBytes=:bytes,relativePath=:path,completedAt=:now,updatedAt=:now,lastError=NULL,attempts=0 WHERE profileId=:profileId AND songId=:songId AND status='RUNNING'")
     suspend fun complete(profileId: Long, songId: String, bytes: Long, path: String, now: Long): Int

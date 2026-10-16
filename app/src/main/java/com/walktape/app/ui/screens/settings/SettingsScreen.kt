@@ -30,12 +30,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.walktape.app.Graph
 import com.walktape.app.R
 import com.walktape.app.core.settings.ThemeMode
 import com.walktape.app.ui.components.SectionHeader
@@ -106,6 +109,8 @@ fun SettingsScreen(
         )
 
         DownloadsStorageSection(viewModel)
+
+        SoundSection(viewModel)
 
         Row(
             modifier = Modifier
@@ -181,6 +186,8 @@ private fun DownloadsStorageSection(viewModel: SettingsViewModel) {
         onCheckedChange = viewModel::setSkipUnavailable
     )
 
+    QualitySection(viewModel, profileSettings)
+
     Text(stringResource(R.string.download_space_title),
         style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
     if (cacheCleared == false) {
@@ -231,9 +238,171 @@ private fun DownloadsStorageSection(viewModel: SettingsViewModel) {
     )
 }
 
+/** Per-profile streaming/download quality (W09-T01); originals are the honest default. */
 @Composable
-private fun CacheLimitChooser(label: String, options: List<Long>, selected: Long, onSelect: (Long) -> Unit) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+private fun QualitySection(
+    viewModel: SettingsViewModel,
+    profileSettings: com.walktape.app.core.db.ProfileSettingsEntity,
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(stringResource(R.string.quality_mobile_title),
+            style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+        Text(stringResource(R.string.quality_mobile_help),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+        SingleChoiceSegmentedButtonRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+            val options = listOf(
+                false to R.string.quality_mobile_original,
+                true to R.string.quality_mobile_reduced,
+            )
+            options.forEachIndexed { index, (reduced, label) ->
+                SegmentedButton(
+                    selected = profileSettings.mobileReduced == reduced,
+                    onClick = { viewModel.setMobileReduced(reduced) },
+                    shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size)
+                ) {
+                    Text(stringResource(label))
+                }
+            }
+        }
+        if (profileSettings.mobileReduced || profileSettings.downloadReduced) {
+            Text(stringResource(R.string.quality_bitrate_title),
+                style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp))
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+                com.walktape.app.playback.REDUCED_KBPS_CHOICES.forEach { kbps ->
+                    androidx.compose.material3.FilterChip(
+                        selected = profileSettings.reducedBitRate == kbps,
+                        onClick = { viewModel.setReducedBitRate(kbps) },
+                        label = { Text(stringResource(R.string.quality_bitrate_kbps, kbps)) }
+                    )
+                }
+            }
+        }
+        FeedbackSetting(
+            title = stringResource(R.string.quality_download_reduced),
+            help = stringResource(R.string.quality_download_reduced_help),
+            enabled = profileSettings.downloadReduced,
+            onCheckedChange = viewModel::setDownloadReduced
+        )
+    }
+}
+
+/** W09 audio DSP: crossfade, ReplayGain, equalizer, bass boost and tape effect. */
+@Composable
+private fun SoundSection(viewModel: SettingsViewModel) {
+    val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val effects by Graph.systemEffects.state.collectAsStateWithLifecycle()
+
+    SectionHeader(text = stringResource(R.string.audio_section_title))
+    Text(stringResource(R.string.audio_defaults_note),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp))
+
+    FeedbackSetting(
+        title = stringResource(R.string.audio_crossfade),
+        help = stringResource(R.string.audio_crossfade_help),
+        enabled = settings.crossfadeEnabled,
+        onCheckedChange = viewModel::setCrossfadeEnabled
+    )
+    if (settings.crossfadeEnabled) {
+        val durationLabel = stringResource(R.string.audio_crossfade_duration, settings.crossfadeDurationMs / 1000f)
+        Text(durationLabel,
+            style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp))
+        androidx.compose.material3.Slider(
+            value = settings.crossfadeDurationMs.toFloat(),
+            onValueChange = { viewModel.setCrossfadeDurationMs((it.toInt() / 500 * 500)
+                .coerceIn(500, 12000)) },
+            valueRange = 500f..12000f,
+            steps = 22,
+            modifier = Modifier.padding(horizontal = 16.dp).semantics { contentDescription = durationLabel },
+        )
+    }
+
+    Text(stringResource(R.string.audio_replaygain),
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    Text(stringResource(R.string.audio_replaygain_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = 16.dp))
+    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+        val modes = listOf(
+            com.walktape.app.core.settings.ReplayGainMode.OFF to R.string.audio_replaygain_off,
+            com.walktape.app.core.settings.ReplayGainMode.TRACK to R.string.audio_replaygain_track,
+            com.walktape.app.core.settings.ReplayGainMode.ALBUM to R.string.audio_replaygain_album,
+        )
+        modes.forEachIndexed { index, (mode, label) ->
+            SegmentedButton(
+                selected = settings.replayGainMode == mode,
+                onClick = { viewModel.setReplayGainMode(mode) },
+                shape = SegmentedButtonDefaults.itemShape(index = index, count = modes.size)
+            ) { Text(stringResource(label)) }
+        }
+    }
+
+    when (val state = effects) {
+        is com.walktape.app.playback.dsp.SystemEffectsController.State.Ready -> {
+            FeedbackSetting(
+                title = stringResource(R.string.audio_equalizer),
+                help = stringResource(R.string.audio_equalizer_help),
+                enabled = state.eqEnabled,
+                onCheckedChange = viewModel::setEqualizerEnabled
+            )
+            if (state.eqEnabled) {
+                state.centerHz.forEachIndexed { band, hz ->
+                    val level = state.bandLevelsMilliB.getOrElse(band) { 0 }
+                    val range = state.levelRangeMilliB
+                    val bandLabel = stringResource(R.string.audio_equalizer_band, hz)
+                    Column(Modifier.padding(horizontal = 16.dp)) {
+                        Text(bandLabel,
+                            style = MaterialTheme.typography.bodySmall)
+                        androidx.compose.material3.Slider(
+                            value = level.toFloat(),
+                            onValueChange = { viewModel.setEqualizerBand(band, it.toInt(), finished = false) },
+                            onValueChangeFinished = {
+                                viewModel.setEqualizerBand(band, level, finished = true)
+                            },
+                            valueRange = range.first.toFloat()..range.last.toFloat(),
+                            modifier = Modifier.semantics { contentDescription = bandLabel },
+                        )
+                    }
+                }
+            }
+            FeedbackSetting(
+                title = stringResource(R.string.audio_bass_boost),
+                help = stringResource(R.string.audio_bass_boost_help, state.bassStrength / 10),
+                enabled = state.bassEnabled,
+                onCheckedChange = viewModel::setBassBoostEnabled
+            )
+            if (state.bassEnabled) {
+                val bassLabel = stringResource(R.string.audio_bass_boost)
+                androidx.compose.material3.Slider(
+                    value = state.bassStrength.toFloat(),
+                    onValueChange = { viewModel.setBassBoostStrength((it.toInt() / 50 * 50)
+                        .coerceIn(0, 1000)) },
+                    valueRange = 0f..1000f,
+                    modifier = Modifier.padding(horizontal = 16.dp).semantics { contentDescription = bassLabel },
+                )
+            }
+        }
+        is com.walktape.app.playback.dsp.SystemEffectsController.State.Unavailable ->
+            Text(stringResource(R.string.audio_equalizer_unavailable),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp))
+        else -> Unit
+    }
+
+    FeedbackSetting(
+        title = stringResource(R.string.audio_tape),
+        help = stringResource(R.string.audio_tape_help),
+        enabled = settings.tapeEffectEnabled,
+        onCheckedChange = viewModel::setTapeEffectEnabled
+    )
+}
+
+@Composable
+private fun CacheLimitChooser(label: String, options: List<Long>, selected: Long, onSelect: (Long) -> Unit) {    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         Text(label, style = MaterialTheme.typography.titleMedium)
         androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth()) {
             options.forEachIndexed { index, bytes ->

@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quality_settings">Quality and sound</string>
+    <string name="quality_mobile_title">Mobile network</string>
+    <string name="quality_mobile_original">Original</string>
+    <string name="quality_mobile_reduced">Reduced</string>
+    <string name="quality_mobile_help">With “Reduced” the server transcodes songs to the chosen bitrate while you are on a mobile network. Wi-Fi always streams the original.</string>
+    <string name="quality_bitrate_title">Reduced bitrate</string>
+    <string name="quality_bitrate_kbps">%1$d kbps</string>
+    <string name="quality_download_reduced">Also download in reduced quality</string>
+    <string name="quality_download_reduced_help">New downloads will keep the reduced copy instead of the original. Files already downloaded are never touched or re-downloaded.</string>
+    <string name="quality_now_title">Now playing quality</string>
+    <string name="quality_now_local_original">Local copy · original</string>
+    <string name="quality_now_local_reduced">Local copy · reduced</string>
+    <string name="quality_now_stream_original">Streaming · original</string>
+    <string name="quality_now_stream_reduced">Streaming · reduced %1$d kbps</string>
+    <string name="quality_now_transcoding_unavailable">Original: server transcoding not available</string>
+    <string name="quality_now_unknown">Detecting</string>
+    <string name="quality_codec_label">%1$s · %2$s</string>
+    <string name="quality_codec_opus">Opus</string>
+    <string name="quality_codec_mp3">MP3</string>
+    <string name="quality_codec_flac">FLAC</string>
+    <string name="quality_codec_aac">AAC</string>
+    <string name="quality_codec_unknown">Format %1$s</string>
+    <string name="audio_crossfade">Crossfade</string>
+    <string name="audio_crossfade_help">Overlaps the start of the next song with the end of the current one. When off, transitions stay gapless.</string>
+    <string name="audio_crossfade_duration">Crossfade length: %1$.1f s</string>
+    <string name="audio_replaygain">ReplayGain</string>
+    <string name="audio_replaygain_help">Applies the ReplayGain tags stored in the files. Songs without tags keep their volume untouched.</string>
+    <string name="audio_replaygain_off">Off</string>
+    <string name="audio_replaygain_track">Track</string>
+    <string name="audio_replaygain_album">Album</string>
+    <string name="audio_replaygain_no_tags">No tags: neutral gain</string>
+    <string name="audio_replaygain_applied">Tag: %1$.1f dB (peak protection applied)</string>
+    <string name="audio_equalizer">Equalizer</string>
+    <string name="audio_equalizer_help">Available bands from the system audio engine.</string>
+    <string name="audio_equalizer_unavailable">Equalizer not available on this device or audio output.</string>
+    <string name="audio_equalizer_band">%1$d Hz band</string>
+    <string name="audio_bass_boost">Bass boost</string>
+    <string name="audio_bass_boost_help">Strength %1$d%%</string>
+    <string name="audio_tape">Cassette effect</string>
+    <string name="audio_tape_help">A light background hiss and gentle wobble, like a real cassette.</string>
+    <string name="audio_section_title">Sound</string>
+    <string name="audio_defaults_note">All effects start off: the default sound stays clean.</string>
+</resources>

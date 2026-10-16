@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
@@ -113,6 +114,36 @@ class SettingsViewModel(
         }
     }
 
+    /** W09-T01: reduced streaming on metered networks; originals remain the default. */
+    fun setMobileReduced(enabled: Boolean) {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch {
+            val dao = Graph.database.downloadDao()
+            dao.upsertSettings((dao.settings(profileId)
+                ?: ProfileSettingsEntity(profileId = profileId)).copy(mobileReduced = enabled))
+        }
+    }
+
+    fun setReducedBitRate(kbps: Int) {
+        val profileId = activeProfile.value?.id ?: return
+        if (kbps !in com.walktape.app.playback.MIN_REDUCED_KBPS..com.walktape.app.playback.MAX_REDUCED_KBPS) return
+        viewModelScope.launch {
+            val dao = Graph.database.downloadDao()
+            dao.upsertSettings((dao.settings(profileId)
+                ?: ProfileSettingsEntity(profileId = profileId)).copy(reducedBitRate = kbps))
+        }
+    }
+
+    /** W09-T01: reduced copies for new downloads; existing files keep their bytes. */
+    fun setDownloadReduced(enabled: Boolean) {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch {
+            val dao = Graph.database.downloadDao()
+            dao.upsertSettings((dao.settings(profileId)
+                ?: ProfileSettingsEntity(profileId = profileId)).copy(downloadReduced = enabled))
+        }
+    }
+
     fun setAudioCacheLimit(bytes: Long) {
         viewModelScope.launch {
             settingsRepository.setAudioCacheLimitBytes(bytes)
@@ -183,6 +214,51 @@ class SettingsViewModel(
         viewModelScope.launch {
             settingsRepository.setKeyClicksEnabled(enabled)
         }
+    }
+
+    // --- W09 audio DSP ---
+
+    fun setCrossfadeEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setCrossfadeEnabled(enabled) }
+    }
+
+    fun setCrossfadeDurationMs(ms: Int) {
+        viewModelScope.launch { settingsRepository.setCrossfadeDurationMs(ms) }
+    }
+
+    fun setReplayGainMode(mode: com.walktape.app.core.settings.ReplayGainMode) {
+        viewModelScope.launch { settingsRepository.setReplayGainMode(mode) }
+    }
+
+    fun setEqualizerEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.setEqualizerEnabled(enabled)
+            Graph.systemEffects.apply(enabled,
+                Graph.systemEffects.sanitizeBandLevelsCsv(
+                    settingsRepository.settings.first().equalizerBands),
+                settingsRepository.settings.first().bassBoostEnabled,
+                settingsRepository.settings.first().bassBoostStrength)
+        }
+    }
+
+    /** Applies a band change live and persists the full set when the gesture ends. */
+    fun setEqualizerBand(band: Int, levelMilliB: Int, finished: Boolean) {
+        if (!finished) Graph.systemEffects.setBandLevel(band, levelMilliB)
+        if (finished) viewModelScope.launch {
+            settingsRepository.setEqualizerBands(Graph.systemEffects.currentBandLevelsCsv())
+        }
+    }
+
+    fun setBassBoostEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setBassBoostEnabled(enabled) }
+    }
+
+    fun setBassBoostStrength(strength: Int) {
+        viewModelScope.launch { settingsRepository.setBassBoostStrength(strength) }
+    }
+
+    fun setTapeEffectEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.setTapeEffectEnabled(enabled) }
     }
 
     companion object {

@@ -184,12 +184,18 @@ Pubblicazione successiva su richiesta esplicita dell'utente: **b90b9f3 — Wave 
 
 Dipendenze: wave 08; ricerca audio wave 01.
 
-- [ ] W09-T01 — Implementare qualità per rete/profilo, download originali o ridotti e comportamento quando il transcoding manca.
+Handoff 2026-10-15: l'utente richiede il prompt per implementare tutta W09 in una nuova sessione. Salvato NEXT_PROMPT.md completo (locale ignorato), ripresa W09-T01 → T06 dalla HEAD pubblicata 0902d82/codice W08 b90b9f3 e Room v10. Funzioni W08-T01–T06 disponibili; W08-T07, W07-T06 e collaudi hardware W05/W06 rimangono aperti e documentati, senza bloccare genericamente i task indipendenti W09. Ricerca W01 da verificare sulle API/versioni effettive, non considerata implementazione del DSP. Nessun task W09 avviato o segnato completo in questo handoff, nessun nuovo commit/push richiesto.
+
+- [x] W09-T01 — Implementare qualità per rete/profilo, download originali o ridotti e comportamento quando il transcoding manca.
 - [ ] W09-T02 — Implementare gapless e crossfade regolabile inizialmente spento.
-- [ ] W09-T03 — Implementare ReplayGain album/brano, inizialmente spento, e gestione dei metadati mancanti.
-- [ ] W09-T04 — Implementare equalizzatore e rinforzo bassi opzionali, inizialmente spenti.
-- [ ] W09-T05 — Implementare effetto cassetta opzionale con lieve fruscio e oscillazione, inizialmente spento.
+- [x] W09-T03 — Implementare ReplayGain album/brano, inizialmente spento, e gestione dei metadati mancanti.
+- [x] W09-T04 — Implementare equalizzatore e rinforzo bassi opzionali, inizialmente spenti.
+- [x] W09-T05 — Implementare effetto cassetta opzionale con lieve fruscio e oscillazione, inizialmente spento.
 - [ ] W09-T06 — Verificare MP3/FLAC, transizioni, seek, combinazioni di effetti, clipping e ascolto Bluetooth sul dispositivo reale.
+
+Incremento W09 2026-10-15: **T01/T03/T04/T05 implementati e verificati; T02/T06 parziali**. Room v11, migrazione10→11 e conservazione verificate. Qualità originale di default, Opus ridotto persistente per profilo, fallback raw a fresh open e rifiuto cambio codec nei retry; ridotti non ricomposti nella cache a frammenti senza validatore, download completi prioritari/origini conservate. Server reale: MP3+FLAC→Opus96, download e PCM Android. ReplayGain da tag realmente estratti, gain/peak/bypass misurati; EQ/bassi audiofx con sessione condivisa, supporto reale AVD5bande, livelli/enable/release e preferenze persistenti verificati; cassetta con hiss e variazione dei periodi misurata, bypass runtime pulito. **129/129 JVM**, build app/androidTest, lint **0 errori/30 avvisi**; **suite Android W09 finale14/14 (111,68s)** senza skip/failure. Regressioni W05–W08 passate in esecuzioni separate; combinata precedente41 casi era39 passati/2 falliti, risolti/ripetuti separatamente, non presentata come suite unica verde.
+
+**T02 resta aperto**: gapless MP3/LAME e FLAC verificato sul seam PCM e crossfade con due ramp reali, ma handover al principale via seek può rebufferizzare; attribuzione durevole del tempo entrante durante l'overlap ancora da completare. **T06 aperto** per questi residui, matrice completa con effetti/focus/transizioni e risposta/clipping audiofx/Bluetooth sul Motorola non misurati. Nessuna nuova prova hardware. APK debug e checklist `local/PHONE_TESTS_W09.md` pronti; env/fixture temporanei AVD rimossi con assenza verificata, AVD spento. W05–W08 residui invariati, nessun commit/push/release.
 
 Criterio di uscita: impostazioni audio realmente operative, suono pulito predefinito e limiti delle combinazioni documentati e concordati.
 

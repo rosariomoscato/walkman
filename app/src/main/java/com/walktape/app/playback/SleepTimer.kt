@@ -31,6 +31,15 @@ class SleepTimer {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val mutable = MutableStateFlow(State())
     val state = mutable.asStateFlow()
+    /** True only when advancing to the next item cannot pass an armed stop boundary. */
+    fun allowsOverlap(): Boolean {
+        val attachedPlayer = player ?: return false
+        return when (val mode = mutable.value.mode) {
+            null, Mode.DURATION -> true
+            Mode.TRACK -> false
+            else -> boundaryRemainingMs(attachedPlayer, mode) == null
+        }
+    }
     private var player: Player? = null
     private var listener: Player.Listener? = null
     private var job: Job? = null

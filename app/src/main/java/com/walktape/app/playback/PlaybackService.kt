@@ -50,42 +50,133 @@ class PlaybackService : MediaSessionService() {
     private lateinit var tracker: ScrobbleTracker
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    /** Completed downloads of the active profile: songId -> audio file on private storage. */
-    @Volatile private var completedDownloads: Map<String, File> = emptyMap()
+    /** Completed downloads of the active profile: songId -> audio file + representation. */
+    @Volatile private var completedDownloads: Map<String, Pair<File, Boolean>> = emptyMap()
     private var skipStreak = 0
+
+    /** W09 DSP of the main deck; the secondary deck builds its own fresh pair per fade. */
+    private val mainGain = com.walktape.app.playback.dsp.ReplayGainProcessor()
+    private val mainTape = com.walktape.app.playback.dsp.TapeProcessor()
+    private var secondaryGain: com.walktape.app.playback.dsp.ReplayGainProcessor? = null
+    private var secondaryTape: com.walktape.app.playback.dsp.TapeProcessor? = null
+    private var lastSecondaryTags = com.walktape.app.playback.dsp.ReplayGainParser.Tags()
+    private lateinit var crossfade: CrossfadeCoordinator
 
     override fun onCreate() {
         super.onCreate()
+        val connectivity = getSystemService(CONNECTIVITY_SERVICE) as? android.net.ConnectivityManager
+        val selectionFor: (Long) -> StreamSelection = { profileId ->
+            // Pure local decision (persisted settings + connectivity state): no request,
+            // no capability probe — offline-only never leaks through this path.
+            streamSelection(
+                Graph.networkGate.mobileReduced(profileId),
+                Graph.networkGate.reducedBitRate(profileId),
+                connectivity?.activeNetwork?.let { network ->
+                    connectivity.getNetworkCapabilities(network)?.let { capabilities ->
+                        capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_CELLULAR) &&
+                            !capabilities.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)
+                    }
+                } == true,
+            )
+        }
         val dataSourceFactory = LocalFirstDataSourceFactory(
             OpenSubsonicClient.streamingHttpClient(), "WalkTape",
             { connection.value },
             Graph.audioCache,
             localFile = { profileId, songId ->
-                if (connection.value?.id == profileId) completedDownloads[songId] else null
+                if (connection.value?.id == profileId) completedDownloads[songId]?.first else null
             },
             offlineOnly = { profileId -> Graph.networkGate.offlineOnly(profileId) },
+            selectionFor = selectionFor,
+            qualityMonitor = Graph.playbackQuality,
+            localReducedLookup = { songId -> completedDownloads[songId]?.second == true },
         )
         Graph.audioOutput.reset()
         Graph.scrobbleSender.trigger() // deliver offline listen events as soon as possible
-        val player = ExoPlayer.Builder(this, Graph.audioOutput.renderers(this))
+        // One shared audio session for both decks: the system EQ/bass chain (W09-T04)
+        // processes whatever either deck plays, including during a crossfade.
+        val audioSessionId = (getSystemService(AUDIO_SERVICE) as? android.media.AudioManager)
+            ?.generateAudioSessionId() ?: android.media.audiofx.AudioEffect.ERROR_BAD_VALUE
+        val musicAttributes = AudioAttributes.Builder()
+            .setUsage(C.USAGE_MEDIA)
+            .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
+            .build()
+        val player = ExoPlayer.Builder(this,
+            Graph.audioOutput.renderers(this, sinkHook = { builder ->
+                builder.setAudioProcessors(arrayOf(mainGain, mainTape))
+            }, monitor = true))
             .setDeviceVolumeControlEnabled(true)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
-            .setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                /* handleAudioFocus = */ true
-            )
+            .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
             .setWakeMode(C.WAKE_MODE_LOCAL)
             .build()
+        if (audioSessionId > 0) {
+            player.setAudioSessionId(audioSessionId)
+        }
         val shuffle = ServiceShuffle(player)
         player.addListener(shuffle)
         Graph.playbackTimer.attach(player)
         player.addListener(automationListener)
         player.addListener(unavailableListener)
+        player.addListener(qualityListener)
+        player.addListener(replayGainListener(mainGain, mainDeck = true))
         tracker = ScrobbleTracker(player, Graph.listeningStore, scope)
+        // W09-T02: the secondary crossfade deck shares the data source, the session and
+        // the DSP wiring, but never owns focus, queue or scrobbles.
+        crossfade = CrossfadeCoordinator(scope, player,
+            deckBuilder = {
+                val gain = com.walktape.app.playback.dsp.ReplayGainProcessor()
+                gain.enabled = Graph.currentSettings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
+                val tape = com.walktape.app.playback.dsp.TapeProcessor()
+                secondaryGain = gain
+                secondaryTape = tape
+                lastSecondaryTags = com.walktape.app.playback.dsp.ReplayGainParser.Tags()
+                tape.enabled = Graph.currentSettings.tapeEffectEnabled
+                val deck = ExoPlayer.Builder(this,
+                    Graph.audioOutput.renderers(this, sinkHook = { builder ->
+                        builder.setAudioProcessors(arrayOf(gain, tape))
+                    }, monitor = false))
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
+                    .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ false)
+                    .setHandleAudioBecomingNoisy(false)
+                    .setWakeMode(C.WAKE_MODE_LOCAL)
+                    .build()
+                if (audioSessionId > 0) {
+                    deck.setAudioSessionId(audioSessionId)
+                }
+                deck.addListener(replayGainListener(gain, mainDeck = false))
+                deck
+            },
+            enabled = { Graph.currentSettings.crossfadeEnabled },
+            durationMs = { Graph.currentSettings.crossfadeDurationMs },
+            transitionAllowed = { Graph.playbackTimer.allowsOverlap() },
+            focusGain = {
+                val volume = player.volume
+                if (volume > 0f) ((Graph.audioOutput.outputGain.value ?: volume) / volume).coerceIn(0f, 1f)
+                else 0f
+            },
+            report = { Graph.crossfadeStatus.value = it },
+        )
+        crossfade.start()
+        Graph.systemEffects.attach(audioSessionId)
+        scope.launch {
+            Graph.settingsRepository.settings.collect { settings ->
+                mainTape.enabled = settings.tapeEffectEnabled
+                mainGain.enabled = settings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
+                secondaryTape?.enabled = settings.tapeEffectEnabled
+                secondaryGain?.let { processor ->
+                    processor.enabled = settings.replayGainMode != com.walktape.app.core.settings.ReplayGainMode.OFF
+                    applyReplayGainTags(processor, lastSecondaryTags, settings.replayGainMode)
+                }
+                // Re-derive the gain of the current track when the mode changes.
+                applyReplayGainTags(mainGain,
+                    lastMainTags ?: com.walktape.app.playback.dsp.ReplayGainParser.Tags(), settings.replayGainMode)
+                Graph.systemEffects.apply(settings.equalizerEnabled,
+                    Graph.systemEffects.sanitizeBandLevelsCsv(settings.equalizerBands),
+                    settings.bassBoostEnabled, settings.bassBoostStrength)
+            }
+        }
         scope.launch {
             while (true) {
                 delay(60_000)
@@ -98,7 +189,7 @@ class PlaybackService : MediaSessionService() {
                 completedDownloads = emptyMap()
                 if (profile != null) {
                     Graph.downloadStore.downloads(profile.id).collect { rows ->
-                        val available = mutableMapOf<String, File>()
+                        val available = mutableMapOf<String, Pair<File, Boolean>>()
                         rows.filter { it.status == com.walktape.app.core.db.DownloadStatus.COMPLETED.name }
                             .forEach { row ->
                                 val path = row.relativePath ?: return@forEach
@@ -106,7 +197,8 @@ class PlaybackService : MediaSessionService() {
                                 runCatching {
                                     val file = File(root, path).canonicalFile
                                     if (file.path.startsWith(root.path + File.separator) && file.isFile) {
-                                        available[row.songId] = file
+                                        available[row.songId] = Pair(file,
+                                            row.representation == com.walktape.app.core.db.DownloadRepresentation.REDUCED.name)
                                     }
                                 }
                             }
@@ -155,7 +247,12 @@ class PlaybackService : MediaSessionService() {
             })
             .build()
         persistence = PlaybackPersistence(player, shuffle, Graph.queues, scope) {
-            if (it == null) { Graph.playbackTimer.cancel(); Graph.suggestion.reset() }
+            if (it == null) {
+                Graph.playbackTimer.cancel(); Graph.suggestion.reset(); Graph.playbackQuality.reset()
+                lastMainTags = null
+                mainGain.targetGainDb = 0f
+                mainGain.tagPeak = null
+            }
             connection.value = it
         }
         persistence.start()
@@ -236,6 +333,63 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
+    /** Honest quality label (W09-T01): decoder-side mime/bitrate of the song actually playing. */
+    private val qualityListener = object : Player.Listener {
+        override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+            val item = mediaSession.player.currentMediaItem ?: return
+            val songId = item.mediaMetadata.extras?.getString(QueueIdentity.SONG) ?: return
+            var mime: String? = null
+            var bitrate: Int? = null
+            for (group in tracks.groups) {
+                val format = group.getTrackFormat(0)
+                if (format.sampleMimeType?.startsWith("audio/") == true) {
+                    mime = format.sampleMimeType
+                    bitrate = format.bitrate.takeIf { it > 0 }
+                    break
+                }
+            }
+            Graph.playbackQuality.observed(songId, mime, bitrate)
+        }
+    }
+
+    /** Last ReplayGain tags of the main deck, to re-derive the gain when the mode changes. */
+    @Volatile private var lastMainTags: com.walktape.app.playback.dsp.ReplayGainParser.Tags? = null
+
+    /** W09-T03: reads the tags the extractor really exposed and sets the deck's gain. */
+    private fun replayGainListener(processor: com.walktape.app.playback.dsp.ReplayGainProcessor,
+        mainDeck: Boolean): Player.Listener =
+        object : Player.Listener {
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                var metadata: androidx.media3.common.Metadata? = null
+                for (group in tracks.groups) {
+                    val format = group.getTrackFormat(0)
+                    if (format.sampleMimeType?.startsWith("audio/") == true) {
+                        metadata = format.metadata
+                        break
+                    }
+                }
+                val tags = com.walktape.app.playback.dsp.ReplayGainParser.parse(metadata)
+                if (mainDeck) lastMainTags = tags else lastSecondaryTags = tags
+                applyReplayGainTags(processor, tags)
+            }
+        }
+
+    private fun applyReplayGainTags(processor: com.walktape.app.playback.dsp.ReplayGainProcessor,
+        tags: com.walktape.app.playback.dsp.ReplayGainParser.Tags,
+        mode: com.walktape.app.core.settings.ReplayGainMode = Graph.currentSettings.replayGainMode) {
+        processor.targetGainDb = com.walktape.app.playback.dsp.ReplayGainParser.selectGainDb(tags, mode)
+        processor.tagPeak = com.walktape.app.playback.dsp.ReplayGainParser.selectPeak(tags, mode)
+        if (processor === mainGain) {
+            val present = when (mode) {
+                com.walktape.app.core.settings.ReplayGainMode.OFF -> false
+                com.walktape.app.core.settings.ReplayGainMode.TRACK -> tags.trackGainDb != null
+                com.walktape.app.core.settings.ReplayGainMode.ALBUM -> tags.albumGainDb != null || tags.trackGainDb != null
+            }
+            Graph.replayGainInfo.value = com.walktape.app.playback.dsp.ReplayGainParser.Info(
+                mode, present, processor.targetGainDb)
+        }
+    }
+
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? =
         if (controllerInfo.uid == applicationInfo.uid || controllerInfo.isTrusted) mediaSession else null
 
@@ -248,9 +402,12 @@ class PlaybackService : MediaSessionService() {
         tracker.close()
         persistence.close()
         scope.cancel()
+        crossfade.release()
+        Graph.systemEffects.release()
         mediaSession.run {
             player.removeListener(automationListener)
             player.removeListener(unavailableListener)
+            player.removeListener(qualityListener)
             Graph.playbackTimer.detach()
             Graph.suggestion.reset()
             player.release()

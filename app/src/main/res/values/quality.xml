@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="quality_settings">Qualità e suono</string>
+    <string name="quality_mobile_title">Rete mobile</string>
+    <string name="quality_mobile_original">Originale</string>
+    <string name="quality_mobile_reduced">Ridotta</string>
+    <string name="quality_mobile_help">Con «Ridotta» il server converte i brani al bitrate scelto quando sei su rete mobile. Il Wi-Fi usa sempre l\'originale.</string>
+    <string name="quality_bitrate_title">Bitrate ridotto</string>
+    <string name="quality_bitrate_kbps">%1$d kbps</string>
+    <string name="quality_download_reduced">Scarica anche in qualità ridotta</string>
+    <string name="quality_download_reduced_help">I nuovi download useranno la copia ridotta al posto dell\'originale. I file già scaricati non vengono toccati né riscaricati.</string>
+    <string name="quality_now_title">Qualità in ascolto</string>
+    <string name="quality_now_local_original">Copia locale · originale</string>
+    <string name="quality_now_local_reduced">Copia locale · ridotta</string>
+    <string name="quality_now_stream_original">Streaming · originale</string>
+    <string name="quality_now_stream_reduced">Streaming · ridotta %1$d kbps</string>
+    <string name="quality_now_transcoding_unavailable">Originale: transcoding non disponibile dal server</string>
+    <string name="quality_now_unknown">Rilevamento in corso</string>
+    <string name="quality_codec_label">%1$s · %2$s</string>
+    <string name="quality_codec_opus">Opus</string>
+    <string name="quality_codec_mp3">MP3</string>
+    <string name="quality_codec_flac">FLAC</string>
+    <string name="quality_codec_aac">AAC</string>
+    <string name="quality_codec_unknown">Formato %1$s</string>
+    <string name="audio_crossfade">Dissolvenza incrociata</string>
+    <string name="audio_crossfade_help">Sovrappone l\'inizio del brano successivo alla fine del corrente. Spegnendo la funzione le transizioni restano senza interruzioni.</string>
+    <string name="audio_crossfade_duration">Durata dissolvenza: %1$.1f s</string>
+    <string name="audio_replaygain">ReplayGain</string>
+    <string name="audio_replaygain_help">Applica i tag ReplayGain presenti nei file. I brani senza tag restano a volume invariato.</string>
+    <string name="audio_replaygain_off">No</string>
+    <string name="audio_replaygain_track">Brano</string>
+    <string name="audio_replaygain_album">Album</string>
+    <string name="audio_replaygain_no_tags">Tag assenti: guadagno neutro</string>
+    <string name="audio_replaygain_applied">Tag: %1$.1f dB (con protezione picchi)</string>
+    <string name="audio_equalizer">Equalizzatore</string>
+    <string name="audio_equalizer_help">Bande disponibili nel motore audio di sistema.</string>
+    <string name="audio_equalizer_unavailable">Equalizzatore non disponibile su questo dispositivo o uscita audio.</string>
+    <string name="audio_equalizer_band">Banda %1$d Hz</string>
+    <string name="audio_bass_boost">Rinforzo bassi</string>
+    <string name="audio_bass_boost_help">Intensità %1$d%%</string>
+    <string name="audio_tape">Effetto cassetta</string>
+    <string name="audio_tape_help">Leggero fruscio di fondo e oscillazione del suono, come su una cassetta reale.</string>
+    <string name="audio_section_title">Suono</string>
+    <string name="audio_defaults_note">Tutti gli effetti sono inizialmente spenti: il suono predefinito resta pulito.</string>
+</resources>

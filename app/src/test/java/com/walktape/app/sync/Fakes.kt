@@ -54,7 +54,7 @@ class FakeDownloadDao : DownloadDao {
         upsertDownload(row.copy(bytes = bytes, updatedAt = now))
     }
 
-    override suspend fun checkpoint(profileId: Long, songId: String, bytes: Long, total: Long, path: String, now: Long): Int {
+    override suspend fun checkpoint(profileId: Long, songId: String, bytes: Long, total: Long, path: String?, now: Long): Int {
         val row = download(profileId, songId)?.takeIf { it.status == "RUNNING" } ?: return 0
         upsertDownload(row.copy(bytes = bytes, totalBytes = total, relativePath = path, updatedAt = now))
         return 1

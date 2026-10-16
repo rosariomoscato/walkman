@@ -41,6 +41,40 @@ class DownloadStoreTest {
     }
 
     @Test
+    fun `new downloads record the chosen representation and keep completed files on change`() = runBlocking {
+        val dao = FakeDownloadDao()
+        val library = FakeLibraryDao().apply { upsertSongs(listOf(song("a"), song("b"))) }
+        val root = temporary.newFolder()
+        val store = DownloadStore(dao, library, FakeBrowseDao(),
+            profileDirectory = { root },
+            clientProvider = { throw IllegalStateException("no network in state tests") },
+            choiceFor = { DownloadChoice(com.walktape.app.core.db.DownloadRepresentation.REDUCED, 96) })
+        store.enqueueSongs(1L, listOf(song("a")), DownloadStore.ORIGIN_SINGLE)
+        val row = dao.download(1L, "a")!!
+        assertEquals(com.walktape.app.core.db.DownloadRepresentation.REDUCED.name, row.representation)
+        assertEquals(96, row.qualityKbps)
+        // the original size does not predict a transcode transfer
+        assertEquals(-1L, row.totalBytes)
+
+        // a completed original keeps its bytes and origins when the choice changes
+        val original = DownloadChoice(com.walktape.app.core.db.DownloadRepresentation.ORIGINAL, null)
+        val completed = row.copy(status = DownloadStatus.COMPLETED.name,
+            representation = com.walktape.app.core.db.DownloadRepresentation.ORIGINAL.name,
+            qualityKbps = null, relativePath = "${DownloadStore.MUSIC_DIR}/a.mp3",
+            bytes = 100, totalBytes = 100)
+        dao.upsertDownload(completed)
+        val second = DownloadStore(dao, library, FakeBrowseDao(),
+            profileDirectory = { root },
+            clientProvider = { throw IllegalStateException("no network in state tests") },
+            choiceFor = { original })
+        second.enqueueSongs(1L, listOf(song("a")), DownloadStore.ORIGIN_SINGLE)
+        val after = dao.download(1L, "a")!!
+        assertEquals(DownloadStatus.COMPLETED.name, after.status)
+        assertEquals(com.walktape.app.core.db.DownloadRepresentation.ORIGINAL.name, after.representation)
+        assertEquals(1, dao.origins(1L, "a").size)
+    }
+
+    @Test
     fun `enqueue creates one row per song and links origins`() = runBlocking {
         val dao = FakeDownloadDao()
         val store = store(dao, FakeBrowseDao(), FakeLibraryDao().apply {

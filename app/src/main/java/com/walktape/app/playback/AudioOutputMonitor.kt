@@ -3,6 +3,7 @@ package com.walktape.app.playback
 import android.content.Context
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.audio.ForwardingAudioSink
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,11 +14,23 @@ class AudioOutputMonitor {
     val outputGain = gain.asStateFlow()
     fun reset() { gain.value = null }
 
+    /**
+     * W09 renderers factory: the sink runs the configured build hook (audio processors
+     * for ReplayGain/tape). The main deck wraps its sink with the gain monitor; the
+     * secondary crossfade decks keep a plain sink so the diagnostic reflects the
+     * session player only.
+     */
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
-    fun renderers(context: Context) = object : DefaultRenderersFactory(context) {
+    fun renderers(context: Context, sinkHook: (DefaultAudioSink.Builder) -> DefaultAudioSink.Builder = { it },
+        monitor: Boolean = true) = object : DefaultRenderersFactory(context) {
         override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
-            enableAudioOutputPlaybackParams: Boolean): AudioSink? {
-            val delegate = super.buildAudioSink(context, enableFloatOutput, enableAudioOutputPlaybackParams) ?: return null
+            enableAudioPlaybackParams: Boolean): AudioSink? {
+            val delegate = DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(enableFloatOutput)
+                .setEnableAudioTrackPlaybackParams(enableAudioPlaybackParams)
+                .let(sinkHook)
+                .build()
+            if (!monitor) return delegate
             return object : ForwardingAudioSink(delegate) {
                 override fun setVolume(volume: Float) {
                     super.setVolume(volume)

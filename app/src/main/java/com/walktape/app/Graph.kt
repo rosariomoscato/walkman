@@ -90,7 +90,16 @@ object Graph {
         DownloadStore(database.downloadDao(), database.libraryDao(), database.browseDao(),
             profileDirectory = { id -> profiles.directory(id) },
             clientProvider = { id -> profiles.clientFor(id) },
-            commitLocal = { block -> database.withTransaction { block() } })
+            commitLocal = { block -> database.withTransaction { block() } },
+            // W09-T01: new downloads are reduced copies only when the profile opted in;
+            // existing files keep their representation and are never re-downloaded silently.
+            choiceFor = { id ->
+                if (networkGate.downloadReduced(id))
+                    com.walktape.app.core.downloads.DownloadChoice(
+                        com.walktape.app.core.db.DownloadRepresentation.REDUCED,
+                        networkGate.reducedBitRate(id))
+                else com.walktape.app.core.downloads.DownloadChoice.ORIGINAL_ONLY
+            })
     }
     val downloadEngine: DownloadEngine by lazy { DownloadEngine(appContext) }
 
@@ -102,6 +111,17 @@ object Graph {
     /** Per-profile temporary audio cache (Media3 SimpleCache, 1 GB default). */
     val audioCache: com.walktape.app.playback.AudioCacheManager by lazy {
         com.walktape.app.playback.AudioCacheManager(appContext) { id -> profiles.directory(id) }
+    }
+
+    /** Honest playback-quality label state for the current song (W09-T01). */
+    val playbackQuality = com.walktape.app.playback.PlaybackQualityMonitor()
+    /** Volatile status of the service's actual secondary deck, never a second queue. */
+    val crossfadeStatus = MutableStateFlow(com.walktape.app.playback.CrossfadeCoordinator.Status())
+    val replayGainInfo = MutableStateFlow(com.walktape.app.playback.dsp.ReplayGainParser.Info())
+
+    /** System EQ/bass effects on the shared audio session; attached by the service (W09-T04). */
+    val systemEffects: com.walktape.app.playback.dsp.SystemEffectsController by lazy {
+        com.walktape.app.playback.dsp.SystemEffectsController(appContext)
     }
 
     /** Counter of unavailable songs skipped during offline playback; observed by the player UI. */

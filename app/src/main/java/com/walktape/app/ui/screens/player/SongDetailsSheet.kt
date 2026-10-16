@@ -23,6 +23,8 @@ import kotlinx.coroutines.CancellationException
 @Composable
 internal fun SongDetailsSheet(profileId: Long, songId: String, onDismiss: () -> Unit) {
     val playback by Graph.playback.state.collectAsStateWithLifecycle()
+    val quality by Graph.playbackQuality.playbackQuality.collectAsStateWithLifecycle()
+    val replayGain by Graph.replayGainInfo.collectAsStateWithLifecycle()
     var song by remember(profileId, songId) { mutableStateOf<SongEntity?>(null) }
     var lyrics by remember(profileId, songId) { mutableStateOf<LyricsRepository.Result?>(null) }
     var retry by remember(profileId, songId) { mutableIntStateOf(0) }
@@ -60,6 +62,15 @@ internal fun SongDetailsSheet(profileId: Long, songId: String, onDismiss: () -> 
                         stringResource(R.string.song_details_bitrate_value, it)
                     })
                     DetailValue(R.string.song_details_duration, durationLabel(s.duration))
+                    if (playback.songId == songId) {
+                        DetailValue(R.string.quality_now_title, qualityLabel(quality?.takeIf { it.songId == songId }))
+                        DetailValue(R.string.audio_replaygain, when {
+                            replayGain.mode == com.walktape.app.core.settings.ReplayGainMode.OFF ->
+                                stringResource(R.string.audio_replaygain_off)
+                            !replayGain.hasTags -> stringResource(R.string.audio_replaygain_no_tags)
+                            else -> stringResource(R.string.audio_replaygain_applied, replayGain.gainDb)
+                        })
+                    }
                 } ?: Text(stringResource(R.string.song_details_unavailable))
             }
             item {
@@ -87,4 +98,31 @@ internal fun SongDetailsSheet(profileId: Long, songId: String, onDismiss: () -> 
 @Composable
 private fun DetailValue(label: Int, value: String?) {
     if (!value.isNullOrBlank()) Text("${stringResource(label)}: $value")
+}
+
+/** Honest description of the bytes actually flowing for the current song (W09-T01). */
+@Composable
+private fun qualityLabel(quality: com.walktape.app.playback.PlaybackQuality?): String {
+    if (quality == null) return stringResource(R.string.quality_now_unknown)
+    val codec = when (quality.actualMime) {
+        "audio/ogg", "audio/opus" -> stringResource(R.string.quality_codec_opus)
+        "audio/mpeg" -> stringResource(R.string.quality_codec_mp3)
+        "audio/flac" -> stringResource(R.string.quality_codec_flac)
+        "audio/mp4" -> stringResource(R.string.quality_codec_aac)
+        null -> null
+        else -> stringResource(R.string.quality_codec_unknown, quality.actualMime)
+    }
+    val base = when {
+        quality.local -> stringResource(if (quality.localReduced == true)
+            R.string.quality_now_local_reduced else R.string.quality_now_local_original)
+        quality.requestedReduced && quality.transcodingUnavailable != true -> stringResource(R.string.quality_now_stream_reduced,
+            quality.requestedKbps ?: 0)
+        else -> stringResource(R.string.quality_now_stream_original)
+    }
+    val withCodec = if (codec != null && quality.actualBitrate != null)
+        stringResource(R.string.quality_codec_label, base, "$codec ${quality.actualBitrate / 1000} kbps")
+    else if (codec != null) stringResource(R.string.quality_codec_label, base, codec)
+    else base
+    return if (quality.transcodingUnavailable == true)
+        stringResource(R.string.quality_now_transcoding_unavailable) + " · $withCodec" else withCodec
 }

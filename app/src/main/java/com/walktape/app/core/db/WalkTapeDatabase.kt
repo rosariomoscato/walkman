@@ -15,7 +15,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         ScrobbleEventEntity::class, LyricsEntity::class, ListeningStateEntity::class,
         DownloadEntity::class, DownloadOriginEntity::class,
         PendingOpEntity::class, ProfileSettingsEntity::class, DownloadGroupEntity::class],
-    version = 10,
+    version = 11,
     exportSchema = true
 )
 abstract class WalkTapeDatabase : RoomDatabase() {
@@ -96,6 +96,14 @@ abstract class WalkTapeDatabase : RoomDatabase() {
         }, object : Migration(9, 10) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("CREATE TABLE IF NOT EXISTS download_group (profileId INTEGER NOT NULL, origin TEXT NOT NULL, name TEXT NOT NULL, songIds TEXT NOT NULL, refreshedAt INTEGER NOT NULL, serverMissing INTEGER NOT NULL, PRIMARY KEY(profileId,origin), FOREIGN KEY(profileId) REFERENCES profile(id) ON UPDATE NO ACTION ON DELETE CASCADE)")
+            }
+        }, object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE profile_settings ADD COLUMN mobileReduced INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE profile_settings ADD COLUMN reducedBitRate INTEGER NOT NULL DEFAULT 192")
+                db.execSQL("ALTER TABLE profile_settings ADD COLUMN downloadReduced INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE download ADD COLUMN representation TEXT NOT NULL DEFAULT 'ORIGINAL'")
+                db.execSQL("ALTER TABLE download ADD COLUMN qualityKbps INTEGER DEFAULT NULL")
             }
         })
 

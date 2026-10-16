@@ -116,6 +116,12 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 - Banner persistente **Solo offline** nella libreria; nel player notice quando si salta un brano indisponibile, senza falso esito di download. Nessun autoplay alla riconnessione.
 - Le modifiche locali sono esplicitamente pendenti: riepilogo nella libreria, foglio **Gestisci sincronizzazione**, stato invio/rifiuto/conflitto e retry. Dettaglio playlist con pending e risoluzione locale/server/nuova copia. Cuori locali pendenti non vengono presentati come ACK server. IT/EN e FlowRow/chip per evitare overflow dei nuovi controlli; TalkBack e collaudo adattivo completo W08 restano nella checklist telefono.
 
+## Incremento W09 — qualità e suono (2026-10-15)
+
+- Impostazioni qualità nel gruppo del profilo: Originale/Ridotta su rete mobile, chip bitrate e download ridotti opzionali. I file già scaricati non vengono sostituiti cambiando preferenza. Sound settings di dispositivo separati: crossfade con durata, ReplayGain off/brano/album, EQ con bande realmente fornite da audiofx, bassi e cassetta. Tutti inizialmente spenti, componenti Material3 e palette TPS-L2 invariati.
+- Slider con descrizione accessibile, durata in frazioni di secondo e range reali. Se il sistema non fornisce gli effetti la UI mostra indisponibilità; nessuna banda dimostrativa. Dettagli brano: qualità/formato osservato e ReplayGain tag/assenza neutra, distinti dai metadati originali dell'indice.
+- Prove automatiche del player W06 ripetute; TalkBack, adattività e resa sonora sul telefono delle nuove impostazioni ancora da collaudare con `local/PHONE_TESTS_W09.md`. Crossfade funzionale ma T02 aperto sui limiti di handover/attribuzione overlap, descritti in ARCHITECTURE/WORKLOG.
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

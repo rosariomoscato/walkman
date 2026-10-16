@@ -54,4 +54,15 @@ class ProfileNetworkGate(
 
     fun wifiOnly(profileId: Long): Boolean =
         settings[profileId]?.wifiOnly ?: true
+
+    /** Reduced streaming on metered networks; original by default (W09-T01). */
+    fun mobileReduced(profileId: Long): Boolean =
+        settings[profileId]?.mobileReduced ?: false
+
+    fun reducedBitRate(profileId: Long): Int =
+        settings[profileId]?.reducedBitRate?.takeIf { it > 0 } ?: 192
+
+    /** Reduced copies for new explicit downloads; originals by default (W09-T01). */
+    fun downloadReduced(profileId: Long): Boolean =
+        settings[profileId]?.downloadReduced ?: false
 }
