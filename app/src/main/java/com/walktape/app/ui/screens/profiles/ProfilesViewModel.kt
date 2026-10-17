@@ -60,6 +60,22 @@ class ProfilesViewModel : ViewModel() {
         }
     }
 
+    /** W11-T03: fresh sign-in for imported profiles (no credentials in the backup). */
+    fun login(id: Long, url: String, username: String, password: String, http: Boolean, onDone: () -> Unit) {
+        if (mutableAction.value.busy) return
+        if (Graph.networkGate.offlineOnly(id)) {
+            mutableAction.value = ProfileActionState(error = ApiError.Unreachable)
+            return
+        }
+        viewModelScope.launch {
+            mutableAction.value = ProfileActionState(busy = true)
+            mutableAction.value = when (val result = repository.login(id, url, username, password, http)) {
+                is ApiResult.Failure -> ProfileActionState(error = result.error)
+                is ApiResult.Success -> ProfileActionState(success = true).also { onDone() }
+            }
+        }
+    }
+
     fun activate(id: Long) {
         if (mutableAction.value.busy) return
         viewModelScope.launch {

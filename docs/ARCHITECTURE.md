@@ -265,6 +265,58 @@ Vincoli registrati:
   test sul runtime 1.11.1. Le guide developer.android.com non raggiungibili, il DHU assente
   nell'SDK e nessun telefono fisico collegato lasciano **T04/T05 aperti**.
 
+## Incremento W11 — impostazioni sistema, diagnostica, backup e aggiornamenti (2026-10-17)
+
+- **Room v12 invariata**: nessun cambio schema o migrazione; le funzioni W11 vivono su query
+  aggiuntive (`DownloadDao.allOrigins/observeProblemCount/observePausedCount`, `ProfileDao.update`)
+  e DataStore. `Graph.librarySyncEngine` è il singleton del refresh indice per ogni superficie UI
+  (libreria e impostazioni condividono lo stesso Mutex: nessun doppio sync parallelo).
+- **Diagnostica (T02)**: `DiagnosticsCollector` costruisce il report solo da allowlist in nove
+  sezioni con `Sources` iniettabili (default bind ai singleton Graph dopo `Graph.ready()`).
+  La sezione CONNECTIONS (URL/username profili) è opt-in ed esclusa dal default. Il rendering
+  passa per `Redactor` (policy estesa: `p/t/s/u=` corti anche dopo `?/&;/spazio`, header
+  Authorization/Cookie per riga intera, secret etichettati, blob base64 ≥48, query URL → `?***`).
+  Export con SAF `CreateDocument` e condivisione via `FileProvider` authority `com.walktape.app.files`
+  (solo `cache-path` reports/updates, grant read per chiamata). Nessun logcat, dump DB, raccolta
+  o invio automatico; in Solo offline la costruzione resta locale.
+- **Backup (T03)**: formato JSON `walktape.backup` v1, DTO espliciti Gson. Validazione totale in
+  `BackupCodec` (format/versione/limiti: 32 profili, 5k code, 20k download, 10MB/URL ServerAddress/
+  permutazioni traversal/prefissi UUID/ripeat) **prima** di applicare; file troncato, corrotto o
+  futuro è rifiutato intero. `BackupManager` esporta profili senza credenziali, preferenze
+  dispositivo (senza flag `loaded`), download COMPLETED con origini/gruppi (duplicati playlist
+  compresi) e coda salvata letta dalla barriera FIFO di `QueueStore`. Import: transazione per
+  profilo; match URL+username → merge (credenziali e file esistenti mai toccati), altrimenti
+  profilo nuovo con `credentialId=""` e suffisso nome "(2)"; righe download → PAUSED (il worker
+  non le scarica finché l'utente non riprende); coda sostituita salvo profilo attivo con media;
+  preferenze applicate solo su richiesta e senza fallimenti. Nessun autoplay/prepare/download/
+  HTTP; zero richieste verificate con MockWebServer. Nuovo login: `ProfileRepository.login`
+  (ping → nuova chiave Keystore, cancellazione della vecchia, URL/username aggiornabili dal
+  dialog). Mai ascolti/ACK/overlap/pending_op nel backup: si recuperano dal server dopo l'accesso.
+- **Aggiornamenti (T04)**: `GitHubReleases` con OkHttpClient dedicato (redirect attivi per
+  objects.githubusercontent.com, header `Accept: application/vnd.github+json`,
+  `X-GitHub-Api-Version: 2022-11-28`, User-Agent dedicato, `NetworkTraffic.listener`). Semantica
+  verificata contro docs.github.com (settembre 2026): `/releases/latest` esclude draft/prerelease
+  e risponde **404 senza release** (stato reale del repository rosariomoscato/walktape: 404).
+  `UpdateManager.decide` pura confronta tag `vX.Y.Z` con versionName; tag non paragonabili →
+  UnknownVersion. Asset: `AssetSelector` accetta un solo APK inequivoco (universal > ABI,
+  ambiguità → null). Download in cache privata con `.part`, verifica lunghezza, cancellazione
+  con rimozione del parziale. `ApkVerifier` fail-closed: stesso package, versionCode crescente,
+  firma identica per digest SHA-256 dei certificati (GET_SIGNING_CERTIFICATES/GET_SIGNATURES);
+  firma illeggibile/diversa → rifiuto, mai disinstallazione. Installazione: ACTION_VIEW su URI
+  FileProvider dopo `canRequestPackageInstalls()` (altrimenti settings unknown-sources dedicati);
+  conferma sempre dell'installer Android. Permesso `REQUEST_INSTALL_PACKAGES` dichiarato.
+  Auto-check opt-in default off in DataStore (`updateCheckEnabled`, `updateLastCheckAt`,
+  `updateLastOutcome`), max 1/die, check-only, gate `awaitReady`+`offlineOnly(-1)` e in Solo
+  offline non consuma il giorno. Fonte: [REST releases](https://docs.github.com/en/rest/releases/releases).
+- **Verifiche T05**: 172/172 JVM (BackupCodecTest/UpdateLogicTest/RedactorTest), W11 Android
+  10/10 su walktape_aosp (BackupStorageTest/DiagnosticsReportTest/UpdateFlowTest con APK
+  precompilati), regressioni ProfilesInstrumentedTest 4/4 + QueueStorageTest 5/5, upgrade reale
+  v1→v2→v1 via `adb install -r(-d)` con profilo/coda marker persistenti e app senza crash.
+  **Non eseguiti** (registro): navigazione UI via dump (ANR ambiente AVD: system_server morto per
+  bluetooth headless; processi app vivi, zero FATAL), confronto firma tra APK realmente diversi,
+  dialog installer/unknown-sources interattivi, update da release reale (inesistente).
+  W10-T04/T05, W09-T06 e residui W05–W08 restano aperti.
+
 ## Controlli non eseguiti nella wave 01 (registro storico)
 
 - Prove su emulatore e telefono (nessun AVD/dispositivo collegato in wave 01).

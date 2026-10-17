@@ -994,3 +994,135 @@ Pubblicazione eseguita:
 - PLAN/MEMORY/NEXT_PROMPT aggiornati. T04/T05 e residui hardware invariati; nessuna release
   o pubblicazione APK, nessuna nuova build per la sola operazione Git. File privati preservati.
   Ulteriori commit/push successivi a questa pubblicazione soltanto su nuova richiesta esplicita.
+
+## 2026-10-16 — Handoff per tutta W11; collaudo Auto previsto domani
+
+Richiesta utente: «scrivimi il prompt per implementare W11 in nuova sessione (i test li faccio
+domani in auto)». Registrato collaudo Auto previsto per17ottobre2026, **non eseguito né superato**:
+W10-T04/T05 rimangono aperti, insieme a W09-T06 e residui W05–W08. Il lavoro indipendente
+W11 è richiesto esplicitamente senza attendere i controlli fisici wave08–10.
+
+Letti AGENTS/memoria/NEXT_PROMPT precedente, wave11 completa, requisiti SPEC operatività/backup/
+update e voci recenti; esaminati AppSettings e diagnostica/redattore esistenti per indicare
+punti di estensione concreti. Verificati Git inizialmente pulito e HEAD **a49d0e7**, codiceW10
+**109b652** pubblicato. Nessuna nuova discovery, modifica applicativa o esecuzione test/emulatore.
+
+Preparato **NEXT_PROMPT.md W11-T01–T05**: impostazioni/sistema reali sui repository esistenti;
+diagnostica da allowlist con anteprima/controllo dei dati ed export/share; backup versionato
+di profili/preferenze/lista download/coda/posizione senza credenziali/audio e con nuovo login,
+validazione/mapping/collisioni senza perdita dati; aggiornamenti GitHub manuali e automatici
+opt-in, asset/APK/versionCode/package/firma, download e conferma dell'installer Android.
+Esplicitati gate offline anche su GitHub, assenza autoplay/download silenziosi nell'import,
+non trasferimento del ledger ascolti/pending_op come nuovi eventi, conservazione Roomv12 o
+nuove migrazioni esplicite se necessarie, test significativi e prove reali/fixture distinte.
+Nessuna release/nuova chiave per fabbricare un test di update; stato Releases da verificare.
+
+Prompt W10 originale preservato integralmente in **local/NEXT_PROMPT_W10_ARCHIVE_20261016.md**
+con intestazione storica aggiunta; nuovo punto corrente W11-T01 in memoria/piano. Checklist
+W05–W10 ed esiti precedenti conservati; W11 dovrà preparare la propria checklist privata.
+SPEC/DESIGN/ARCHITECTURE senza modifiche: nessun nuovo requisito o cambiamento visivo in questa
+attività. Controlli proporzionati: diff documentale/whitespace, presenza e ignore dei prompt.
+Nessun task W11 segnato completo e nessun commit/push/release richiesto o eseguito.
+
+## 2026-10-17 — Wave 11 completa: impostazioni sistema, diagnostica, backup, aggiornamenti (T01–T05)
+
+Richiesta: implementare tutta W11 dalla baseline a49d0e7. Working tree iniziale con sole note
+dell'handoff (PLAN/WORKLOG/PROJECT_MEMORY) preservate. Letti memoria/NEXT_PROMPT W11/SPEC/wave11/
+ARCHITECTURE/DESIGN; mappati i punti di estensione esistenti (SettingsRepository, DiagnosticsCollector/
+Redactor, Graph, DownloadDao/Engine/Store, OfflineOps, LibrarySync, ProfileRepository, QueueStore).
+
+**T01 — Impostazioni/sistema operative.** `Graph.librarySyncEngine` singleton: libreria e
+impostazioni condividono lo stesso motore/Mutex (nessun refresh parallelo dello stesso profilo;
+LibraryViewModel instradata su di esso). SettingsViewModel espone stati reali osservati da Room
+(library_state ultimo aggiornamento+esito, SyncProgress condiviso, pending/conflitti pending_op,
+download attivi/in pausa/falliti) e azioni con effetti reali: verifica connessione singola
+(repository.verify con gate), aggiorna/annulla indice (syncEngine), invia modifiche
+(offlineOps.drain), pausa tutti (pauseWork+pauseAll) e riprendi tutti (resumeAll+schedule).
+`SettingsScreen.SystemStatusSection` con stato onesto (mai dati non caricati), date formattate,
+errori per categoria come nei profili; nuovi entry Backup e Aggiornamenti. DownloadDao:
+observeProblemCount (CONFLICT+FAILED) e observePausedCount.
+
+**T02 — Diagnostica esportabile.** DiagnosticsCollector riscritto a **sezioni con allowlist**
+(APP/DEVICE/STORAGE/LIBRARY/DOWNLOADS/SYNC/PLAYER/CONNECTIONS/PREFERENCES) con Sources iniettabili
+per test (default bind Graph). CONNECTIONS (URL+username, nessun segreto) è **opt-in esclusa di
+default** con avviso in UI. Nessun logcat/dump DB/telemetria. Redactor esteso in difesa in
+profondità: parametri corti OpenSubsonic `p=/t=/s=/u=` (anche dopo `?/&/;/spazio`), header
+Authorization/Cookie per intera riga, secret con etichetta (password/token/credentialId/
+encryptedPassword…), blob base64 ≥48, query degli URL completa sostituita con `?***`; URL nudi
+senza query sopravvivono. UI: interruttori per sezione, anteprima immediata senza ricampionare,
+Copia, Esporta file (SAF CreateDocument text/plain) e Condividi file via FileProvider dedicato
+`com.walktape.app.files` (cache-path reports/updates, sola lettura per chiamata).
+
+**T03 — Backup manuale.** Formato JSON versionato `walktape.backup` v1 con **DTO espliciti**
+(Gson già in dipendenze): profili (nome/URL/username/allowLocalHttp, **mai** credentialId/
+encryptedPassword), preferenze dispositivo (senza flag `loaded`), lista da riscaricare (solo
+download COMPLETED con metadati + origini + gruppi playlist con duplicati), coda con occorrenze
+duplicate/UUID/traversal/posizione/repeat/shuffle/nome mixtape. Codec a validazione totale prima
+dell'applicazione (format/versione/limiti 32 profili-5k coda-20k download-10MB/URL via
+ServerAddress/permutazioni/prefissi queue/); file troncati/futuri/corrotti rifiutati interi.
+Import: match per URL+username (merge nel profilo esistente, credenziali e file COMPLETED mai
+degradati), altrimenti creazione con suffisso onesto "(2)" e **credentialId vuoto** (nuovo login);
+righe download importate come PAUSED (nessun download silenzioso: claimNext non le prende);
+coda sostituita per profilo matched **tranne** se attivo con media caricata (skip dichiarato);
+preferenze applicate solo se richiesto e solo senza fallimenti; transazione per profilo.
+`ProfileRepository.login` (verifica ping → nuova chiave Keystore, rimozione vecchia) + dialog
+"Accedi" per profili importati con URL/username precompilati. Export/import via SAF con anteprima
+contenuti obbligatoria prima di entrambi.
+
+**T04 — Aggiornamenti GitHub Releases.** Client dedicato (mai il client Navidrome): OkHttp
+proprio con redirect (asset su objects.githubusercontent.com), header ufficiali
+(Accept/vnd.github+json, X-GitHub-Api-Version 2022-11-28, User-Agent) e NetworkTraffic.listener
+(gate globale). `/repos/rosariomoscato/walktape/releases/latest`: 200 parse, **404→NoReleases
+onesto**, 403/429 con rate limit→RateLimited, rete/JSON invalidi distinti. Versioni v MAVJOR.MINOR
+.PATCH paragonate alla versionName; tag non paragonabili→UnknownVersion senza decisioni implicite.
+Asset: selezione APK univoca con preferenza universal su ABI-specifici, ambiguità rifiutata.
+Download in cache privata con `.part`, progresso, verifica dimensione, cancellazione con pulizia
+(file troncati mai consegnati al verifier/installer). `ApkVerifier` fail-closed: package ==
+com.walktape.app, versionCode strettamente maggiore, **firma uguale all'installato** (digest
+SHA-256 certificati; nessuna disinstallazione proposta per firme incompatibili). Installazione:
+permesso REQUEST_INSTALL_PACKAGES, canRequestPackageInstalls→altrimenti pagina Sorgenti
+sconosciute limitata a WalkTape, poi Intent ACTION_VIEW su URI FileProvider: conferma sempre di
+Android. Controllo automatico opt-in **default off** (DataStore), max 1/die, check-only; in Solo
+offline il gate (awaitReady+offlineOnly(-1)) blocca senza consumare il giorno. API verificate su
+docs.github.com (settembre 2026) e stato reale: **HTTP 404, nessuna release pubblicata**.
+
+**T05 — Verifiche.** JVM **172/172** (0 falliti, 2 skip preesistenti): BackupCodecTest (roundtrip,
+not-json/format/versione/URL/duplicati/traversal/entryId/limiti/preferenze/coda vuota, JSON senza
+campi credenziali), UpdateLogicTest (parsing/versioni/decisioni pure/asset/MockWebServer
+parse-404-ratelimit-invalid-header), RedactorTest esteso (aggiornate 2 attese alla policy u=/s=
+per requisito W11; nuovi casi p/t/s/u, header, blob, query URL). FakeDownloadDao esteso ai nuovi
+metodi DAO. Android su walktape_aosp (APK precompilati pm compile): **BackupStorageTest 4/4**
+(roundtrip due profili in DB isolati sandbox: coda duplicati/traversal/repeat/posizione/mixtape,
+download COMPLETED→PAUSED, nessun profilo attivo né credenziali, zero richieste al server del
+profilo; merge matched con credenziali/file conservati e coda sostituita; collisione nome→"(2)";
+skip coda su profilo attivo con media; troncato/versione futura/traversal invalido lasciano i
+dati intatti), **DiagnosticsReportTest 1/1** (allowlist, CONNECTIONS opt-in assente dal default,
+nessun materiale credenziali), **UpdateFlowTest 5/5** (parse release reale HTTP, 404 onesto,
+download con progresso→rifiuto Corrupt su non-APK, **gate Solo offline blocca con 0 richieste**
+tramite ProfileNetworkGate isolato, APK installato letto dal verifier→NotNewer). Regressioni
+percorsi toccati: **ProfilesInstrumentedTest 4/4 + QueueStorageTest 5/5**. **Upgrade reale con
+dati persistenti**: marker seme (profilo+coda) nel DB dell'app via test temporaneo → APK
+versionCode 2 (stessa firma debug) `install -r` → app avviata senza crash, marker intatto →
+ritorno a v1 con `install -r -d` → marker intatto; test temporaneo rimosso e marker pulito.
+Build app/androidTest e **lint 0 errori/45 avvisi** (rimosse 2 stringhe poi inutilizzate;
+PluralsCandidate/UnusedResources preesistenti). **Room v12 invariata**: nessuna migrazione.
+
+Controlli NON eseguiti (registro onesto): navigazione UI via dump delle nuove schermate — l'AVD
+ha subito crash di system_server (bluetooth headless) e tempesta ANR System UI/startup sotto
+carico host (D25/D28): processi app vivi, zero FATAL walktape in logcat, suite strumentata verde
+sullo stesso APK, ma il dump non è stato possibile; da ripetere insieme ai collaudi telefono.
+Confronto firma tra due APK firmati diversamente, dialog installer di sistema e flusso
+unknown-sources interattivo, download/cancellazione a metà file su rete reale e release GitHub
+reale (inesistente: 404) restano prove telefoniche/hardware o W12. TalkBack/adattività delle
+nuove superfici in `local/PHONE_TESTS_W11.md`.
+
+File principali: nuovi `core/backup/*` (Models/Codec/Manager), `core/updates/*` (Models/
+GitHubReleases/ApkVerifier/Manager), `ui/screens/backup|updates/*`, `res/{values,values-en}/
+system.xml`, `res/xml/file_paths.xml`; modificati Graph (librarySyncEngine/backupManager/
+updateManager/auto-check), AppSettings/SettingsRepository (preferenze update), DownloadDao/
+ProfileDao, ProfileRepository.login, DiagnosticsCollector/Redactor, Settings ViewModel/Screen,
+Diagnostics ViewModel/Screen, Profiles ViewModel/Screen (login), LibraryViewModel, NavHost/
+MainActivity, Manifest (REQUEST_INSTALL_PACKAGES, FileProvider). APK debug finale SHA256
+**658F31DA5E388ACB169874673DDC0E3D26D2254C10FC86767C37E05F22DA1DFD**. Emulatore spento, adb
+vuoto, temporanei di test rimossi (file storici in temp non toccati). Nessun commit/push/release;
+versionCode tornato a 1 dopo la prova upgrade.

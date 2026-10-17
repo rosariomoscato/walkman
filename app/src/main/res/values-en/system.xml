@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- W11-T01: real system status and recovery actions in settings. -->
+    <string name="system_status_title">Status and recovery</string>
+    <string name="system_connection_verify">Verify connection</string>
+    <string name="system_connection_ok">Connection successful</string>
+    <string name="system_connection_running">Verifying…</string>
+    <string name="system_index_title">Library index</string>
+    <string name="system_index_never">Never refreshed</string>
+    <string name="system_index_last_ok">Last refresh: %1$s · %2$d songs</string>
+    <string name="system_index_last_failed">Last attempt failed: %1$s</string>
+    <string name="system_index_running">Refreshing: %1$d/%2$d</string>
+    <string name="system_index_refresh">Refresh index</string>
+    <string name="system_index_cancel">Cancel refresh</string>
+    <string name="system_sync_title">Changes to sync</string>
+    <string name="system_sync_pending">%1$d waiting</string>
+    <string name="system_sync_problems">%1$d need resolution (conflicts or rejections)</string>
+    <string name="system_sync_none">No pending changes</string>
+    <string name="system_sync_send">Send now</string>
+    <string name="system_sync_help">Conflicts are resolved from Manage sync in the My music screen.</string>
+    <string name="system_downloads_title">Downloads</string>
+    <string name="system_downloads_active">%1$d in progress</string>
+    <string name="system_downloads_paused">%1$d paused</string>
+    <string name="system_downloads_failed">%1$d failed</string>
+    <string name="system_downloads_idle">No active downloads</string>
+    <string name="system_downloads_pause">Pause all</string>
+    <string name="system_downloads_resume">Resume all</string>
+    <string name="system_backup_entry">Backup and transfer</string>
+    <string name="system_updates_entry">App updates</string>
+
+    <!-- W11-T02: diagnostics sections, inclusion control, file export. -->
+    <string name="diagnostics_section_app">App</string>
+    <string name="diagnostics_section_device">Device</string>
+    <string name="diagnostics_section_storage">Storage</string>
+    <string name="diagnostics_section_library">Index</string>
+    <string name="diagnostics_section_downloads">Downloads</string>
+    <string name="diagnostics_section_sync">Sync</string>
+    <string name="diagnostics_section_player">Player</string>
+    <string name="diagnostics_section_connections">Connections</string>
+    <string name="diagnostics_section_preferences">Preferences</string>
+    <string name="diagnostics_connections_warning">Includes profile URLs and usernames: review before exporting or sharing.</string>
+    <string name="diagnostics_included_sections">Included sections</string>
+    <string name="diagnostics_export_file">Export file</string>
+    <string name="diagnostics_share">Share file</string>
+    <string name="diagnostics_exported">Report exported</string>
+
+    <!-- W11-T03: manual backup without credentials or audio. -->
+    <string name="backup_title">Backup and transfer</string>
+    <string name="backup_description">Copies profiles (without passwords), preferences, the list of songs to re-download, queue and position. Audio files, credentials and listening history are not included. Nothing is sent automatically.</string>
+    <string name="backup_export">Export backup</string>
+    <string name="backup_import">Import backup</string>
+    <string name="backup_preview_title">Backup contents</string>
+    <string name="backup_preview_profiles">Profiles: %1$d</string>
+    <string name="backup_preview_queues">Saved queues: %1$d</string>
+    <string name="backup_preview_downloads">Songs to re-download: %1$d</string>
+    <string name="backup_preview_preferences">Device preferences included</string>
+    <string name="backup_preview_no_preferences">Device preferences excluded</string>
+    <string name="backup_import_title">Import on this device</string>
+    <string name="backup_import_apply_preferences">Also apply device preferences</string>
+    <string name="backup_import_warning">Queues of matching profiles are replaced. New profiles require signing in again: no password is imported. No automatic download or playback.</string>
+    <string name="backup_import_confirm">Import</string>
+    <string name="backup_result_title">Import result</string>
+    <string name="backup_result_created">Profile created: %1$s</string>
+    <string name="backup_result_merged">Existing profile updated: %1$s</string>
+    <string name="backup_result_queue">Queue restored</string>
+    <string name="backup_result_downloads_added">%1$d songs to re-download added</string>
+    <string name="backup_result_downloads_kept">%1$d existing files kept</string>
+    <string name="backup_result_profile_error">Profile not imported: %1$s</string>
+    <string name="backup_result_preferences">Preferences applied</string>
+    <string name="backup_error_not_backup">The file is not a WalkTape backup</string>
+    <string name="backup_error_version">Unsupported backup version</string>
+    <string name="backup_error_invalid">Invalid backup: %1$s</string>
+    <string name="backup_error_read">Unable to read the file</string>
+    <string name="backup_error_write">Unable to write the file</string>
+    <string name="backup_export_done">Backup exported</string>
+    <string name="backup_relogin_hint">Imported profiles require signing in again from the Profiles screen.</string>
+    <string name="profile_needs_login">Sign-in required</string>
+    <string name="profile_login">Sign in</string>
+    <string name="profile_login_title">Sign in again</string>
+    <string name="profile_login_help">The password is not included in the backup: sign in to this server again.</string>
+
+    <!-- W11-T04: manual GitHub Releases updates, opt-in automatic checks. -->
+    <string name="update_title">Updates</string>
+    <string name="update_description">Checks and downloads new versions published on GitHub Releases. Installation is always confirmed by Android.</string>
+    <string name="update_current_version">Installed version: %1$s</string>
+    <string name="update_check">Check for updates</string>
+    <string name="update_checking">Checking…</string>
+    <string name="update_uptodate">WalkTape is up to date</string>
+    <string name="update_available">Version %1$s available</string>
+    <string name="update_no_releases">No release published yet. New versions will arrive on GitHub Releases.</string>
+    <string name="update_rate_limited">GitHub temporarily limited the requests: try again later.</string>
+    <string name="update_network_error">Network unavailable or server unreachable.</string>
+    <string name="update_blocked_offline">Checks are disabled while Offline only is on.</string>
+    <string name="update_invalid_response">Unrecognized GitHub response.</string>
+    <string name="update_notes_title">What\'s new</string>
+    <string name="update_download">Download APK</string>
+    <string name="update_download_running">Downloading %1$s of %2$s</string>
+    <string name="update_download_done">APK downloaded and verified</string>
+    <string name="update_download_cancel">Cancel download</string>
+    <string name="update_download_failed">Download failed</string>
+    <string name="update_verify_failed_package">The APK is not a WalkTape update.</string>
+    <string name="update_verify_failed_version">The APK is not newer than the installed version.</string>
+    <string name="update_verify_failed_signature">Incompatible APK signature: uninstalling would lose data, so the update is refused.</string>
+    <string name="update_verify_failed_corrupt">Corrupted or unreadable APK: download again.</string>
+    <string name="update_install">Install update</string>
+    <string name="update_install_permission">Allow WalkTape to install apps in Android settings, then come back here to install.</string>
+    <string name="update_install_hint">Android will ask for confirmation before installing.</string>
+    <string name="update_auto">Check automatically (once a day)</string>
+    <string name="update_auto_help">Check only: no automatic download or installation. Disabled while Offline only is on.</string>
+    <string name="update_last_check">Last automatic check: %1$s</string>
+    <string name="update_last_check_never">Automatic check never run</string>
+    <string name="update_last_check_uptodate">Nothing new</string>
+    <string name="update_last_check_no_releases">No release published</string>
+    <string name="update_last_check_error">Check failed</string>
+</resources>

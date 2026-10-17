@@ -73,6 +73,48 @@ class ProfileRepository(
     suspend fun verify(id: Long): ApiResult<ServerInfo> =
         clientFor(id)?.ping() ?: ApiResult.Failure(ApiError.CredentialsUnavailable)
 
+    /**
+     * W11-T03: fresh sign-in for an imported (credential-less) profile. Verifies the
+     * credentials against the server, then stores them under a new Keystore key; the
+     * previous key, if any, is removed. Never touches queue, downloads or the server.
+     */
+    suspend fun login(id: Long, url: String, username: String, password: String,
+                      allowLocalHttp: Boolean): ApiResult<Unit> = withContext(Dispatchers.IO) {
+        if (username.isBlank() || password.isEmpty()) {
+            return@withContext ApiResult.Failure(ApiError.InvalidRequest)
+        }
+        val address = ServerAddress.parse(url, allowLocalHttp)
+            ?: return@withContext ApiResult.Failure(ApiError.InvalidRequest)
+        when (val result = OpenSubsonicClient(address, Credentials(username, password)).ping()) {
+            is ApiResult.Failure -> result
+            is ApiResult.Success -> mutex.withLock {
+                val profile = dao.get(id) ?: return@withLock ApiResult.Failure(ApiError.InvalidRequest)
+                val oldKeyId = profile.credentialId
+                val keyId = UUID.randomUUID().toString()
+                try {
+                    val encrypted = vault.encrypt(keyId, password)
+                    database.withTransaction {
+                        dao.update(profile.copy(
+                            serverUrl = address.url.toString(),
+                            username = username,
+                            credentialId = keyId,
+                            encryptedPassword = encrypted,
+                            allowLocalHttp = allowLocalHttp,
+                        ))
+                    }
+                    if (oldKeyId.isNotEmpty()) vault.delete(oldKeyId)
+                    ApiResult.Success(Unit)
+                } catch (_: android.database.sqlite.SQLiteConstraintException) {
+                    vault.delete(keyId)
+                    ApiResult.Failure(ApiError.InvalidRequest)
+                } catch (_: java.security.GeneralSecurityException) {
+                    vault.delete(keyId)
+                    ApiResult.Failure(ApiError.CredentialsUnavailable)
+                }
+            }
+        }
+    }
+
     suspend fun activate(id: Long): Boolean = mutex.withLock {
         database.withTransaction {
             val profile = dao.get(id) ?: return@withTransaction false

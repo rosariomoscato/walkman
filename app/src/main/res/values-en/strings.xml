@@ -34,7 +34,6 @@
     <string name="diagnostics_title">Diagnostics</string>
     <string name="diagnostics_description">Technical report of the device. Sensitive data (URLs with credentials, tokens) are redacted automatically.</string>
     <string name="diagnostics_copy">Copy report</string>
-    <string name="diagnostics_export">Export</string>
     <string name="diagnostics_copied">Report copied</string>
     <string name="diagnostics_export_subject">WalkTape — diagnostics report</string>
 

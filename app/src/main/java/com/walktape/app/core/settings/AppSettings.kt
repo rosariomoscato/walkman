@@ -32,6 +32,12 @@ data class AppSettings(
     val bassBoostStrength: Int = DEFAULT_BASS_STRENGTH,
     /** Optional cassette tape effect; off by default (W09-T05). */
     val tapeEffectEnabled: Boolean = false,
+    /** Optional automatic update checks against GitHub Releases; off until the user opts in (W11-T04). */
+    val updateCheckEnabled: Boolean = false,
+    /** Epoch ms of the last automatic update check; 0 = never. */
+    val updateLastCheckAt: Long = 0,
+    /** Short non-sensitive outcome of the last automatic check ("" = none). */
+    val updateLastOutcome: String = "",
     /** False until DataStore has emitted at least once; gates must not run on defaults. */
     val loaded: Boolean = false
 ) {

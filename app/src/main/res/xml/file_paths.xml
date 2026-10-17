@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- FileProvider scopes (W11): temporary diagnostics reports and verified update APKs.
+     Only the app's own private cache is exposed, per-call with a read grant. -->
+<paths>
+    <cache-path name="reports" path="reports/" />
+    <cache-path name="updates" path="updates/" />
+</paths>

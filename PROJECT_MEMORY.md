@@ -1,8 +1,32 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-16 (W10-T01–T03 software verificato; T04/T05 sideload/DHU/auto aperti).
+Ultimo aggiornamento: 2026-10-17 (Wave 11 implementata e verificata in automatico; collaudi telefono W11 da fare; collaudo Auto dell'utente ancora da ricevere).
 
-## Punto corrente — W10-T04/T05: abilitazione APK e collaudo Auto
+## Punto corrente — W11-T01–T05 [x]; collaudi telefono/aperto W10-T04/T05, W09-T06
+
+- **W11 completata in automatico** sulla baseline a49d0e7: impostazioni/sistema reali (T01),
+  diagnostica a sezioni con allowlist+redazione estesa ed export SAF/FileProvider (T02), backup
+  versionato senza credenziali/audio con import validato e nuovo login (T03), aggiornamenti
+  GitHub Releases con verifica package/versionCode/firma e installer Android (T04), verifiche
+  T05: **172/172 JVM**, build app/androidTest, lint **0/45**, Android **W11 10/10**, regressioni
+  profili+coda **9/9**, **upgrade reale v1→v2→v1 via adb con dati persistenti**. Room **v12
+  invariata**, nessuna migrazione. Dettagli nel WORKLOG 2026-10-17. APK SHA256
+  **658F31DA5E388ACB169874673DDC0E3D26D2254C10FC86767C37E05F22DA1DFD**.
+- **Prossima azione precisa**: raccogliere i collaudi Auto dell'utente (W10-T04/T05, previsti,
+  non ancora riferiti) e i test telefono W11 con `local/PHONE_TESTS_W11.md` (impostazioni stato/
+  azioni, diagnostica export, backup export/import+nuovo login, aggiornamenti con stato reale
+  "nessuna release"). Poi **W12** su richiesta: matrice end-to-end, README/privacy/licenza,
+  firma stabile e release. Navigazione UI via dump delle nuove schermate non eseguita per ANR
+  ambiente AVD (D25/D28): da ripetere con i collaudi o in W12.
+- Controllo non eseguiti dichiarati: firma tra APK realmente diversi, dialog installer/unknown
+  sources interattivi, download update su rete reale (nessuna release pubblicata: API GitHub
+  verificata 404), TalkBack delle nuove superfici. Stato GitHub Releases **vuoto** gestito
+  onestamente dall'app.
+- W09-T06 e residui W05–W08 restano differiti e non superati; tutte le checklist W05–W11
+  preservate in `local/`. Nessun commit/push/release eseguito per W11 (versionCode tornato a 1
+  dopo la prova upgrade). Handoff W10 preservato in `local/NEXT_PROMPT_W10_ARCHIVE_20261016.md`.
+
+## Baseline W10 pubblicata — T04/T05 ancora da collaudare
 
 - **W10-T01–T03 [x]** per implementazione e contratto software verificato; **T04/T05 [ ]**.
   `PlaybackService` ora MediaLibraryService con una sola MediaLibrarySession sul player logico
@@ -20,7 +44,7 @@ Ultimo aggiornamento: 2026-10-16 (W10-T01–T03 software verificato; T04/T05 sid
   offlinezeroHTTP e restore/rebind/play). Regressioni W05/W08 **24passati+2skip opt-in,
   217,268s**. W09: prima27→25passati/2falliti, entrambi poi verdi isolati; conclusivo12/12
   più1offline+1handoverreale su esecuzioni separate. Non sommare come suite unica.
-- **Prossima azione precisa**: leggere `docs/ANDROID_AUTO.md` e `local/PHONE_TESTS_W10.md`;
+- **Collaudo Auto previsto dall'utente domani**: leggere `docs/ANDROID_AUTO.md` e `local/PHONE_TESTS_W10.md`;
   quando disponibile il Motorola, verificare la procedura corrente Unknown sources/launcher,
   installare il pacchetto SDK DHU e usare il vero head-unit server Android Auto, poi collaudo
   in auto (rete Wi-Fi/mobile/VPN, scollegamenti, controlli e assistente). Ora nessun telefono
@@ -184,6 +208,9 @@ Il punto di ripresa precedente seguente è storico, superato dall'incremento W07
 - D35 — W09 qualità: raw originale di default; Opus esplicito a bitrate scelto solo su cellulare/download opt-in. Nessuna cache a frammenti del transcode senza validatore/Range affidabile; copie ridotte complete nei download. Fallback raw solo fresh-open, URI cache/sessione logica. Motivo/esiti nel WORKLOG W09.
 - D36 — W09 DSP: preferenze audio di dispositivo, processori PCM nella chain del sink con bypass byte-exact, audiofx su sessione condivisa. Crossfade nel servizio unico ancora parziale sui punti documentati; non confondere i test dei ramp con continuità del handover né capture PCM con risposta hardware.
 - D37 — Supera la parte crossfade parziale di D36: player logico ExoPlayer stabile con instradamento della API pubblica, promozione del deck udibile senza seek, focus unico esterno ai deck e ledger overlap Roomv12 con ricevuta di promozione. Testare l'indice uscente nei confini timer; mantenere distinti stato logico, inviluppi/ducking e volume Android. Riferimenti: WORKLOG e ARCHITECTURE incremento2026-10-16.
+- D38 — W11-T02 diagnostica: report costruito **solo da allowlist** in sezioni (APP/DEVICE/STORAGE/LIBRARY/DOWNLOADS/SYNC/PLAYER/CONNECTIONS/PREFERENCES) con Sources iniettabili; CONNECTIONS (URL/username) è opt-in esclusa dal default. Redactor come difesa in profondità con policy estesa ai parametri corti `p/t/s/u`, header Authorization/Cookie, secret etichettati, blob ≥48 char e query URL integrali. Export: SAF CreateDocument + FileProvider `com.walktape.app.files` sola lettura per chiamata. Nessuna raccolta/invio automatico.
+- D39 — W11-T03 backup: formato `walktape.backup` v1 con DTO espliciti Gson e validazione totale **prima** di applicare; contenuti approvati solo profili senza credenziali, preferenze (senza `loaded`), download COMPLETED (→PAUSED all'import, mai download silenziosi), code con UUID/traversal/mixtape. Match import per URL+username (merge; credenziali/file esistenti intatti), collisioni nome→suffisso "(2)", coda del profilo attivo con media non toccata. Nuovo accesso obbligatorio via `ProfileRepository.login` (nuova chiave Keystore). Mai ledger ascolti/ACK/overlap/pending_op nel backup.
+- D40 — W11-T04 update: client GitHub dedicato (redirect, header API 2022-11-28, gate Solo offline via `networkGate.offlineOnly(-1)` dopo awaitReady); 404=nessuna release onesto; decisioni versione solo su tag paragonabili; asset APK univoco (universal>ABI, ambiguità rifiutata); verifica fail-closed package/versionCode/firma **senza** mai proporre disinstallazione; installazione solo via installer Android con URI FileProvider; auto-check opt-in default off, max 1/die, check-only e non consuma il giorno in offline. Pipeline release/firma stabile restano W12.
 
 - Workspace: `C:\Users\rosar\kDrive\Lavoro\Progetti\walkman` (nome cartella locale invariato); repository GitHub rinominato dall'utente in `rosariomoscato/walktape`, remote `origin` = https://github.com/rosariomoscato/walktape.git, branch `main` tracciato. Remote aggiornato e accesso verificato il 2026-10-13. Identità per-commit: `Rosario Moscato <53149348+rosariomoscato@users.noreply.github.com>` (config non persistita).
 - Shell: Windows PowerShell 5.1. Usare `npx.cmd`; `Range` header via `[System.Net.HttpWebRequest]::AddRange`; redirect `>` di binari corrompe i file (usare `adb pull`).

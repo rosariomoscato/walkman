@@ -48,7 +48,7 @@ enum class LibraryTab(val sortKey: String, val defaultSort: String) {
 class LibraryViewModel : ViewModel() {
     private val database = Graph.database
     private val profiles = Graph.profiles
-    private val syncEngine = Graph.librarySync()
+    private val syncEngine = Graph.librarySyncEngine
 
     val activeProfile: StateFlow<ProfileEntity?> = profiles.profiles
         .map { list -> list.firstOrNull { it.isActive } }

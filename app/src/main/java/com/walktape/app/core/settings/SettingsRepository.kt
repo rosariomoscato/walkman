@@ -31,6 +31,9 @@ class SettingsRepository(private val context: Context) {
     private val bassBoostEnabledKey = booleanPreferencesKey("bass_boost_enabled")
     private val bassBoostStrengthKey = longPreferencesKey("bass_boost_strength")
     private val tapeEffectKey = booleanPreferencesKey("tape_effect_enabled")
+    private val updateCheckKey = booleanPreferencesKey("update_check_enabled")
+    private val updateLastCheckKey = longPreferencesKey("update_last_check_at")
+    private val updateLastOutcomeKey = stringPreferencesKey("update_last_outcome")
 
     val settings: Flow<AppSettings> = context.settingsStore.data.map { prefs ->
         AppSettings(
@@ -55,6 +58,9 @@ class SettingsRepository(private val context: Context) {
             bassBoostStrength = (prefs[bassBoostStrengthKey] ?: AppSettings.DEFAULT_BASS_STRENGTH.toLong())
                 .toInt().coerceIn(AppSettings.MIN_BASS_STRENGTH, AppSettings.MAX_BASS_STRENGTH),
             tapeEffectEnabled = prefs[tapeEffectKey] ?: false,
+            updateCheckEnabled = prefs[updateCheckKey] ?: false,
+            updateLastCheckAt = prefs[updateLastCheckKey] ?: 0L,
+            updateLastOutcome = prefs[updateLastOutcomeKey] ?: "",
             loaded = true
         )
     }
@@ -132,6 +138,19 @@ class SettingsRepository(private val context: Context) {
 
     suspend fun setTapeEffectEnabled(enabled: Boolean) {
         context.settingsStore.edit { prefs -> prefs[tapeEffectKey] = enabled }
+    }
+
+    suspend fun setUpdateCheckEnabled(enabled: Boolean) {
+        context.settingsStore.edit { prefs -> prefs[updateCheckKey] = enabled }
+    }
+
+    /** Records the last automatic check; outcome is a fixed short token, never raw server data. */
+    suspend fun setUpdateLastCheck(atMs: Long, outcome: String) {
+        require(outcome.length <= 32)
+        context.settingsStore.edit { prefs ->
+            prefs[updateLastCheckKey] = atMs
+            prefs[updateLastOutcomeKey] = outcome
+        }
     }
 
     suspend fun setLibrarySort(key: String, sort: String) {

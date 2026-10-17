@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- W11-T01: real system status and recovery actions in settings. -->
+    <string name="system_status_title">Stato e recupero</string>
+    <string name="system_connection_verify">Verifica connessione</string>
+    <string name="system_connection_ok">Connessione riuscita</string>
+    <string name="system_connection_running">Verifica in corso…</string>
+    <string name="system_index_title">Indice libreria</string>
+    <string name="system_index_never">Mai aggiornato</string>
+    <string name="system_index_last_ok">Ultimo aggiornamento: %1$s · %2$d brani</string>
+    <string name="system_index_last_failed">Ultimo tentativo non riuscito: %1$s</string>
+    <string name="system_index_running">Aggiornamento in corso: %1$d/%2$d</string>
+    <string name="system_index_refresh">Aggiorna indice</string>
+    <string name="system_index_cancel">Annulla aggiornamento</string>
+    <string name="system_sync_title">Modifiche da sincronizzare</string>
+    <string name="system_sync_pending">%1$d in attesa</string>
+    <string name="system_sync_problems">%1$d da risolvere (conflitti o rifiuti)</string>
+    <string name="system_sync_none">Nessuna modifica in attesa</string>
+    <string name="system_sync_send">Invia adesso</string>
+    <string name="system_sync_help">I conflitti si risolvono da Gestisci sincronizzazione nella schermata La mia musica.</string>
+    <string name="system_downloads_title">Download</string>
+    <string name="system_downloads_active">%1$d in corso</string>
+    <string name="system_downloads_paused">%1$d in pausa</string>
+    <string name="system_downloads_failed">%1$d non riusciti</string>
+    <string name="system_downloads_idle">Nessun download attivo</string>
+    <string name="system_downloads_pause">Metti tutti in pausa</string>
+    <string name="system_downloads_resume">Riprendi tutti</string>
+    <string name="system_backup_entry">Backup e trasferimento</string>
+    <string name="system_updates_entry">Aggiornamenti app</string>
+
+    <!-- W11-T02: diagnostics sections, inclusion control, file export. -->
+    <string name="diagnostics_section_app">App</string>
+    <string name="diagnostics_section_device">Dispositivo</string>
+    <string name="diagnostics_section_storage">Spazio</string>
+    <string name="diagnostics_section_library">Indice</string>
+    <string name="diagnostics_section_downloads">Download</string>
+    <string name="diagnostics_section_sync">Sincronizzazione</string>
+    <string name="diagnostics_section_player">Player</string>
+    <string name="diagnostics_section_connections">Connessioni</string>
+    <string name="diagnostics_section_preferences">Preferenze</string>
+    <string name="diagnostics_connections_warning">Include URL e nome utente dei profili: controlla prima di esportare o condividere.</string>
+    <string name="diagnostics_included_sections">Sezioni incluse</string>
+    <string name="diagnostics_export_file">Esporta file</string>
+    <string name="diagnostics_share">Condividi file</string>
+    <string name="diagnostics_exported">Rapporto esportato</string>
+
+    <!-- W11-T03: manual backup without credentials or audio. -->
+    <string name="backup_title">Backup e trasferimento</string>
+    <string name="backup_description">Copia profili (senza password), preferenze, lista dei brani da riscaricare, coda e posizione. I file audio, le credenziali e gli ascolti non sono inclusi. Nessun invio automatico.</string>
+    <string name="backup_export">Esporta backup</string>
+    <string name="backup_import">Importa backup</string>
+    <string name="backup_preview_title">Contenuto del backup</string>
+    <string name="backup_preview_profiles">Profili: %1$d</string>
+    <string name="backup_preview_queues">Code salvate: %1$d</string>
+    <string name="backup_preview_downloads">Brani da riscaricare: %1$d</string>
+    <string name="backup_preview_preferences">Preferenze del dispositivo incluse</string>
+    <string name="backup_preview_no_preferences">Preferenze del dispositivo escluse</string>
+    <string name="backup_import_title">Importa su questo dispositivo</string>
+    <string name="backup_import_apply_preferences">Applica anche le preferenze del dispositivo</string>
+    <string name="backup_import_warning">Le code dei profili corrispondenti vengono sostituite. I profili nuovi richiedono un nuovo accesso: nessuna password viene importata. Nessun download o riproduzione automatica.</string>
+    <string name="backup_import_confirm">Importa</string>
+    <string name="backup_result_title">Esito importazione</string>
+    <string name="backup_result_created">Profilo creato: %1$s</string>
+    <string name="backup_result_merged">Profilo esistente aggiornato: %1$s</string>
+    <string name="backup_result_queue">Coda ripristinata</string>
+    <string name="backup_result_downloads_added">%1$d brani da riscaricare aggiunti</string>
+    <string name="backup_result_downloads_kept">%1$d file già presenti conservati</string>
+    <string name="backup_result_profile_error">Profilo non importato: %1$s</string>
+    <string name="backup_result_preferences">Preferenze applicate</string>
+    <string name="backup_error_not_backup">Il file non è un backup WalkTape</string>
+    <string name="backup_error_version">Versione del backup non supportata</string>
+    <string name="backup_error_invalid">Backup non valido: %1$s</string>
+    <string name="backup_error_read">Impossibile leggere il file</string>
+    <string name="backup_error_write">Impossibile scrivere il file</string>
+    <string name="backup_export_done">Backup esportato</string>
+    <string name="backup_relogin_hint">I profili importati richiedono un nuovo accesso dalla schermata Profili.</string>
+    <string name="profile_needs_login">Accesso richiesto</string>
+    <string name="profile_login">Accedi</string>
+    <string name="profile_login_title">Nuovo accesso</string>
+    <string name="profile_login_help">La password non è inclusa nel backup: accedi di nuovo a questo server.</string>
+
+    <!-- W11-T04: manual GitHub Releases updates, opt-in automatic checks. -->
+    <string name="update_title">Aggiornamenti</string>
+    <string name="update_description">Controlli e download delle nuove versioni pubblicate su GitHub Releases. L\'installazione è sempre confermata da Android.</string>
+    <string name="update_current_version">Versione installata: %1$s</string>
+    <string name="update_check">Controlla aggiornamenti</string>
+    <string name="update_checking">Controllo in corso…</string>
+    <string name="update_uptodate">WalkTape è aggiornato</string>
+    <string name="update_available">Versione %1$s disponibile</string>
+    <string name="update_no_releases">Nessuna release pubblicata per ora. Le nuove versioni arriveranno su GitHub Releases.</string>
+    <string name="update_rate_limited">GitHub ha temporaneamente limitato le richieste: riprova più tardi.</string>
+    <string name="update_network_error">Rete non disponibile o server non raggiungibile.</string>
+    <string name="update_blocked_offline">I controlli sono disattivati in Solo offline.</string>
+    <string name="update_invalid_response">Risposta di GitHub non comprensibile.</string>
+    <string name="update_notes_title">Novità</string>
+    <string name="update_download">Scarica APK</string>
+    <string name="update_download_running">Download %1$s su %2$s</string>
+    <string name="update_download_done">APK scaricato e verificato</string>
+    <string name="update_download_cancel">Annulla download</string>
+    <string name="update_download_failed">Download non riuscito</string>
+    <string name="update_verify_failed_package">L\'APK non è un aggiornamento di WalkTape.</string>
+    <string name="update_verify_failed_version">L\'APK non è più recente della versione installata.</string>
+    <string name="update_verify_failed_signature">Firma dell\'APK incompatibile: disinstallare l\'app perderebbe i dati, quindi l\'aggiornamento è rifiutato.</string>
+    <string name="update_verify_failed_corrupt">APK danneggiato o non leggibile: download da ripetere.</string>
+    <string name="update_install">Installa aggiornamento</string>
+    <string name="update_install_permission">Consenti l\'installazione di app da WalkTape nelle impostazioni di Android, poi torna qui per installare.</string>
+    <string name="update_install_hint">Android chiederà conferma prima di installare.</string>
+    <string name="update_auto">Controlla automaticamente (una volta al giorno)</string>
+    <string name="update_auto_help">Solo il controllo: nessun download o installazione automatica. Disattivato in Solo offline.</string>
+    <string name="update_last_check">Ultimo controllo automatico: %1$s</string>
+    <string name="update_last_check_never">Controllo automatico mai eseguito</string>
+    <string name="update_last_check_uptodate">Nessuna novità</string>
+    <string name="update_last_check_no_releases">Nessuna release pubblicata</string>
+    <string name="update_last_check_error">Controllo non riuscito</string>
+</resources>

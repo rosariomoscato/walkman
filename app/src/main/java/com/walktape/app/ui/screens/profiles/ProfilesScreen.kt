@@ -40,6 +40,12 @@ fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesVi
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var http by remember { mutableStateOf(false) }
+    // W11-T03: fresh sign-in dialog for imported (credential-less) profiles.
+    var loginProfile by remember { mutableStateOf<ProfileEntity?>(null) }
+    var loginUrl by remember { mutableStateOf("") }
+    var loginUser by remember { mutableStateOf("") }
+    var loginPassword by remember { mutableStateOf("") }
+    var loginHttp by remember { mutableStateOf(false) }
     val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
         result.contents?.let { contents ->
             QrCodec.decode(contents)?.let { payload ->
@@ -64,7 +70,19 @@ fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesVi
                     Text(profile.serverUrl)
                     Text(stringResource(if (profile.serverUrl.startsWith("https:")) R.string.connection_https else R.string.connection_http))
                     if (profile.isActive) Text(stringResource(R.string.profile_active))
+                    if (profile.credentialId.isEmpty()) {
+                        Text(stringResource(R.string.profile_needs_login), color = MaterialTheme.colorScheme.error)
+                    }
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (profile.credentialId.isEmpty()) {
+                            TextButton(enabled = !action.busy, onClick = {
+                                loginProfile = profile
+                                loginUrl = profile.serverUrl
+                                loginUser = profile.username
+                                loginPassword = ""
+                                loginHttp = profile.allowLocalHttp
+                            }) { Text(stringResource(R.string.profile_login)) }
+                        }
                         if (!profile.isActive) TextButton(enabled = !action.busy, onClick = { viewModel.activate(profile.id) }) {
                             Text(stringResource(R.string.profile_activate))
                         }
@@ -114,6 +132,34 @@ fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesVi
             text = { Text(stringResource(R.string.profile_remove_confirm, profile.name, bytes)) },
             confirmButton = { TextButton(enabled = !action.busy, onClick = viewModel::remove) { Text(stringResource(R.string.profile_remove)) } },
             dismissButton = { TextButton(onClick = viewModel::cancelRemoval) { Text(stringResource(R.string.action_cancel)) } })
+    }
+    loginProfile?.let { profile ->
+        AlertDialog(onDismissRequest = { loginPassword = ""; loginProfile = null },
+            title = { Text(stringResource(R.string.profile_login_title)) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.profile_login_help) + " " + profile.name,
+                    style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(loginUrl, { loginUrl = it }, label = { Text(stringResource(R.string.profile_url)) },
+                    singleLine = true, enabled = !action.busy, modifier = Modifier.fillMaxWidth())
+                OutlinedTextField(loginUser, { loginUser = it }, label = { Text(stringResource(R.string.profile_username)) },
+                    singleLine = true, enabled = !action.busy, modifier = Modifier.fillMaxWidth())
+                Row {
+                    Checkbox(loginHttp, { loginHttp = it }, enabled = !action.busy)
+                    Text(stringResource(R.string.profile_http_opt_in), modifier = Modifier.padding(top = 12.dp))
+                }
+                OutlinedTextField(loginPassword, { loginPassword = it }, label = { Text(stringResource(R.string.profile_password)) },
+                    singleLine = true, enabled = !action.busy, visualTransformation = PasswordVisualTransformation(),
+                    modifier = Modifier.fillMaxWidth())
+            } },
+            confirmButton = { TextButton(enabled = !action.busy && loginUrl.isNotBlank() &&
+                    loginUser.isNotBlank() && loginPassword.isNotEmpty(), onClick = {
+                viewModel.login(profile.id, loginUrl, loginUser, loginPassword, loginHttp) {
+                    loginPassword = ""; loginProfile = null
+                }
+            }) { Text(stringResource(R.string.profile_login)) } },
+            dismissButton = { TextButton(enabled = !action.busy, onClick = {
+                loginPassword = ""; loginProfile = null; viewModel.reset()
+            }) { Text(stringResource(R.string.action_cancel)) } })
     }
     share?.let { profile ->
         val qr = remember(profile.id) {

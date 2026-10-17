@@ -262,11 +262,24 @@ Criterio di uscita: percorso di ascolto in auto verificato; eventuale prova hard
 
 Dipendenze: wave 08–10.
 
-- [ ] W11-T01 — Completare impostazioni di dispositivo/profilo e schermata sistema con stati e azioni operative.
-- [ ] W11-T02 — Implementare report diagnostico esportabile con esclusione di segreti e controllo dei dati inclusi.
-- [ ] W11-T03 — Implementare export/import di backup senza credenziali/audio, incluse coda, posizione e lista da riscaricare.
-- [ ] W11-T04 — Implementare controllo aggiornamenti GitHub Releases, novità, download e conferma Android; controllo automatico facoltativo.
-- [ ] W11-T05 — Verificare importazioni invalide, cambio telefono, aggiornamento dell'app e migrazioni senza perdita dei dati.
+Handoff2026-10-16: l'utente richiede il prompt per implementare tutta W11 in una nuova sessione
+e prevede i test **domani in auto**. Autorizzato lo sviluppo indipendente **W11-T01 → T05** sulle
+funzioni W08/W09/W10 disponibili, senza attendere la chiusura dei collaudi hardware. W10-T04/T05,
+W09-T06 e residui precedenti restano aperti: il collaudo previsto non è un esito già acquisito.
+Baseline pubblicata a49d0e7/codiceW10 109b652, Roomv12; NEXT_PROMPT W11 completo e precedente
+handoff W10 archiviato in local/ ignorato. Solo preparazione documentale: nessun codice W11,
+task completato o nuovo commit/push/release in questo handoff.
+
+Incremento 2026-10-17: **W11-T01–T05 [x]** per implementazione e contratto software verificato
+(apparato automatico; collaudo telefono da fare con `local/PHONE_TESTS_W11.md`). Nessun cambio
+schema: **Roomv12** invariata, nessuna nuova migrazione. Dettagli, limiti e controlli non eseguiti
+nel WORKLOG 2026-10-17.
+
+- [x] W11-T01 — Completare impostazioni di dispositivo/profilo e schermata sistema con stati e azioni operative.
+- [x] W11-T02 — Implementare report diagnostico esportabile con esclusione di segreti e controllo dei dati inclusi.
+- [x] W11-T03 — Implementare export/import di backup senza credenziali/audio, incluse coda, posizione e lista da riscaricare.
+- [x] W11-T04 — Implementare controllo aggiornamenti GitHub Releases, novità, download e conferma Android; controllo automatico facoltativo.
+- [x] W11-T05 — Verificare importazioni invalide, cambio telefono, aggiornamento dell'app e migrazioni senza perdita dei dati.
 
 Criterio di uscita: l'utente può diagnosticare, trasferire configurazione e aggiornare l'app nei percorsi verificati.
 

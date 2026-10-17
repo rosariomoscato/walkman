@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.walktape.app.ui.screens.backup.BackupScreen
 import com.walktape.app.ui.screens.diagnostics.DiagnosticsScreen
 import com.walktape.app.ui.screens.library.AlbumDetailScreen
 import com.walktape.app.ui.screens.library.ArtistDetailScreen
@@ -15,6 +16,7 @@ import com.walktape.app.ui.screens.library.PlaylistDetailScreen
 import com.walktape.app.ui.screens.player.PlayerScreen
 import com.walktape.app.ui.screens.profiles.ProfilesScreen
 import com.walktape.app.ui.screens.settings.SettingsScreen
+import com.walktape.app.ui.screens.updates.UpdateScreen
 
 object Routes {
     const val HOME = "home"
@@ -22,6 +24,8 @@ object Routes {
     const val DIAGNOSTICS = "diagnostics"
     const val PROFILES = "profiles"
     const val PLAYER = "player"
+    const val BACKUP = "backup"
+    const val UPDATE = "update"
     const val ALBUM = "album/{id}"
     const val ARTIST = "artist/{id}"
     const val GENRE = "genre/{name}"
@@ -54,13 +58,17 @@ fun WalkTapeNavHost(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 onOpenDiagnostics = { navController.navigate(Routes.DIAGNOSTICS) },
-                onOpenProfiles = { navController.navigate(Routes.PROFILES) }
+                onOpenProfiles = { navController.navigate(Routes.PROFILES) },
+                onOpenBackup = { navController.navigate(Routes.BACKUP) },
+                onOpenUpdates = { navController.navigate(Routes.UPDATE) }
             )
         }
         composable(Routes.DIAGNOSTICS) {
             DiagnosticsScreen()
         }
         composable(Routes.PROFILES) { ProfilesScreen() }
+        composable(Routes.BACKUP) { BackupScreen() }
+        composable(Routes.UPDATE) { UpdateScreen() }
         composable(Routes.PLAYER) { PlayerScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.ALBUM) { entry ->
             AlbumDetailScreen(

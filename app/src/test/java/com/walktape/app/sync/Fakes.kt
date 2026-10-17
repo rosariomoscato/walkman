@@ -157,6 +157,16 @@ class FakeDownloadDao : DownloadDao {
     override suspend fun originsFor(profileId: Long, origin: String): List<DownloadOriginEntity> =
         origins.value.filter { it.profileId == profileId && it.origin == origin }
 
+    override suspend fun allOrigins(profileId: Long): List<DownloadOriginEntity> =
+        origins.value.filter { it.profileId == profileId }
+
+    override fun observeProblemCount(profileId: Long): Flow<Int> = ops.map { list ->
+        list.count { it.profileId == profileId && (it.state == "CONFLICT" || it.state == "FAILED") }
+    }
+
+    override fun observePausedCount(profileId: Long): Flow<Int> =
+        rows.map { map -> map.values.count { it.profileId == profileId && it.status == "PAUSED" } }
+
     override suspend fun downloadedPlaylistOrigins(profileId: Long): List<String> =
         (origins.value.filter { it.profileId == profileId && it.origin.startsWith("playlist:") }.map { it.origin } +
             groupRows.value.values.filter { it.profileId == profileId && it.origin.startsWith("playlist:") }.map { it.origin }).distinct()

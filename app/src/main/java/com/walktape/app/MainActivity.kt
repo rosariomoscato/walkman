@@ -159,7 +159,7 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
                 if (currentRoute != Routes.PLAYER) {
                     PlaybackControls(onOpenPlayer = { navController.navigate(Routes.PLAYER) })
                 }
-                if (showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
+                if (showBottomBar && currentRoute !in setOf(Routes.DIAGNOSTICS, Routes.BACKUP, Routes.UPDATE)) {
                     NavigationBar {
                         WalkTapeDestination.entries.forEach { destination ->
                             NavigationBarItem(
@@ -186,7 +186,7 @@ private fun WalkTapeShell(widthSizeClass: WindowWidthSizeClass) {
         }
     ) { innerPadding ->
         Row(modifier = Modifier.fillMaxSize()) {
-            if (!showBottomBar && currentRoute != Routes.DIAGNOSTICS) {
+            if (!showBottomBar && currentRoute !in setOf(Routes.DIAGNOSTICS, Routes.BACKUP, Routes.UPDATE)) {
                 NavigationRail {
                     Column(
                         modifier = Modifier.fillMaxHeight(),

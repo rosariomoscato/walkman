@@ -133,6 +133,30 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 - Palette, player Compose e token TPS-L2 invariati. Layout effettivo head unit, lingua, voce,
   rotella/touch e visualizzazione copertine in proiezione richiedono ancora DHU/auto reale.
 
+## Incremento W11 — impostazioni sistema, diagnostica, backup, aggiornamenti (2026-10-17)
+
+- Impostazioni: nuova sezione **Stato e recupero** dentro Sistema con soli dati reali osservati
+  (profilo attivo, esito verifica, indice con ultimo aggiornamento/conteggi/progresso lineare in
+  WtOrange, modifiche in attesa/conflitti, download attivi/pausa/errori). Azioni materiali
+  (Verifica, Aggiorna indice, Annulla, Invia adesso, Metti tutti in pausa/Riprendi tutti) come
+  TextButton esistenti; rinvio onesto alla gestione conflitti in La mia musica. Righe voce con
+  icona primaria per **Backup e trasferimento** e **Aggiornamenti app**, accanto a Diagnostica.
+- Diagnostica: interruttori Material3 per le nove sezioni (CONNECTIONS con avviso rosso quando
+  inclusa), anteprima monospace sempre aggiornata senza ricampionare, tasti Copia/Esporta file/
+  Condividi file (MechanicalTextKey, emphasized su Condividi). Nessun dato dimostrativo.
+- Backup: schermata testo+descrizione onesta (inclusi/esclusi), anteprima obbligatoria in dialog
+  con checkbox preferenze, risultato import per profilo (creato/unito, coda, da riscaricare
+  aggiunti/conservati, errori in `error`). Profili importati con badge **Accesso richiesto** e
+  dialog di nuovo accesso con campi precompilati e password mai precompilata.
+- Aggiornamenti: versione installata, stato con esiti onesti (nessuna release pubblicata, rate
+  limit, offline), novità come testo, progresso download lineare, rifiuti verifica con motivi
+  espliciti (firma incompatibile senza proporre disinstallazione), invito unknown-sources
+  limitato all'app e conferma sempre di Android. Interruttore controllo automatico default off
+  con testo "solo controllo".
+- Palette/tipografia/materiali TPS-L2 invariati; FlowRow per le azioni multiple; IT/EN completo;
+  barre di navigazione nascoste sulle tre sotto-schermate come Diagnostica. TalkBack/adattività
+  su telefono da collaudare con `local/PHONE_TESTS_W11.md`.
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

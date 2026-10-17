@@ -37,6 +37,8 @@ import java.io.File
 @Suppress("StaticFieldLeak")
 @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 object Graph {
+    private const val UPDATE_CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
+
     private val coverStores = mutableMapOf<Long, CoverArtStore>()
     private lateinit var appContext: Context
     lateinit var database: WalkTapeDatabase
@@ -70,6 +72,22 @@ object Graph {
             // Leaving offline-only mode drains the mutation queue as soon as allowed.
             database.downloadDao().observeAllSettings().collect { rows ->
                 rows.filter { !it.offlineOnly }.forEach { offlineOps.triggerSync(it.profileId) }
+            }
+        }
+        appScope.launch {
+            // W11-T04: opt-in daily update check; check only, nothing is downloaded or
+            // installed automatically, and offline-only blocks it without consuming the day.
+            var lastAutoCheck = 0L
+            settingsRepository.settings.collect { settings ->
+                if (!settings.updateCheckEnabled) return@collect
+                val now = System.currentTimeMillis()
+                if (now - settings.updateLastCheckAt < UPDATE_CHECK_INTERVAL_MS) return@collect
+                if (now - lastAutoCheck < 60_000L) return@collect
+                lastAutoCheck = now
+                val outcome = updateManager.check()
+                if (outcome !is com.walktape.app.core.updates.UpdateManager.CheckOutcome.BlockedOffline) {
+                    settingsRepository.setUpdateLastCheck(now, updateManager.outcomeToken(outcome))
+                }
             }
         }
     }
@@ -148,6 +166,12 @@ object Graph {
             .map { offlineOps.conflictPlaylistId(it) }.toSet()
     }
 
+    /**
+     * One shared engine for every UI surface (library and settings): a single mutex
+     * prevents parallel index refreshes of the same profile (W11-T01).
+     */
+    val librarySyncEngine: LibrarySync by lazy { librarySync() }
+
     fun librarySync() = LibrarySync(database.libraryDao(), clientProvider = { id ->
         // Do not let an index refresh replace optimistic favorites with older server
         // values while an edit, rejection or conflict is still awaiting resolution.
@@ -207,6 +231,30 @@ object Graph {
     fun lyricsRepository() = LyricsRepository(database.lyricsDao(),
         clientProvider = { id -> profiles.clientFor(id) },
         offlineOnly = { id -> networkGate.offlineOnly(id) })
+
+    /** W11-T03: backup build/import over the live singletons (FIFO queue reads included). */
+    val backupManager: com.walktape.app.core.backup.BackupManager by lazy {
+        com.walktape.app.core.backup.BackupManager(
+            database, settingsRepository,
+            queueLoader = { id -> queues.load(id) },
+            activeProfileHasMedia = { playback.state.value.hasMedia },
+            appVersion = try {
+                appContext.packageManager.getPackageInfo(appContext.packageName, 0).versionName
+                    ?: "unknown"
+            } catch (_: Exception) {
+                "unknown"
+            },
+        )
+    }
+
+    /** W11-T04: GitHub Releases updates behind the global offline-only gate. */
+    val updateManager: com.walktape.app.core.updates.UpdateManager by lazy {
+        com.walktape.app.core.updates.UpdateManager(appContext,
+            networkAllowed = {
+                networkGate.awaitReady()
+                !networkGate.offlineOnly(-1)
+            })
+    }
 
     @Synchronized
     fun coverArtStore(profileId: Long): CoverArtStore = coverStores.getOrPut(profileId) {

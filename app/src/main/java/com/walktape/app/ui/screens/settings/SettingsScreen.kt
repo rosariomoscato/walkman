@@ -14,7 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.BugReport
+import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -48,6 +50,8 @@ import com.walktape.app.ui.nav.WalkTapeDestination
 fun SettingsScreen(
     onOpenDiagnostics: () -> Unit,
     onOpenProfiles: () -> Unit,
+    onOpenBackup: () -> Unit,
+    onOpenUpdates: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
 ) {
@@ -108,28 +112,29 @@ fun SettingsScreen(
             onCheckedChange = viewModel::setKeyClicksEnabled
         )
 
+        SystemStatusSection(viewModel)
+
         DownloadsStorageSection(viewModel)
 
         SoundSection(viewModel)
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onOpenDiagnostics)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.BugReport,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = stringResource(R.string.settings_diagnostics),
-                style = MaterialTheme.typography.titleMedium
-            )
-        }
+        EntryRow(
+            label = stringResource(R.string.system_backup_entry),
+            icon = Icons.Filled.Android,
+            onClick = onOpenBackup
+        )
+
+        EntryRow(
+            label = stringResource(R.string.system_updates_entry),
+            icon = Icons.Filled.SystemUpdate,
+            onClick = onOpenUpdates
+        )
+
+        EntryRow(
+            label = stringResource(R.string.settings_diagnostics),
+            icon = Icons.Filled.BugReport,
+            onClick = onOpenDiagnostics
+        )
 
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
@@ -149,6 +154,191 @@ private fun SettingLabel(text: String, paddingStart: Int) {
         style = MaterialTheme.typography.bodyMedium,
         modifier = Modifier.padding(start = paddingStart.dp)
     )
+}
+
+@Composable
+private fun EntryRow(
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.titleMedium
+        )
+    }
+}
+
+/** Honest per-profile status: connection, index, pending edits and downloads (W11-T01). */
+@Composable
+private fun SystemStatusSection(viewModel: SettingsViewModel) {
+    val profile by viewModel.activeProfile.collectAsStateWithLifecycle()
+    val libraryState by viewModel.libraryState.collectAsStateWithLifecycle()
+    val progress by viewModel.syncProgress.collectAsStateWithLifecycle()
+    val pending by viewModel.pendingEdits.collectAsStateWithLifecycle()
+    val problems by viewModel.problemEdits.collectAsStateWithLifecycle()
+    val active by viewModel.activeDownloads.collectAsStateWithLifecycle()
+    val failed by viewModel.failedDownloads.collectAsStateWithLifecycle()
+    val paused by viewModel.pausedDownloads.collectAsStateWithLifecycle()
+    val verify by viewModel.verifyState.collectAsStateWithLifecycle()
+    val verifyState = verify
+    val dateFormatter = remember {
+        java.text.DateFormat.getDateTimeInstance(
+            java.text.DateFormat.SHORT, java.text.DateFormat.SHORT)
+    }
+
+    SectionHeader(text = stringResource(R.string.system_status_title))
+    val currentProfile = profile ?: run {
+        Text(stringResource(R.string.home_empty_body),
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(horizontal = 16.dp))
+        return
+    }
+
+    Text(currentProfile.name,
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    when (verifyState) {
+        is SettingsViewModel.VerifyState.Busy ->
+            Text(stringResource(R.string.system_connection_running),
+                modifier = Modifier.padding(horizontal = 16.dp))
+        is SettingsViewModel.VerifyState.Ok -> {
+            Text(stringResource(R.string.system_connection_ok),
+                color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(horizontal = 16.dp))
+            TextButton(onClick = viewModel::dismissVerify, modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(stringResource(R.string.action_close))
+            }
+        }
+        is SettingsViewModel.VerifyState.Failed -> {
+            Text(stringResource(apiErrorLabel(verifyState.error)),
+                color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+            TextButton(onClick = viewModel::dismissVerify, modifier = Modifier.padding(horizontal = 16.dp)) {
+                Text(stringResource(R.string.action_close))
+            }
+        }
+        SettingsViewModel.VerifyState.Idle -> Unit
+    }
+    if (verifyState !is SettingsViewModel.VerifyState.Busy) {
+        androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 16.dp)) {
+            TextButton(onClick = viewModel::verifyConnection) {
+                Text(stringResource(R.string.system_connection_verify))
+            }
+        }
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    Text(stringResource(R.string.system_index_title),
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    val state = libraryState
+    when {
+        state == null -> Text(stringResource(R.string.system_index_never),
+            modifier = Modifier.padding(horizontal = 16.dp))
+        state.lastSyncOk -> Text(stringResource(R.string.system_index_last_ok,
+            dateFormatter.format(java.util.Date(state.lastSyncAt)), state.songCount),
+            modifier = Modifier.padding(horizontal = 16.dp))
+        else -> Text(stringResource(R.string.system_index_last_failed,
+            dateFormatter.format(java.util.Date(state.lastSyncAt))),
+            modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    if (progress.running) {
+        Text(stringResource(R.string.system_index_running, progress.processed, progress.total),
+            modifier = Modifier.padding(horizontal = 16.dp))
+        androidx.compose.material3.LinearProgressIndicator(
+            progress = { if (progress.total > 0) progress.processed.toFloat() / progress.total else 0f },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+    } else {
+        progress.error?.let {
+            Text(stringResource(apiErrorLabel(it)), color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 16.dp))
+        }
+    }
+    androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 16.dp)) {
+        if (progress.running) {
+            TextButton(onClick = viewModel::cancelSync) {
+                Text(stringResource(R.string.system_index_cancel))
+            }
+        } else {
+            TextButton(onClick = viewModel::syncIndex) {
+                Text(stringResource(R.string.system_index_refresh))
+            }
+        }
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    Text(stringResource(R.string.system_sync_title),
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    if (problems > 0) {
+        Text(stringResource(R.string.system_sync_problems, problems),
+            color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    if (pending > 0) {
+        Text(stringResource(R.string.system_sync_pending, pending),
+            modifier = Modifier.padding(horizontal = 16.dp))
+        androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 16.dp)) {
+            TextButton(onClick = viewModel::sendPendingEdits) {
+                Text(stringResource(R.string.system_sync_send))
+            }
+        }
+    } else if (problems == 0) {
+        Text(stringResource(R.string.system_sync_none), modifier = Modifier.padding(horizontal = 16.dp))
+    }
+    Text(stringResource(R.string.system_sync_help),
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp))
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp))
+    Text(stringResource(R.string.system_downloads_title),
+        style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(horizontal = 16.dp))
+    if (active == 0 && failed == 0 && paused == 0) {
+        Text(stringResource(R.string.system_downloads_idle), modifier = Modifier.padding(horizontal = 16.dp))
+    } else {
+        val parts = buildList {
+            if (active > 0) add(stringResource(R.string.system_downloads_active, active))
+            if (paused > 0) add(stringResource(R.string.system_downloads_paused, paused))
+            if (failed > 0) add(stringResource(R.string.system_downloads_failed, failed))
+        }
+        Text(parts.joinToString(" · "), modifier = Modifier.padding(horizontal = 16.dp))
+        androidx.compose.foundation.layout.FlowRow(Modifier.padding(horizontal = 16.dp)) {
+            TextButton(enabled = active > 0, onClick = viewModel::pauseAllDownloads) {
+                Text(stringResource(R.string.system_downloads_pause))
+            }
+            TextButton(enabled = paused > 0, onClick = viewModel::resumeAllDownloads) {
+                Text(stringResource(R.string.system_downloads_resume))
+            }
+        }
+    }
+}
+
+/** Same honest categories as the profiles screen; never raw server messages. */
+private fun apiErrorLabel(error: com.walktape.app.core.net.ApiError): Int = when (error) {
+    com.walktape.app.core.net.ApiError.InvalidRequest -> R.string.error_configuration
+    com.walktape.app.core.net.ApiError.CredentialsUnavailable -> R.string.error_credentials_storage
+    com.walktape.app.core.net.ApiError.LocalStorage -> R.string.error_local_storage
+    com.walktape.app.core.net.ApiError.Unreachable, com.walktape.app.core.net.ApiError.Network -> R.string.error_network
+    com.walktape.app.core.net.ApiError.Timeout -> R.string.error_timeout
+    com.walktape.app.core.net.ApiError.Tls -> R.string.error_tls
+    com.walktape.app.core.net.ApiError.InvalidResponse -> R.string.error_response
+    is com.walktape.app.core.net.ApiError.Http -> R.string.error_http
+    is com.walktape.app.core.net.ApiError.Protocol -> when (error.kind) {
+        com.walktape.app.core.net.ProtocolErrorKind.AUTHENTICATION -> R.string.error_auth
+        com.walktape.app.core.net.ProtocolErrorKind.FORBIDDEN -> R.string.error_permission
+        com.walktape.app.core.net.ProtocolErrorKind.AUTH_UNSUPPORTED, com.walktape.app.core.net.ProtocolErrorKind.AUTH_CONFLICT -> R.string.error_auth_method
+        com.walktape.app.core.net.ProtocolErrorKind.CLIENT_VERSION, com.walktape.app.core.net.ProtocolErrorKind.SERVER_VERSION -> R.string.error_version
+        else -> R.string.error_protocol
+    }
 }
 
 /** Per-profile download/offline controls plus honest on-disk space accounting. */

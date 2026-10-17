@@ -29,6 +29,10 @@ class SettingsViewModel(
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
+    /** Shared with the library screen: one mutex, no parallel index refreshes (W11-T01). */
+    private val syncEngine = Graph.librarySyncEngine
+    val syncProgress = syncEngine.progress
+
     val settings: StateFlow<AppSettings> = settingsRepository.settings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), AppSettings())
 
@@ -43,6 +47,102 @@ class SettingsViewModel(
         else Graph.database.downloadDao().observeSettings(profile.id)
             .map { it ?: ProfileSettingsEntity(profileId = profile.id) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), ProfileSettingsEntity(profileId = 0))
+
+    /** Persisted index state of the active profile: last successful refresh and counts. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val libraryState: StateFlow<com.walktape.app.core.db.LibraryStateEntity?> =
+        activeProfile.flatMapLatest { profile ->
+            profile?.let { Graph.database.libraryDao().observeState(it.id) }
+                ?: flowOf<com.walktape.app.core.db.LibraryStateEntity?>(null)
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    /** Offline edits waiting for the network (pending + conflicts + rejected). */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val pendingEdits: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observeUnsyncedCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** Conflicted or rejected operations that need an explicit resolution in the library. */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val problemEdits: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observeProblemCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val activeDownloads: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observeActiveCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val failedDownloads: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observeFailedCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val pausedDownloads: StateFlow<Int> = activeProfile.flatMapLatest { profile ->
+        profile?.let { Graph.database.downloadDao().observePausedCount(it.id) } ?: flowOf(0)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+
+    /** One connection verification at a time; result kept until dismissed or re-run. */
+    sealed interface VerifyState {
+        data object Idle : VerifyState
+        data object Busy : VerifyState
+        data object Ok : VerifyState
+        data class Failed(val error: com.walktape.app.core.net.ApiError) : VerifyState
+    }
+
+    private val mutableVerify = MutableStateFlow<VerifyState>(VerifyState.Idle)
+    val verifyState = mutableVerify.asStateFlow()
+
+    fun verifyConnection() {
+        val profileId = activeProfile.value?.id ?: return
+        if (mutableVerify.value is VerifyState.Busy) return
+        if (Graph.networkGate.offlineOnly(profileId)) {
+            mutableVerify.value = VerifyState.Failed(com.walktape.app.core.net.ApiError.Unreachable)
+            return
+        }
+        viewModelScope.launch {
+            mutableVerify.value = VerifyState.Busy
+            mutableVerify.value = when (val result = Graph.profiles.verify(profileId)) {
+                is com.walktape.app.core.net.ApiResult.Failure -> VerifyState.Failed(result.error)
+                is com.walktape.app.core.net.ApiResult.Success -> VerifyState.Ok
+            }
+        }
+    }
+
+    fun dismissVerify() { mutableVerify.value = VerifyState.Idle }
+
+    /** Manual index refresh on the shared engine; no-op while another refresh runs. */
+    fun syncIndex() {
+        val profileId = activeProfile.value?.id ?: return
+        if (syncProgress.value.running) return
+        viewModelScope.launch { syncEngine.sync(profileId) }
+    }
+
+    fun cancelSync() { syncEngine.cancel() }
+
+    /** Drains the offline mutation queue of the active profile (same serializer as the library). */
+    fun sendPendingEdits() {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch { Graph.offlineOps.drain(profileId) }
+    }
+
+    /** Pauses every download of the active profile: rows + persistent work cancellation. */
+    fun pauseAllDownloads() {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch {
+            Graph.downloadEngine.pauseWork(profileId)
+            Graph.downloadStore.pauseAll(profileId)
+        }
+    }
+
+    fun resumeAllDownloads() {
+        val profileId = activeProfile.value?.id ?: return
+        viewModelScope.launch {
+            Graph.downloadStore.resumeAll(profileId)
+            Graph.downloadEngine.schedule(profileId, replace = true)
+        }
+    }
 
     data class SpaceUsage(val musicBytes: Long = -1, val audioCacheBytes: Long = -1,
         val coversBytes: Long = -1, val totalBytes: Long = -1)

@@ -109,6 +109,10 @@ interface DownloadDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOrigin(origin: DownloadOriginEntity)
 
+    /** All origins of a profile (W11 backup export). */
+    @Query("SELECT * FROM download_origin WHERE profileId=:profileId")
+    suspend fun allOrigins(profileId: Long): List<DownloadOriginEntity>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertOrigins(origins: List<DownloadOriginEntity>)
 
@@ -169,6 +173,12 @@ interface DownloadDao {
 
     @Query("SELECT COUNT(*) FROM pending_op WHERE profileId=:profileId AND state IN ('PENDING','SYNCING','CONFLICT','FAILED')")
     fun observeUnsyncedCount(profileId: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM pending_op WHERE profileId=:profileId AND state IN ('CONFLICT','FAILED')")
+    fun observeProblemCount(profileId: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM download WHERE profileId=:profileId AND status='PAUSED'")
+    fun observePausedCount(profileId: Long): Flow<Int>
 
     @Query("DELETE FROM pending_op WHERE profileId=:profileId AND opId=:opId")
     suspend fun deleteOp(profileId: Long, opId: String)

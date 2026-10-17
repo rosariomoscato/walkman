@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <!-- W11-T04: lets the user confirm APK updates from GitHub Releases; the install
+         dialog is always driven by Android's package installer. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
         android:name=".WalkTapeApp"
@@ -66,5 +69,17 @@
             android:authorities="com.walktape.app.art"
             android:exported="true"
             tools:ignore="ExportedContentProvider" />
+
+        <!-- W11: shares diagnostics reports and hands verified update APKs to Android's
+             installer with the minimum, per-call read grant. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="com.walktape.app.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
     </application>
 </manifest>

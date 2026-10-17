@@ -34,7 +34,6 @@
     <string name="diagnostics_title">Diagnostica</string>
     <string name="diagnostics_description">Rapporto tecnico del dispositivo. I dati sensibili (URL con credenziali, token) vengono oscurati automaticamente.</string>
     <string name="diagnostics_copy">Copia rapporto</string>
-    <string name="diagnostics_export">Esporta</string>
     <string name="diagnostics_copied">Rapporto copiato</string>
     <string name="diagnostics_export_subject">WalkTape — rapporto diagnostico</string>
 
