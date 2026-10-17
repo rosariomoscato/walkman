@@ -4,11 +4,12 @@ Come installare WalkTape e collegarlo al proprio server Navidrome.
 
 ## 1. Installare l'APK
 
-La prima GitHub Release non è ancora pubblicata; questa procedura descrive
-l'installazione quando l'APK sarà disponibile nella pagina Releases.
+Versione pubblica: **[v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)**,
+`versionCode 2`, Android 8.0+; APK universal firmato.
 
-1. Scarica l'APK `walktape-universal-…apk` dall'ultima
-   [release](https://github.com/rosariomoscato/walktape/releases).
+1. Scarica [walktape-universal-0.1.0.apk](https://github.com/rosariomoscato/walktape/releases/download/v0.1.0/walktape-universal-0.1.0.apk).
+   L'hash per verificarne l'integrità è in
+   [SHA256SUMS.txt](https://github.com/rosariomoscato/walktape/releases/download/v0.1.0/SHA256SUMS.txt).
 2. Aprilo sul telefono ("Scarica" completata → tocca il file, o da File manager).
 3. Android può chiedere il permesso di installare app sconosciute per il browser o
    gestore file che apre l'APK. Per gli aggiornamenti avviati dentro WalkTape, invece,
@@ -18,6 +19,14 @@ l'installazione quando l'APK sarà disponibile nella pagina Releases.
 **Aggiornamenti**: si installano sopra la versione precedente (stessa firma verificata
 dall'app: vedi [UPDATES.md](UPDATES.md)). Una build con firma diversa richiede la
 disinstallazione: i dati dell'app andrebbero persi, la musica sul server no.
+
+### Da build di sviluppo già denominate 0.1.0
+
+Il controllo in-app confronta i nomi versione: considera la build di test e la release
+0.1.0 equivalenti, anche se il pacchetto release è diverso. Installa manualmente l'APK
+pubblico sopra quello attuale, senza disinstallare: la firma di progetto è stata mantenuta.
+Questo vale anche passando da una build debug con versionCode2 al release con code2.
+Le versioni future incrementeranno sia versionName sia versionCode.
 
 ## 2. Rendere Navidrome raggiungibile
 

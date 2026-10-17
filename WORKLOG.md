@@ -1531,3 +1531,39 @@ e remoto `bc93c3c4826b256066ad2764bd22c74a78e20ce0` verificati identici e workin
 pulita subito dopo. Nessun tag/release/asset APK pubblicato. Questa nota e la memoria
 sono nel successivo commit documentale. Restano aperti i collaudi residui già elencati;
 per una futura release ricostruire il relativo APK con le modifiche ultime.
+
+## 2026-10-17 — Preparazione pubblicazione v0.1.0 autorizzata
+
+Task W12-T06/T07. Richiesta esplicita: «pubblichamol'apk disponibile e aggiorniamo tutta
+la documentazione di conseguenza, quindi commit e push». Preflight working tree pulita
+su afdb6a5, fetch0/0, repository pubblico rosariomoscato/walktape, nessuna release/tag
+esistente. Autorizzate pubblicazione tag/release/upload APK e commit/push documenti.
+Conservata versione concordata0.1.0/code2; nessuna modifica applicativa. Ricostruito
+release finale per includere splash/tasti/D41, non distribuito il vecchio139A391A.
+
+Build `assembleRelease lintRelease` con JBR/in-process/max-workers2: **BUILD SUCCESSFUL
+12m53s**, **lint release0errori/45avvisi**. APK packagecom.walktape.app,0.1.0/code2,
+ABIarm64-v8a/armeabi-v7a/x86/x86_64; firma V2 verificata con apksigner, certSHA256
+`60e9a71f990819c44b2a07a6fc9254925a0d87414c36495f85feb9ffde7b178c`.
+Artefatto ignorato `local/walktape-universal-0.1.0.apk`, SHA256
+`c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`;
+checksum in local/SHA256SUMS.txt. Keystore/configurazione locali intatte, nessun segreto
+nei documenti o negli asset.
+
+Prova upgrade emulatore debug0.1.0/code2→release0.1.0/code2: primo install fallito
+con broken pipe del servizio package, secondo timeout del tool. Verifica successiva:
+installazione completata, pkgFlags senza DEBUGGABLE e marker files/ conservato; SHA256
+di base.apk installato letto sul dispositivo identico all'artefattoC1CC. MainActivity
+resumed e am start Statusok, ma dumpUI iniziali coperti da ANR Quickstep/system/systemUI.
+Crash buffer: abort del processo app in AndroidXProfileInstaller/JNI durante
+DeadSystemRuntimeException/DeadSystemException del PackageManager (system_server morto),
+coerente con broken pipe e tempesta ANR; non dichiarato «zero crash app» né bug risolto.
+Cold reboot dello stesso AVD senza wipe per nuova verifica avvio.
+
+Aggiornate guide README/INSTALL/UPDATES/Auto/Backup/Diagnostica/Privacy/PhoneTests e
+SPEC/PLAN/ARCHITECTURE; nuove docs/RELEASE_NOTES.md e RELEASING.md con checksum,
+certificato pubblico, limiti e processo. Evidenziato passaggio manuale dalle build di
+test già denominate0.1.0: updater le considera pari versione, non si inventa un'offerta
+né si chiude il collaudo di un futuro aggiornamento a versione maggiore.
+Tag previsto sul sorgenteafdb6a57e381c574b2df94e4d17446b90dc2dd39, aggiornamenti docs
+successivi su main. Pubblicazione effettiva e controlli download da registrare dopo.

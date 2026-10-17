@@ -2,7 +2,7 @@
 
 ## Stato della verifica W10
 
-L'APK debug espone lo stesso `PlaybackService` come **MediaLibraryService Media3 1.11.1**.
+L'APK release v0.1.0 (come il debug) espone `PlaybackService` come **MediaLibraryService Media3 1.11.1**.
 Telefono, notifica e browser usano lo stesso player logico W09, la stessa coda e gli stessi UUID.
 Android Auto disegna l'interfaccia; non viene proiettata la scocca Compose TPS-L2.
 
@@ -46,7 +46,8 @@ sono servite soltanto ai chiamanti ammessi e per il profilo attivo.
 
 1. Telefono compatibile con Android Auto, app Android Auto aggiornata e connessione
    USB dati affidabile (oppure modalità wireless supportata dall'auto).
-2. Installare `app/build/outputs/apk/debug/app-debug.apk` sul telefono, autorizzando
+2. Installare l'[APK firmato v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)
+   sul telefono ([guida](INSTALL.md)), autorizzando
    l'installazione dalla sorgente scelta quando Android lo richiede. Non disinstallare una
    copia contenente dati per aggirare una firma diversa: l'aggiornamento richiede la stessa firma.
 3. Aprire WalkTape sul telefono, configurare Navidrome e verificare MP3/FLAC e download.
@@ -56,9 +57,10 @@ sono servite soltanto ai chiamanti ammessi e per il profilo attivo.
    per le app multimediali esterne al Play Store. Posizioni e nomi dei menu possono variare:
    confrontare prima la guida ufficiale corrente indicata sotto.
 5. Collegare l'head unit, verificare che WalkTape compaia e annotare versioni telefono,
-   Android Auto e head unit. Il debug sideload qui preparato non equivale a pubblicazione Play.
+   Android Auto e head unit. La distribuzione APK esterna non equivale a pubblicazione Play.
 
-I passi 1–5 non sono stati eseguiti su un telefono in questo incremento.
+Il collaudo W10 non ha attestato i passi di proiezione Auto su telefono/head unit;
+la pubblicazione v0.1.0 non li chiude automaticamente.
 
 ## Desktop Head Unit (DHU) — da eseguire quando il telefono è disponibile
 
@@ -84,8 +86,8 @@ Riferimento ufficiale: <https://developer.android.com/training/cars/testing/dhu>
    & "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" -s <seriale-telefono> forward --remove tcp:5277
    ```
 
-Questi comandi non sono stati eseguiti in questa sessione: non è disponibile il telefono e il
-DHU non è installato. Non usare l'AVD AOSP come sostituto della proiezione Auto.
+Questi comandi non sono stati eseguiti nel collaudo W10 documentato e il DHU allora
+non era installato. Non usare l'AVD AOSP come sostituto della proiezione Auto.
 
 ## Fonti e provenienza
 
@@ -101,4 +103,5 @@ DHU non è installato. Non usare l'AVD AOSP come sostituto della proiezione Auto
 - La nota Unknown sources di `docs/ARCHITECTURE.md` W01 è una ricerca precedente,
   non evidenza di abilitazione dell'APK W10 sulla versione Android Auto del telefono.
 
-Nessun account WalkTape, backend, servizio SaaS, nuova chiave di firma o release richiesti.
+Nessun account WalkTape, backend o servizio SaaS richiesto. Versione e limiti correnti:
+[note di rilascio](RELEASE_NOTES.md).

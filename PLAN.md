@@ -285,9 +285,14 @@ Criterio di uscita: l'utente può diagnosticare, trasferire configurazione e agg
 
 ## Wave 12 — Verifica complessiva e distribuzione
 
+Prima distribuzione autorizzata dall'utente: **v0.1.0 / versionCode2**, APK release
+riallineato a splash/tasti/D41, firma stabile e checksum. Artefatto e processo in
+[RELEASING.md](docs/RELEASING.md), verifiche/limiti nelle [note](docs/RELEASE_NOTES.md).
+La pubblicazione non chiude T02/T03 né i collaudi hardware precedenti.
+
 Incrementi UI post-collaudo: tasti player a larghezza piena e splash con logo/versione/
-credits implementati e compilati (debug+lint); riscontro visivo e lifecycle sul telefono
-ancora da raccogliere, APK release da riallineare prima di un'eventuale pubblicazione.
+credits implementati e compilati (debug+lint); successivo riscontro visivo positivo.
+La build release della prima distribuzione ora include questi incrementi e D41.
 
 Successivo riscontro utente: splash/tasti approvati. Rinforzo bassi per route concordato
 in D41: sospensione su speaker/uscita ignota, preferenza conservata per cuffie. Verifiche

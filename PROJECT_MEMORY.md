@@ -4,6 +4,22 @@ Ultimo aggiornamento: 2026-10-17 (W12 e incrementi UI/bassi pubblicati in bc93c3
 
 ## Punto corrente — post-W12; collaudi utente pendenti; release non pubblicata
 
+- **Task corrente W12-T06/T07 — pubblicazione APK richiesta esplicitamente** («pubblichamo
+  l'apk disponibile e aggiorniamo tutta la documentazione ... commit e push»).
+  Versione mantenuta0.1.0/code2, release aggiornata dal sorgente afdb6a5 (code invariato).
+  Build assembleRelease/lintRelease riuscita12m53s,lint0/45, firma V2/cert60e9a71f…
+  verificati, ABI arm64-v8a/armeabi-v7a/x86/x86_64. Asset locale ignorato
+  `local/walktape-universal-0.1.0.apk`, SHA256
+  `c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`;
+  checksum `local/SHA256SUMS.txt`. Metadati e pipeline in docs/RELEASING.md,
+  note definitive in docs/RELEASE_NOTES.md. Non usare il vecchio candidato139A391A.
+  Prima prova install emulatore: broken pipe del servizio package, successivo comando
+  timeout tool ma install completata; base.apk letto ha hash C1CC identico, release
+  non-debuggable e marker dati conservato sopra debug0.1.0/code2. MainActivity resumed;
+  dump UI inizialmente bloccato da ANR Quickstep/system (non attestato come collaudo UI).
+  Prossima azione: commit/push documenti, tag v0.1.0 sul sorgente afdb6a5, draft+upload,
+  verifica download e pubblicazione latest, poi aggiornare stato e registri.
+
 - **Commit e push eseguiti su richiesta esplicita**: codice/test/documenti W12 e
   incrementi successivi in **bc93c3c — Wave 12: verifiche, interfaccia e bassi per uscita**,
   35file/1576inserimenti/95rimozioni. Push ordinario530e83a..bc93c3c riuscito,

@@ -2,6 +2,11 @@
 
 Funzione W11-T02. La diagnostica è **solo locale**: nessun invio automatico, nessuna telemetria.
 
+Versione pubblica di riferimento: [v0.1.0](RELEASE_NOTES.md), versionCode2.
+Prima di segnalare un problema controllare la sezione **App** del rapporto per identificare
+versione e versionCode. Le build di sviluppo possono avere gli stessi numeri: indicare
+anche la provenienza dell'APK per distinguere debug e release.
+
 ## Cosa contiene
 
 Il rapporto è costruito da un'allowlist di campi, organizzato in nove sezioni:

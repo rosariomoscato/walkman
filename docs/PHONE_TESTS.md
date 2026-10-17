@@ -1,10 +1,13 @@
 # WalkTape — prove sul Motorola
 
-Questa è una procedura di prova: i controlli sotto non sono ancora stati eseguiti sul telefono.
+Procedura originaria W03/W04, conservata come riferimento. Gli esiti successivi sono
+registrati in WORKLOG/PLAN; non tutte le voci di questa matrice sono automaticamente
+superate dai collaudi più recenti. Versione pubblica: [v0.1.0](RELEASE_NOTES.md).
 
 ## Preparazione
 
-- APK debug locale: `app/build/outputs/apk/debug/app-debug.apk`.
+- APK pubblico: [release v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0),
+  oppure debug locale per sviluppo: `app/build/outputs/apk/debug/app-debug.apk`.
 - Sul telefono usare l'indirizzo LAN oppure Tailscale del computer che ospita Navidrome. `localhost` e `10.0.2.2` non sono indirizzi del server utilizzabili dal telefono.
 - Inserire le credenziali direttamente nell'app; non copiarle in chat, screenshot o report.
 
@@ -23,7 +26,9 @@ Questa è una procedura di prova: i controlli sotto non sono ancora stati esegui
 1. Dalla home avviare **Aggiorna libreria**. Durante l'indicizzazione consultare gli elementi già caricati.
 2. Alternare Album/Artisti/Brani/Generi; aprire un album e controllare titolo, artista, tracce e durate. Provare un album multidisco e una compilation.
 3. Cercare un nome noto, svuotare la ricerca e cambiare ordinamento. Chiudere/riaprire per controllare la persistenza dell'ordinamento.
-4. Disattivare temporaneamente la rete: l'indice già memorizzato deve restare consultabile. Questo non è ancora un test di ascolto offline: il motore audio e i download appartengono alle wave successive.
+4. Disattivare temporaneamente la rete: l'indice già memorizzato deve restare consultabile.
+   Questo passo verifica il solo indice; ascolto offline e download sono funzioni distinte
+   implementate nelle wave successive e da verificare separatamente.
 
 ## Esiti da raccogliere
 

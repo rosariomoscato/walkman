@@ -2,6 +2,10 @@
 
 Stato: approvata dall'utente nella conversazione iniziale. Trascrizione del perimetro, non attestazione di implementazione.
 
+Distribuzione di riferimento: [v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)
+(code2); [note e collaudi residui](docs/RELEASE_NOTES.md). Pubblicare il pacchetto non
+equivale a dichiarare superata l'intera matrice hardware di questa specifica.
+
 ## Obiettivo e piattaforma
 
 Player Android nativo per Navidrome con identità visiva ispirata al Sony TPS-L2. Primo pubblico: proprietario, amici e familiari; evoluzione futura verso distribuzione pubblica.

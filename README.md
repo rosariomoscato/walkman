@@ -4,7 +4,9 @@ Player Android nativo per [Navidrome](https://www.navidrome.org), con un'identit
 
 Open source (licenza MIT), nessuna pubblicità, nessuna telemetria, nessun account aggiuntivo: la tua musica resta sul tuo server.
 
-![Stato](https://img.shields.io/badge/stato-prima%20versione%20in%20verifica-orange)
+**Versione corrente: [v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)**
+— [Scarica APK universal](https://github.com/rosariomoscato/walktape/releases/download/v0.1.0/walktape-universal-0.1.0.apk)
+· [Novità e verifiche](docs/RELEASE_NOTES.md)
 
 ## Cos'è
 
@@ -15,7 +17,7 @@ WalkTape riproduce la libreria del tuo server Navidrome sul telefono (e in Andro
 - **Player TPS-L2**: coda con occorrenze distinte, shuffle/ripetizione, timer di spegnimento, crossfade opzionale, ReplayGain, equalizzatore, effetto cassetta (tutti inizialmente spenti: suono pulito predefinito).
 - **Rinforzo bassi** opzionale per cuffie: sospeso su altoparlante o uscita non rilevata, con avviso e preferenza conservata; resa dipendente dal dispositivo, nessuna compensazione automatica del volume.
 - **Offline reale**: download di brani/album/playlist, cache limitata, modifiche offline a playlist/preferiti con recupero e gestione dei conflitti.
-- **Ascolti** inviati a Navidrome, incluso il recupero degli eventi offline senza duplicati.
+- **Ascolti** inviati a Navidrome con deduplica locale e recupero offline; nessuna garanzia exactly-once se il server accetta l'evento ma la risposta si perde.
 - **Android Auto** nell'interfaccia prevista dalla piattaforma.
 - **Backup/trasferimento** senza credenziali né audio, diagnostica esportabile con oscuramento dei dati sensibili, aggiornamenti da GitHub Releases con verifica della firma.
 - Italiano/inglese, chiaro/scuro/sistema, accessibilità (TalkBack, font ingranditi, movimento ridotto), telefono e tablet.
@@ -31,12 +33,10 @@ WalkTape riproduce la libreria del tuo server Navidrome sul telefono (e in Andro
 
 ## Installazione
 
-WalkTape non è su Google Play. La distribuzione prevista è tramite APK nelle
+WalkTape non è su Google Play. L'APK firmato è distribuito tramite
 [GitHub Releases](https://github.com/rosariomoscato/walktape/releases).
-La prima release non è ancora pubblicata; la procedura seguente sarà applicabile
-quando sarà disponibile un APK nella pagina Releases:
 
-1. Scarica l'APK `walktape-universal-…apk` dall'ultima release.
+1. Scarica `walktape-universal-0.1.0.apk` dalla release v0.1.0; il relativo hash è nel file `SHA256SUMS.txt` della stessa release.
 2. Aprilo sul telefono e conferma l'installazione (Android può chiedere il permesso di installare app sconosciute al browser o al gestore file usato).
 3. Al primo avvio: aggiungi il profilo con URL, utente e password Navidrome (o scansiona il QR generato da un altro dispositivo).
 
@@ -44,12 +44,19 @@ quando sarà disponibile un APK nella pagina Releases:
 
 Guida dettagliata: [docs/INSTALL.md](docs/INSTALL.md).
 
+**Per chi usa già una build di test 0.1.0:** il controllo in-app la considera la stessa
+versione. Il primo passaggio al pacchetto release si fa installando manualmente l'APK
+sopra quello attuale, con la stessa firma e senza disinstallare. Versione pubblica:
+`0.1.0`, `versionCode 2`.
+
 ## Limiti
 
 - Solo Navidrome (nessun altro server OpenSubsonic dichiarato/verificato).
 - Nessun Play Store, nessun servizio cloud WalkTape, nessuna sincronizzazione automatica tra telefoni.
 - I download vivono nella memoria privata dell'app: disinstallare significa rimuoverli (per questo il backup contiene la lista, non i file).
 - File locali indipendenti, Cast/DLNA e skin alternative sono fuori dalla prima versione ([backlog](PLAN.md)).
+- Restano collaudi aperti su Android Auto in auto/DHU e parti della matrice hardware,
+  batteria, accessibilità e trasferimento backup: dettaglio nelle [note di rilascio](docs/RELEASE_NOTES.md).
 
 ## Documentazione
 
@@ -59,6 +66,8 @@ Guida dettagliata: [docs/INSTALL.md](docs/INSTALL.md).
 - [Aggiornamenti](docs/UPDATES.md)
 - [Diagnostica](docs/DIAGNOSTICS.md)
 - [Privacy](docs/PRIVACY.md)
+- [Note di rilascio e verifiche](docs/RELEASE_NOTES.md)
+- [Firma, checksum e processo di pubblicazione](docs/RELEASING.md)
 - [Architettura](docs/ARCHITECTURE.md) e [design system](DESIGN.md)
 
 ## Privacy in breve

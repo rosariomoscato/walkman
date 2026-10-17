@@ -3,6 +3,9 @@
 Funzione W11-T03. Backup **manuale** su file JSON versionato (`walktape.backup`, versione 1):
 nessun cloud WalkTape, nessun invio automatico, nessun account aggiuntivo.
 
+Guida per [WalkTape v0.1.0](RELEASE_NOTES.md): il formato backup rimane v1,
+indipendente dalla versione dell'APK. Per installare su un altro telefono: [INSTALL.md](INSTALL.md).
+
 ## Cosa include (e cosa no)
 
 | Incluso | Escluso |

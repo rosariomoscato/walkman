@@ -1,10 +1,31 @@
-# WalkTape — architettura e risultati della wave 01
+# WalkTape — architettura e verifiche
 
-Stato: ricerca di fattibilità completata su fonti ufficiali e server reale. Documento vincolante per lo scaffold della wave 02.
+## Distribuzione v0.1.0 — riferimento corrente
+
+APK release `walktape-universal-0.1.0.apk`, versionCode2, package `com.walktape.app`;
+sorgente applicativo `afdb6a57e381c574b2df94e4d17446b90dc2dd39`, senza modifiche
+al codice dopo gli ultimi177/177 JVM e le regressioni Android D41. Build e lint release
+riusciti (0errori/45avvisi), firma V2 verificata, variante non debuggable.
+SHA256 `c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`.
+
+Metadati, certificato pubblico, comando build e pubblicazione: [RELEASING.md](RELEASING.md).
+Download: [GitHub v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0).
+Le note404/assenza release e i digest precedenti nelle sezioni storiche sotto si riferiscono
+alle rispettive verifiche, non all'artefatto corrente. La pubblicazione non chiude i
+collaudi Auto/hardware residui ([note](RELEASE_NOTES.md)).
+
+Stack attuale: Kotlin built-in/Compose, Media3 1.11.1, WorkManager2.12.0, Room schema12
+con migrazioni esplicite; compileSdk37/targetSdk36/minSdk26. Versioni effettive nei file
+di build. Nessun backend/account aggiuntivo, nessuna nuova dipendenza per la release.
+
+## Origine del documento e decisioni iniziali
+
+Ricerca wave01 completata su fonti ufficiali e server reale, poi emendata dalle wave
+successive. Le sezioni datate conservano provenienza e limiti delle prove.
 
 > Emendamenti wave 02 (verificati in build reale): AGP 9 usa il **Kotlin built-in** (plugin `kotlin.android` rimosso; versione Kotlin decisa da AGP); `compileSdk = 37` (navigation-compose 2.10.2 richiede API 37; piattaforma `android-37.0` installata) con `targetSdk = 36` invariato; Media3 aggiornato a **1.11.1**; aggiunti KSP 2.3.12, Room 2.8.5, DataStore 1.2.1, Navigation Compose 2.10.2, lifecycle 2.11.0, activity-compose 1.13.0, core-ktx 1.19.1, appcompat 1.8.0, material-icons (via BOM 1.7.8). Dettagli nel WORKLOG della wave 02.
 
-## Stack e versioni scelte
+## Stack e versioni scelte inizialmente in wave01
 
 | Componente | Versione | Fonte |
 | --- | --- | --- |
@@ -202,7 +223,7 @@ Vincoli registrati:
 
 ## Consolidamento W09-T02 e verifiche automatiche T06 (2026-10-16)
 
-- `CrossfadeCoordinator.player` è un **ExoPlayer logico stabile**: instrada soltanto la API pubblica Media3 ai deck, conserva i listener e sostituisce l'argomento player degli eventi con l'identità logica. Nessuna reflection su implementazioni private. ServiceShuffle, PlaybackPersistence, timer, MediaSession e bridge restano sullo stesso oggetto. Regole R8 preservano i nomi delle interfacce pubbliche instradate; minify/release ancora da verificare in W12.
+- `CrossfadeCoordinator.player` è un **ExoPlayer logico stabile**: instrada soltanto la API pubblica Media3 ai deck, conserva i listener e sostituisce l'argomento player degli eventi con l'identità logica. Nessuna reflection su implementazioni private. ServiceShuffle, PlaybackPersistence, timer, MediaSession e bridge restano sullo stesso oggetto. Regole R8 preservano i nomi delle interfacce pubbliche instradate; in v0.1.0 minify è disabilitato e la build release è verificata (vedi sezione corrente).
 - Il deck entrante viene preparato con coda canonica completa, UUID, permutazione shuffle e parametri nativi. Preload con margine10s prima della finestra, playWhenReady=false/volume0 finché non inizia l'overlap. Fade effettivo limitato a metà delle tracce brevi per evitare che l'entrante finisca durante la finestra; durata dai metadati musicali come fallback per stream Opus non seekable con durata del container ignota. Se il successore non è pronto/errore, prosegue la transizione nativa, senza loop di retry o autoplay autonomi.
 - La promozione cambia il puntatore al **deck già udibile**: nessun seek, prepare, setMediaItems, riapertura della sorgente o ricreazione dell'output entrante a fine fade. Solo l'uscente viene rilasciato; eventi AUTO/timeline/tracks/metadati vengono notificati una volta al proprietario logico. Anche il caso in cui il cursor nativo sia già avanzato è gestito conservando l'indice uscente per i controlli di confine. Rimozioni/riordini/skip invalidano l'ausiliario prima di applicare la mutazione, senza resuscitare un UUID rimosso.
 - **Unico focus owner**: AudioFocusManager ufficiale1.11.1 su HandlerThread (`LogicalAudioFocus`), callback/comandi sul looper del player. ExoPlayer interni configurati con handleAudioFocus=false. Stato logico playWhenReady/suppression indipendente da quale deck suona; perdita transitoria ferma entrambi, regain non supera una pausa manuale, noisy/perdita permanente fermano l'intenzione di suonare. Il servizio/sessione musicale rimane quello preesistente.
@@ -296,7 +317,7 @@ Vincoli registrati:
   objects.githubusercontent.com, header `Accept: application/vnd.github+json`,
   `X-GitHub-Api-Version: 2022-11-28`, User-Agent dedicato, `NetworkTraffic.listener`). Semantica
   verificata contro docs.github.com (settembre 2026): `/releases/latest` esclude draft/prerelease
-  e risponde **404 senza release** (stato reale del repository rosariomoscato/walktape: 404).
+  e risponde **404 senza release** (stato storico verificato prima della pubblicazione v0.1.0).
   `UpdateManager.decide` pura confronta tag `vX.Y.Z` con versionName; tag non paragonabili →
   UnknownVersion. Asset: `AssetSelector` accetta un solo APK inequivoco (universal > ABI,
   ambiguità → null). Download in cache privata con `.part`, verifica lunghezza, cancellazione
@@ -364,7 +385,8 @@ Vincoli registrati:
   condizionale in `app/build.gradle.kts`: nessun segreto committato; `local/` e
   `*.keystore/*.jks` ignorati. Processo riproducibile:
   `JAVA_HOME=<JBR> .\gradlew.bat :app:assembleRelease "-Dkotlin.compiler.execution.strategy=in-process"`;
-  verifica SHA256 + `apksigner verify`. **Release v0.1.0 (versionCode 2)**:
+  verifica SHA256 + `apksigner verify`. **Candidato locale iniziale v0.1.0 (code2),
+  non distribuito e antecedente agli incrementi splash/tasti/D41**:
   SHA256 `139A391A1C130AA4E788CE9C4740B3146ED7BFF497FCEA49070C8A48D5FFA74E`,
   V2 signer CN=Android Debug, **cert SHA-256 `60e9a71f990819c44b2a07a6fc9254925a0d87414c36495f85feb9ffde7b178c`**
   (digest registrato, mai la chiave). Upgrade reale via adb: debug v1 → release v2
@@ -378,8 +400,8 @@ Vincoli registrati:
   (informativa coerente: nessun invio automatico, tabella destinatari), `docs/INSTALL.md`
   (APK + LAN/Tailscale + primo profilo + problemi comuni), bozza note di rilascio in
   `local/DRAFT_RELEASE_NOTES.md`. Guide esistenti linkate dal README.
-- **Non eseguiti (registro onesto)**: pubblicazione tag/release GitHub (nessuna richiesta),
-  download update da release reale (API `releases/latest` resta 404), collaudi telefono
+- **Situazione storica prima della pubblicazione**: tag/release GitHub non ancora richiesti,
+  download update da release reale non eseguito (API all'epoca404), collaudi telefono
   (W10-T04/T05 auto, W11, W12 checklist) e residui W05–W09 hardware. APK release firmato
   preparato; distribuzione solo su richiesta esplicita.
 

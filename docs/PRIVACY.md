@@ -1,5 +1,8 @@
 # WalkTape — informativa privacy
 
+Riferimento: [WalkTape v0.1.0](RELEASE_NOTES.md). La pubblicazione dell'APK non
+aggiunge servizi, telemetria o invii automatici di diagnostica.
+
 WalkTape è un client per il tuo server Navidrome: **nessuna telemetria o invio automatico
 di diagnostica**, nessun analytics, nessun tracker e nessun servizio cloud WalkTape.
 Le comunicazioni funzionali, anche in background, sono descritte qui sotto.

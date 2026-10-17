@@ -4,12 +4,26 @@ Funzione W11-T04. Controlli e download dalle **GitHub Releases** di
 `rosariomoscato/walktape`. Nessun aggiornamento forzato, nessuna installazione automatica:
 Android chiede sempre conferma.
 
+## Prima release pubblica
+
+**[v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)**,
+`versionCode2`, asset `walktape-universal-0.1.0.apk` e `SHA256SUMS.txt`.
+La firma è la stessa delle build di sviluppo del progetto.
+
+Chi ha già una build chiamata0.1.0 vedrà **versione aggiornata**, non un'offerta di
+aggiornamento: il confronto usa versionName, non il tipo debug/release. Per passare al
+primo APK pubblico, scaricarlo e installarlo manualmente senza disinstallare.
+Le prossime release dovranno avere versionName e versionCode maggiori (code>2).
+La prima pubblicazione non dimostra da sola il percorso completo di aggiornamento
+verso una futura versione: download/installer interattivi restano da collaudare.
+
 ## Percorso
 
 Impostazioni → **Aggiornamenti app**:
 
 1. **Controlla aggiornamenti**: interroga `api.github.com` con un client dedicato (senza
-   credenziali né token). "Nessuna release pubblicata" è un esito onesto, non un errore.
+   credenziali né token). HTTP404 è gestito come "Nessuna release pubblicata"; con
+   v0.1.0 pubblicata, l'API latest deve invece restituire la release.
 2. Se c'è una versione più recente: **novità** del rilascio e **Scarica APK** (asset scelto
    solo se univoco: build universal preferite alle ABI-specifiche; ambiguità rifiutata).
 3. L'APK viene verificato **prima** di qualsiasi installazione: stesso package
@@ -32,5 +46,5 @@ quello giornaliero viene "consumato").
 
 - Il download avviene nella cache privata dell'app con file temporaneo: un download interrotto
   non lascia APK parziali e può essere annullato.
-- La firma stabile per gli aggiornamenti e la pipeline di pubblicazione sono parte della
-  wave 12.
+- Firma e pipeline sono predisposte in W12: la chiave resta locale e fuori da Git.
+  Il digest pubblico del certificato e le istruzioni manutentore sono in [RELEASING.md](RELEASING.md).
