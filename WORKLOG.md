@@ -1518,3 +1518,16 @@ distingue telemetria da sync/ascolti funzionali e descrive i permessi effettivi.
 Nessuna modifica applicativa ulteriore: valgono177/177 JVM,lint0/45 e tre Android
 separati1/1 già eseguiti sul codice finale, più riscontro utente. Nessuna nuova build
 necessaria per queste sole note. Esito commit/push da registrare dopo esecuzione.
+
+### Pubblicazione W12 riuscita su richiesta dell'utente
+
+Stage esplicito35file intenzionali; diff --cached --check senza errori. Controllati
+percorsi staged ed esclusi local/, APK, NEXT_PROMPT, chiavi e file segreti; controlli
+materiale sensibile senza riscontri. Identità Rosario Moscato/noreply impostata per
+singolo comando git, nessuna modifica persistente di configurazione e nessun hook saltato.
+Commit **bc93c3c — Wave 12: verifiche, interfaccia e bassi per uscita**,
+35file/1576inserimenti/95rimozioni. Push ordinario530e83a..bc93c3c riuscito; SHA locale
+e remoto `bc93c3c4826b256066ad2764bd22c74a78e20ce0` verificati identici e working tree
+pulita subito dopo. Nessun tag/release/asset APK pubblicato. Questa nota e la memoria
+sono nel successivo commit documentale. Restano aperti i collaudi residui già elencati;
+per una futura release ricostruire il relativo APK con le modifiche ultime.

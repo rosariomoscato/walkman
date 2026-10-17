@@ -1,8 +1,18 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-17 (W12 eseguita in automatico: cancello qualità, coerenza UI, icona/firma/versione decise dall'utente; APK release v0.1.0 preparato, non pubblicato; collaudi telefono W10-auto/W11/W12 ancora da ricevere).
+Ultimo aggiornamento: 2026-10-17 (W12 e incrementi UI/bassi pubblicati in bc93c3c su richiesta; collaudi W12A/B e W11 parziale ricevuti, riscontro D41 positivo; Auto/residui hardware aperti, nessuna GitHub Release).
 
 ## Punto corrente — post-W12; collaudi utente pendenti; release non pubblicata
+
+- **Commit e push eseguiti su richiesta esplicita**: codice/test/documenti W12 e
+  incrementi successivi in **bc93c3c — Wave 12: verifiche, interfaccia e bassi per uscita**,
+  35file/1576inserimenti/95rimozioni. Push ordinario530e83a..bc93c3c riuscito,
+  SHA locale/remoto `bc93c3c4826b256066ad2764bd22c74a78e20ce0` identici e working tree
+  pulita subito dopo. Note della pubblicazione nel commit documentale successivo.
+  Esclusi local/, segreti/chiavi, APK e NEXT_PROMPT; nessun tag o GitHub Release creato.
+  **Prossima azione**: raccogliere W10Auto, residui W11 e voci puntuali W12D/hardware;
+  riallineare APK release alle ultime modifiche prima di un'eventuale pubblicazione
+  autorizzata. Nuovi commit/push/release solo su nuova richiesta.
 
 - **Ultimo riscontro D41**: utente «funziona, fai commt e push». Registrato come
   conferma generale positiva della correzione bassi per route, non attestazione separata
@@ -21,9 +31,13 @@ Ultimo aggiornamento: 2026-10-17 (W12 eseguita in automatico: cancello qualità,
   con polling500ms solo in play oltre ai callback, cancellato a pause/stop/release.
   APK debug corrente `app/build/outputs/apk/debug/app-debug.apk` SHA256
   `C222F47A06F590A5D9A692844CA85DBFADF93C49EB202A9467122870624ABBBF`.
-  Non installato sul telefono, release precedente non riallineata. Prossima azione:
-  installare APK corrente e raccogliere collaudo speaker↔cuffie (W12 checklist sez.D).
+  Non installato dall'agente sul telefono; utente conferma «funziona» dopo la consegna,
+  senza dettagli separati per ogni voce D. Release precedente non riallineata.
+  Raccogliere eventuali dettagli speaker↔cuffie (W12 checklist sez.D), senza rifare
+  discovery né dichiarare superati altri collaudi hardware.
   Emulatore spento, adb vuoto, nessun env/fixture temporaneo residuo.
+
+### Incrementi precedenti — cronologia sintetica (superati dal punto corrente)
 
 - **Riscontro cuffie Bluetooth bassi**: utente «forse un minimo rinforzo dei bassi si
   avverte». Registrare come percezione lieve/incerta, non test superato o misura.
