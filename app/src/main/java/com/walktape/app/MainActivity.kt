@@ -55,17 +55,41 @@ import com.walktape.app.ui.components.PlaybackControls
 
 class MainActivity : AppCompatActivity() {
 
+    companion object {
+        // Activity recreation, language changes and notification re-entry must not
+        // replay the introduction in an already running process.
+        private val introductionShown = java.util.concurrent.atomic.AtomicBoolean(false)
+    }
+
     @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         volumeControlStream = AudioManager.STREAM_MUSIC
         enableEdgeToEdge()
+        val showIntroduction = savedInstanceState == null &&
+            intent.action == android.content.Intent.ACTION_MAIN &&
+            intent.hasCategory(android.content.Intent.CATEGORY_LAUNCHER) &&
+            introductionShown.compareAndSet(false, true)
         setContent {
+            val introductionDeadline = rememberSaveable {
+                if (showIntroduction) android.os.SystemClock.elapsedRealtime() + 1_200L else 0L
+            }
+            var introducing by rememberSaveable { mutableStateOf(showIntroduction) }
+            LaunchedEffect(Unit) {
+                if (introducing) {
+                    kotlinx.coroutines.delay(
+                        (introductionDeadline - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0L)
+                    )
+                    introducing = false
+                }
+            }
             val windowSizeClass = calculateWindowSizeClass(this@MainActivity)
             val viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory)
             val settings by viewModel.settings.collectAsStateWithLifecycle()
             WalkTapeTheme(themeMode = settings.themeMode) {
-                if (!settings.loaded) {
+                if (introducing) {
+                    com.walktape.app.ui.components.LaunchIntroduction()
+                } else if (!settings.loaded) {
                     // Gate must not run on default preferences: wait for the first DataStore emission.
                     Surface {}
                 } else {

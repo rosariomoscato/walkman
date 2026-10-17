@@ -6,6 +6,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,8 +29,12 @@ import com.walktape.app.core.net.ProtocolErrorKind
 import com.walktape.app.core.profiles.QrCodec
 import com.walktape.app.core.profiles.QrPayload
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
-fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesViewModel.Factory)) {
+fun ProfilesScreen(
+    onBack: () -> Unit,
+    viewModel: ProfilesViewModel = viewModel(factory = ProfilesViewModel.Factory)
+) {
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val action by viewModel.action.collectAsStateWithLifecycle()
     val removal by viewModel.removal.collectAsStateWithLifecycle()
@@ -57,9 +63,18 @@ fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesVi
         }
     }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
+    Scaffold(topBar = {
+        TopAppBar(
+            title = { Text(stringResource(R.string.profiles_title)) },
+            navigationIcon = {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
+                }
+            }
+        )
+    }) { innerPadding ->
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp).padding(innerPadding),
         verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.profiles_title), style = MaterialTheme.typography.headlineMedium)
         if (action.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
         action.error?.let { Text(stringResource(errorLabel(it)), color = MaterialTheme.colorScheme.error) }
         if (action.success) Text(stringResource(R.string.connection_ok))
@@ -177,6 +192,7 @@ fun ProfilesScreen(viewModel: ProfilesViewModel = viewModel(factory = ProfilesVi
                 Text(stringResource(R.string.profile_share_qr_body), style = MaterialTheme.typography.bodySmall)
             } },
             confirmButton = { TextButton(onClick = viewModel::dismissShare) { Text(stringResource(R.string.action_close)) } })
+    }
     }
 }
 

@@ -21,13 +21,22 @@ class AudioOutputMonitor {
      */
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     fun renderers(context: Context, sinkHook: (DefaultAudioSink.Builder) -> DefaultAudioSink.Builder = { it },
-        monitor: Boolean = true) = object : DefaultRenderersFactory(context) {
+        monitor: Boolean = true,
+        effects: com.walktape.app.playback.dsp.SystemEffectsController? = null) = object : DefaultRenderersFactory(context) {
         override fun buildAudioSink(context: Context, enableFloatOutput: Boolean,
             enableAudioPlaybackParams: Boolean): AudioSink? {
             val delegate = DefaultAudioSink.Builder(context)
                 .setEnableFloatOutput(enableFloatOutput)
                 .setEnableAudioTrackPlaybackParams(enableAudioPlaybackParams)
                 .let(sinkHook)
+                .also { builder ->
+                    if (effects != null) builder.setAudioOutputProvider(
+                        com.walktape.app.playback.dsp.RoutedAudioOutputProvider(
+                            androidx.media3.exoplayer.audio.AudioTrackAudioOutputProvider.Builder(context).build(),
+                            effects
+                        )
+                    )
+                }
                 .build()
             if (!monitor) return delegate
             return object : ForwardingAudioSink(delegate) {

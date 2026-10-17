@@ -1134,3 +1134,387 @@ remoto `2805aa9e9bcfb64520fe11c40cc276c7f2259c5e` verificati identici, working t
 dopo. Esclusi come da prassi: local/ (credenziali, checklist W05–W11, archivi NEXT_PROMPT),
 NEXT_PROMPT.md corrente, APK. Nessuna release creata. Collaudi telefono W11 e Auto W10-T04/T05
 restano aperti; altri commit/push soltanto su nuova richiesta.
+
+## 2026-10-17 — Handoff per W12 (prompt di ripresa)
+
+Richiesta utente: «Scrivimi il prompt per continuare con W12 in una nuova sessione». Attività
+solo documentale: nessun codice, test, build o commit/push/release. Verificato git status
+pulito dopo la pubblicazione 530e83a (solo file locali ignorati toccati).
+
+Preparato **NEXT_PROMPT.md W12-T01→T07** (verifica complessiva e distribuzione): cancello
+qualità con suite complete in esecuzioni separate; matrice end-to-end server reale/
+offline/backup limitata al hardware disponibile; impegni trasversali SPEC (prestazioni,
+accessibilità, lingue, privacy); icona originale con **approvazione utente obbligatoria**;
+README/guide/privacy/licenza MIT e note di rilascio; firma stabile con keystore **locale mai
+in Git** e decisione utente sulla chiave (raccomandato riusare la debug per preservare dati e
+percorso upgrade in-app); APK firmato con versionCode/versionName da concordare e
+**pubblicazione repository/release solo su richiesta esplicita**; chiusura perimetro con
+registro onesto di verificato/aperto/backlog. Prompt post-W11 (collaudi) preservato integralmente
+in local/NEXT_PROMPT_POSTW11_ARCHIVE_20261017.md con archivi precedenti; nuovo punto corrente
+in memoria/piano. Checklist W05–W11 e credenziali originali intatte; collaudi utente
+(W10-T04/T05 auto, telefono W11) restano pendenti e distinti da qualsiasi fixture.
+
+## 2026-10-17 � Wave 12: cancello qualit�, coerenza UI, firma e preparazione distribuzione (T01�T07)
+
+Task: W12-T01, W12-T02 (parte emulatore/server reale), W12-T03 (porzioni emulatore/codice),
+W12-T04, W12-T05, W12-T06 (preparazione), W12-T07. Attivita' su HEAD 530e83a con working
+tree contenente solo le note handoff W12 (preservate).
+
+Attivita':
+
+- **T01 cancello qualita'**: build app+androidTest+lint+JVM `-PrealServerTest=true`
+  (processo detached, JBR, in-process, max-workers 2): **172/172 JVM** zero fail/skip,
+  lint **0 errori/45 avvisi**. Suite Android su walktape_aosp in esecuzioni separate con
+  APK precompilati `pm compile -m speed -f` e server reale via 10.0.2.2:
+  G1 core/migrazioni/profili **12/12 (75,9s)**; G2 coda/playback **21 OK (169,7s)** con gli
+  skip opt-in attesi (QueueSelectionx2 senza wt-seed; VolumeKeyDiagnostic opt-in); G3
+  servizio/focus/PlayerUi **6/6 (512,5s)**; G4 W07Storage **4/4** + W07UiServer **1/1 dopo
+  correzioni ambiente** (v. sotto); G5 W08 **13/13 (45,6s)**; G6 W09 **25/25** +
+  RealQuality **1/1 dopo cold reboot**; G7 W10 **6/6 (64,5s)**; G8 W11 **10/10 (8,1s)**;
+  seeded UI: UiSeed seed **1/1**, LibraryNavigation **1/1 (151,4s)**, QueueSelection
+  **2/2 (190,5s)**, PlayerUi **2/2 (148,4s)**; VolumeKeyDiagnostic opt-in eseguito
+  (fallimento iniezione = limitazione AVD gia' documentata; tasti fisici confermati
+  dall'utente su telefono in W05).
+- **Difetti corretti prima di procedere**: 4 difetti di infrastruttura nel test W04-era
+  LibraryNavigationTest (stale-node click retry; IME aperto da SET_TEXT su Compose
+  attuale -> chiusura condizionata via dumpsys input_method; albero a11y stantio dopo
+  ricomposizione selezione -> clearCache nel polling; stringa playlist readonly W07).
+  Dettagli e diagnostica "visible:" in ARCHITECTURE W12. Errore mio nel build script
+  firma (java.util vs accessor `java`) corretto con import esplicito Properties.
+- **Fail ambientali registrati, non difetti app**: W07UiServer timeout 40s x2 sotto carico
+  + login fallito a 2min dal cold boot (stesso login verde nel canarino subito dopo) ->
+  **1/1 dopo cold reboot**; Wave09RealQuality PCM tutto-zero x2 per decoder Opus c2
+  silente su un boot dell'AVD (server verificato: transcode Opus valido; MP3/FLAC decode
+  verdi nello stesso giro) -> **1/1 dopo cold reboot**. ANR di sistema (phone/media/
+  systemui/quickstep) e tempesta ANR a fine giornata per RAM host esaurita (0,8GB liberi):
+  risolta fermando i daemon Gradle; boot poi completato. Un rollback qcow2 aveva
+  "resuscitato" i temporanei rimossi prima di emu kill: pulizia rieseguita con `sync`
+  prima dello shutdown e verifica ls finale.
+- **T02 richieste utente**: TopAppBar+freccia Indietro su Diagnostica/Backup/Update/
+  Profili; versione reale "WalkTape 0.1.0" a fondo Impostazioni; crediti esatti
+  "� 2026 Rosario Moscato - handcrafted by a human, upgraded by agents." con nome-link
+  https://rosmoscato.xyz. Verifica manuale via dump+tap su emulatore: tutte le quattro
+  sotto-pagine tornano alla provenienza (freccia `content-desc="Indietro"`); versione
+  coerente con Aggiornamenti app ("Versione installata: 0.1.0") e Diagnostica; il tap sul
+  nome apre il browser (verificato su WebViewBrowserActivity resumed); ricerca "adele" su
+  tab Album con risultati corretti (21/19/25) guidata manualmente; long-press selezione
+  funzionante nell'app (il difetto era nell'attesa del test). Dettagli libreria con back
+  gia' coperti da LibraryNavigationTest. Stringhe IT/EN simmetriche (lint
+  MissingTranslation 0 errori; action_back EN riusato).
+- **T03**: default SPEC puntuali verificati nel codice (cache 1024MiB/250MiB, wifiOnly=1,
+  skipUnavailable=1, haptics=1, suggerimenti/clic/autocheck/lock/crossfade/ReplayGain/EQ/
+  bassi/cassetta=0, allowBackup=false + dataExtractionRules). Misure walktape_aosp (non
+  rappresentative telefono): cold start TotalTime 8,57s, PSS 83MB con indice 6.403 brani.
+  Ambiguita' documentale registrata: "solo offline inizialmente on" (DESIGN/WORKLOG W08)
+  vs default implementato off con gate fail-closed al load: comportamento conforme SPEC,
+  nessun cambio applicato. TalkBack/font200%/batteria restano telefono (checklist W12).
+- **T04**: proposte icona (3 varianti GDI+/SVG, anteprima PNG in local/) -> **utente
+  approva A "Cassetta"**: sostituito ic_launcher_foreground.xml (adaptive+monochrome,
+  background #2A4D9B invariato). README.md, LICENSE MIT, docs/PRIVACY.md, docs/INSTALL.md
+  creati; bozza note di rilascio local/DRAFT_RELEASE_NOTES.md; checklist
+  local/PHONE_TESTS_W12.md.
+- **T05/T06**: decisione utente: **riuso chiave debug** come firma stabile e **v0.1.0 con
+  versionCode 2**. local/signing.env (ignored) + signingConfigs condizionale; nessun
+  segreto in file committati. Build release: APK **139A391A1C130AA4E788CE9C4740B314
+  6ED7BFF497FCEA49070C8A48D5FFA74E**, V2 signer CN=Android Debug, cert SHA-256
+  **60e9a71f990819c44b2a07a6fc9254925a0d87414c36495f85feb9ffde7b178c**. Upgrade reale:
+  marker dati -> `adb install -r` release v2 sopra debug v1 Success -> versionCode 2,
+  marker intatto, app resumed senza crash, vuoto onesto post-cleanup. APK debug per
+  collaudi telefono (icona nuova, code 2): **BA766F2CD5BD8AA818FAEDBD1D0E386BB84D94A5F
+  1A08B2FBE438560E9FEC95F**. Nessun tag/release/push pubblicati (manca richiesta).
+- **T07**: PLAN/DESIGN/ARCHITECTURE/WORKLOG/PROJECT_MEMORY/NEXT_PROMPT aggiornati;
+  emulatori spenti, adb vuoto, temporanei /data/local/tmp rimossi con sync verificato
+  (ls finale: solo dalvik-cache). local/test-server.env e checklist W05�W12 intatti.
+
+Verifiche non eseguite (registro onesto): collaudi hardware utente (W10-T04/T05 auto,
+telefono W11, checklist W12 incluse TalkBack/font200%/batteria/Bluetooth/chiamate reali),
+download update da release GitHub reale (API 404: nessuna release pubblicata), confronto
+firm tra APK realmente diversi e dialog installer interattivi (restano telefono), misure
+prestazioni su telefono. W09-T06 e residui W05�W08 invariati aperti.
+
+Stato: W12-T01/T04/T05/T06(prep)/T07 completati; T02/T03 aperti sulle sole porzioni
+hardware/utente. Prima versione non dichiarata completa: collaudi pendenti.
+
+Prossimo passo: raccogliere gli esiti delle checklist utente (W10 auto, W11 telefono, W12)
+e correggere gli eventuali difetti reali; pubblicazione release GitHub solo su richiesta
+esplicita (bozza note pronta; APK e digest gia' preparati).
+
+## 2026-10-17 � Collaudi telefono W12 sez. A+B: tutti positivi
+
+Task: W12-T02 (porzione telefono), W12-T03 (TalkBack superfici principali).
+
+Riscontri utente registrati punto per punto da `local/PHONE_TESTS_W12.md` (checklist
+aggiornata dall'utente; nessun difetto segnalato):
+
+Sez. A navigazione/informazioni (tutte [x]): frecce Indietro funzionanti da Diagnostica,
+Backup e trasferimento, Aggiornamenti app e Profili (con barra inferiore raggiungibile);
+versione "WalkTape �" coerente con Aggiornamenti app e release; crediti esatti con tap sul
+nome che apre rosmoscato.xyz nel browser senza aperture automatiche; sotto-pagine La mia
+musica (album/artista/genere/playlist) confermate; **TalkBack: frecce annunciate e link
+crediti annunciato come link** (prima attestazione TalkBack reale delle superfici W12).
+
+Sez. B matrice e2e (tutte [x]): login reale LAN/Tailscale con indicizzazione progressiva
+MP3/FLAC; streaming MP3/FLAC con pausa/ripresa da notifica e schermo spento; Solo offline
+zero richieste; ripristino coda dopo riavvio app senza autoplay; download con
+pausa/ripresa e riproduzione offline; backup export+import con nuovo login.
+
+Ambiente: Motorola, APK debug code 2 SHA256 BA766F2CD5BD8AA818FAEDBD1D0E386BB84D94A5F
+1A08B2FBE438560E9FEC95F (upgrade in-place dalla build W11, stessa firma debug).
+
+Non estesi ad altri controlli: restano aperti W10-T04/T05 (Android Auto in auto),
+checklist telefono W11, batteria/font 200% reali (W09-T06 e residui W05�W08), misure
+prestazioni su telefono. Nessun difetto da correggere; nessuna modifica applicativa.
+
+Stato: W12-T02telefono/T03-TalkBack attestate; T02/T03 restano aperti sulle porzioni
+Auto/batteria. Prossimo passo: checklist W11 telefono e W10 auto quando disponibili;
+pubblicazione release solo su richiesta esplicita.
+
+## 2026-10-17 � Collaudi telefono W11 (parziali): 12/21 positivi, nessun difetto
+
+Task: telefono W11 (checklist `local/PHONE_TESTS_W11.md` aggiornata dall'utente).
+
+Riscontri registrati punto per punto (checkmark come da file; voci non spuntate restano
+aperte, non superate):
+
+- **Diagnostica [3/4]**: sezioni on/off con Connessioni esclusa di default e avviso quando
+  inclusa; anteprima coerente con copia/esporta senza token/password; Copia/Esporta/
+  Condividi funzionanti. TalkBack delle sezioni (facoltativo) non eseguito.
+- **Backup [3/6]**: esporta con anteprima e JSON senza password; re-import dello stesso
+  file con merge che conserva credenziali e file gi� scaricati; file troncato/di altra app
+  rifiutato con dati intatti. Restano: import su ambiente pulito (badge Accesso richiesto
+  + nuovo login + attivazione), brani da riscaricare in pausa con consenso esplicito e
+  nessun download automatico, coda ripristinata con duplicati/shuffle/posizione/mixtape.
+- **Aggiornamenti [3/5]**: "Nessuna release pubblicata per ora" su 404 reale; Solo offline
+  blocca il controllo senza richieste; auto-check default off e "Ultimo controllo" max
+  1/giorno quando acceso. Le due voci restanti dipendono da una release esistente o da un
+  APK con firma diversa (non disponibile: nessun difetto).
+- **Regressione [3/3]**: verifica/attivazione profilo; refresh indice da La mia musica;
+  riproduzione/coda/restore senza autoplay dopo le prove.
+- **Sezione 1 "Stato e recupero" [0/6]**: nessuna voce spuntata � resta interamente da
+  collaudare (profilo attivo/indice, Verifica, Aggiorna indice con annullamento, modifiche
+  pending, pausa/riprendi tutti i download, gate in Solo offline). Non esteso con gli
+  esiti W12 sez. B (controlli diversi).
+- Ambiente (data/modello/server) non compilato nel file: registrato qui per trasparenza.
+
+Nessun difetto segnalato: nessuna correzione applicativa. APK collaudo: debug code 2
+BA766F2C�FEC95F (upgrade in-place, stessa firma).
+
+Stato: checklist telefono W11 parziale (12/21). Restano inoltre W10-T04/T05 auto,
+W12 sez. C riferimenti, batteria/font 200% reali e residui W05�W09. Pubblicazione
+release solo su richiesta esplicita.
+
+## 2026-10-17 � Collaudi telefono W11 sez.1 "Stato e recupero": 6/6 positivi
+
+Task: telefono W11 (completamento sez.1 della checklist).
+
+Riscontri utente registrati punto per punto, tutti [x] senza difetti: sezione Stato e
+recupero con profilo attivo e indice reale (ultimo aggiornamento/conteggi); Verifica
+connessione positiva con server raggiungibile e errore pulito con server fermo; Aggiorna
+indice con progresso annullabile e data/conteggi aggiornati a fine corsa; contatore
+modifiche coerente con "Invia adesso" che svuota la coda con rete e conflitti rimandati
+alla gestione in La mia musica; pausa/riprendi tutti con effetti reali in Gestisci
+download e contatori attivi/pausa/errori coerenti; con Solo offline verifica/aggiornamento
+indice disabilitati senza richieste.
+
+Checklist telefono W11 ora **18/24**: restano TalkBack diagnostica (facoltativo), 3 voci
+backup su ambiente pulito (badge Accesso richiesto, da-riscaricare in pausa, coda con
+duplicati/shuffle/mixtape) e 2 voci aggiornamenti dipendenti da release/firma diversa.
+Nessuna correzione applicativa.
+
+Stato: W11 telefono sostanzialmente collaudato; restano W10-T04/T05 auto, batteria/
+font 200% reali (residui W05�W09) e le 6 voci sopra. Pubblicazione release solo su
+richiesta esplicita.
+
+## 2026-10-17 — Segnalazione Rinforzo bassi: diagnosi e correzione UI
+
+Task: W09-T04/W12-T02. Utente: «In Opzioni la funzione Rinforzo bassi non funziona».
+Sintomo preciso e uscita audio ancora da confermare; non attribuito a un limite hardware.
+Ispezionati SystemEffectsController, PlaybackService e SoundSection: sessione condivisa
+generata dal servizio e assegnata ai deck; preferenze applicate dal collector.
+Difetto concreto trovato nella UI: a intensità zero il controller disabilita audiofx;
+la UI usava quello stato per spegnere lo switch e nascondere lo slider, rendendo
+impossibile aumentare nuovamente l'intensità. SoundSection ora usa le preferenze per
+switch, visibilità e valore dello slider; lo stato effettivo rimane distinto.
+Build debug e lint con strategia in-process, max-workers=2, log temporaneo
+`wt-bass-fix.log`: **BUILD SUCCESSFUL in 12m03s**. APK debug SHA256
+`D2FAAEE9036DF1F0F47C1C50CE060EF18404E844EBABE98BFCF15CC1F389E0A1`.
+Nessuna prova di risposta acustica o UI su dispositivo per questa correzione.
+Segnalazione utente aperta: questa correzione non dimostra risolto l'eventuale mancato
+rinforzo udibile. Nessun commit/push/release.
+
+## 2026-10-17 — Diagnostica USB reale: clic e feedback aptico
+
+Task: W06-T05/T06, segnalazione hardware aperta. Motorola G55 5G autorizzato via USB,
+Android16, WalkTape versionName0.1.0/versionCode2. Letture sole impostazioni mirate:
+`sound_effects_enabled=0`, `haptic_feedback_enabled=1`, ringer normale (2), volume
+SYSTEM non muted (5/7). Confermato il gate che sopprime i clic nell'implementazione
+attuale quando i suoni sistema sono spenti. Nessuna impostazione modificata.
+Vibrator manager registra diversi eventi di WalkTape `performHapticFeedback(constant=1)`
+CLICK completati (circa52–57ms), scala LOW; presenti anche eventi LONG_PRESS.
+Questi dati attestano richieste elaborate da Android, non la percezione tattile né la
+correlazione con uno specifico tasto player. Da eseguire pressione manuale controllata
+con successiva lettura dell'evento e riscontro utente. Nessuna conclusione di guasto
+hardware, nessun aggiramento delle preferenze sistema, nessuna modifica codice.
+
+### Riscontro successivo — aptica Coda percepita sul Motorola
+
+Utente: «premuto, vibrazione sentita» dopo la richiesta di premere il tasto Coda del
+player con aptica attiva. Confermata percezione reale su quel controllo. Nuova lettura
+vibrator_manager: eventi WalkTape completati alle18:23 (~53–54ms, scala LOW), coerenti
+con le pressioni recenti; nessuna attribuzione arbitraria di un singolo timestamp.
+Nessuna modifica codice o impostazioni. Non esteso a tutti i controlli o a clic sonori:
+questi ultimi restano bloccati da sound_effects_enabled=0, attivazione globale da
+concordare con l'utente.
+
+### Suoni al tocco abilitati su richiesta dell'utente
+
+Utente: «puoi farlo tu per me?». Sul solo Motorola collegato: lettura iniziale
+sound_effects_enabled=0, scrittura1 e lettura finale1 riuscite. Preferenza globale Android
+ora attiva, precedente0; nessun altro parametro modificato. Prossima prova: tasto Coda
+con Clic dei tasti ON in WalkTape. Percezione sonora non ancora attestata; eventuale
+ripristino a0 da concordare con l'utente.
+ripristino a0 da concordare con l'utente.
+
+### Conferma utente — clic percepito e preferenza da mantenere
+
+Riscontro: «lo sento e va bene, lascia tutto così» sulla prova del tasto Coda.
+Clic sonoro confermato sul Motorola dopo attivazione dei suoni al tocco Android.
+L'utente approva di lasciare sound_effects_enabled=1: nessun ripristino richiesto.
+Nessuna modifica applicativa per clic/aptica; esito limitato al controllo collaudato.
+## 2026-10-17 — Player: tasti distribuiti su tutta la larghezza
+
+Task: W06 UI/W12-T02, su richiesta utente di due file armoniose a larghezza piena.
+PlayerScreen.KeysPanel usa ora pesi per i MechanicalKey nelle FlowRow: prima fila
+alta60dp con precedente/successivo peso1 e Play/Pausa/Stop peso1,25; seconda fila
+alta56dp, larghezze uguali. Spazi10dp anche sulle righe aggiuntive in wrapping.
+Base56dp, adattività telefono/tablet e comandi/semantica/hold/feedback invariati.
+DESIGN e memoria aggiornati. Build assembleDebug+lintDebug riuscita in8m13s,
+diff --check senza errori. Nessuna nuova prova strumentata o visiva su dispositivo:
+layout da far giudicare all'utente sul telefono, senza dichiararlo già collaudato.
+APK debug SHA256 `3928C4D3A9BE3224EDEEE9ECBDA2F93A4E722B88DF6729F29B208A8532825251`;
+include la precedente fix Rinforzo bassi. APK release non aggiornato. Nessun commit/push.
+
+## 2026-10-17 — Splash con logo, versione e credits richiesto dall'utente
+
+Task: W12 UI/W06, nuovo requisito registrato in SPEC e DESIGN. LaunchIntroduction
+Compose con icona Cassetta, nome, versione PackageManager e claim autore approvato.
+Fondo blu/token crema, testo scalabile e scroll, nessuna animazione/rete/suono/autoplay.
+MainActivity presenta il benvenuto per1200ms nominali al primo ingresso launcher del
+processo (AtomicBoolean), poi mantiene gate settings loaded e biometria. Deadline
+elapsedRealtime e stato salvato non ricominciano il timer alla rotazione; ingressi
+da notifica e rientri nello stesso processo non richiedono il benvenuto. Nessuna nuova
+Activity/dipendenza. Tema v31 coordina colore e icona dello splash Android12+.
+Fonte developer.android.com splash-screen tentata ma non raggiungibile (transport error);
+attributi API31 compilati contro SDK corrente.
+Verifiche: assembleDebug+lintDebug BUILD SUCCESSFUL8m25s, diff --check senza errori.
+Nessuna prova lifecycle strumentata o visiva sul telefono eseguita in questo incremento:
+da verificare avvio launcher, ritorno notifica, rotazione, landscape/font200% e lock.
+APK debug SHA256 `55D9199904A171F84424203318D0202290EB649379D83448FEE2CC10296E0998`,
+comprende le precedenti fix tasti/bassi. Release139A391A resta antecedente; non pubblicare
+quel vecchio APK come se contenesse le nuove funzioni. Memoria/handoff aggiornati.
+Nessuna installazione su telefono, nessun commit/push/release.
+
+## 2026-10-17 — UI approvata; risposta Rinforzo bassi ancora da diagnosticare
+
+Utente: «le modifiche introdotte sono ok», riferito a splash/tasti, ma «Rinforzo bassi
+quando attivato mi sembra che riduca solo il volume». Registrata approvazione UI e
+nuovo sintomo audio; non esteso a verifica acustica superata.
+Diagnostica USB readonly Motorola: uscita speaker, traccia attiva sulla sessione16385
+di WalkTape; EqualizerBundle NXP abilitato, Dynamic Bass Boost NXP presente con controllo
+del client ma disabilitato nell'istantanea; Music Volume Listener e DAP Dolby attivi.
+Questo non prova che Dolby sia la causa né attesta la risposta in frequenza.
+Richiesta prova controllata stesso brano/volume con bassi accesi per leggere lo stato
+attivo. Nessun cambio a effetti/preferenze/volume o codice; difetto W09-T04 aperto.
+
+### Bassi attivi — stato reale e fonte NXP/LVM
+
+Utente: «bassi attivi». Lettura USB sulla stessa sessione16385: Dynamic Bass Boost
+NXP enabled=y/suspended=n, controllo client concesso, tracce attive. Volume musica
+speaker ancora4/15, EQ e Dolby attivi. Non è uno switch che rimane spento.
+Consultato sorgente ufficiale AOSP (main):
+https://android.googlesource.com/platform/frameworks/av/+/refs/heads/main/media/libeffects/lvm/wrapper/Bundle/EffectBundle.cpp
+Contenuto base64 decodificato in memoria: EFFECT_CMD_SET_DEVICE su speaker (anche
+A2DP_SPEAKER/BLE_SPEAKER/SCO_CARKIT) imposta bBassTempDisabled e disabilita il motore
+senza cancellare bBassEnabled; LvmEffect_limitLevel calcola attenuazione gainCorrection
+anche dalla contribuzione BassBoost. Spiegazione coerente con il sintomo riferito,
+non prova del comportamento esatto della variante OEM né risposta in frequenza misurata.
+Da verificare con cuffie e rappresentare onestamente lo stato route nella UI.
+Nessuna modifica a volume/Dolby/impostazioni/code o DSP durante la diagnosi.
+
+### Riscontro cuffie Bluetooth — rinforzo lieve e incerto
+
+Utente: «Con cuffie bluetooth forse un minimo rinforzo dei bassi si avverte».
+Riscontro soggettivo prudente, registrato senza trasformarlo in prova positiva certa:
+nessun modello cuffie/intensità/misura specificati. Compatibile con risposta dipendente
+dalla route, non prova della causa su speaker né esclusione di EQ/Dolby. Nessun cambio
+applicativo, nessun task audio hardware chiuso. Resta da gestire onestamente in UI la
+disponibilità del rinforzo sull'uscita corrente.
+
+## 2026-10-17 — D41: rinforzo bassi sospeso su speaker e ripristino su cuffie
+
+Task W09-T04/W12-T02. Approvazione utente: «per adesso va bene soluzione suggerita,
+procedi». SPEC/DESIGN emendati: sospensione su speaker e route ignota, preferenza e
+intensità conservate per ritorno cuffie; niente DSP sostitutivo o compensazione volume.
+
+Implementazione: BassBoostRouting puro aggrega output/deck attivi; speaker prevale,
+route ignota fail-closed, cuffie tutte consentono opt-in/intensità>0. Provider Media3
+standard delegato da RoutedAudioOutputProvider osservando AudioTrack reale tramite
+getter pubblico e OnRoutingChangedListener (fonti ufficiali Media3 1.11.1 consultate).
+Notifiche serializzate main, token per output, guardia atomica release; osservazione
+interrotta in pausa/stop/release. SystemEffectsController distingue richiesta utente da
+stato effettivo audiofx, aggiorna solo bassi alle transizioni e conserva EQ indipendente.
+UI IT/EN con motivo esplicito su speaker/unknown, switch non interattivo e slider su
+cuffie anche a zero. Nessuna migrazione/dipendenza aggiunta; volume Android/Dolby intatti.
+
+Verifiche intermedie: build app/androidTest,177/177 JVM (0fail/skip, compresi5 nuovi
+test policy overlap/zero/opt-in/pausa/release e API reali), lint0errori/45avvisi.
+Controller Android isolato1/1: effetto reale5bande, route simulate consentita/bloccata/
+consentita, richiesta preservata senza altro apply, EQ e intensità invariati.
+Primo Wave09OfflineHandoverTest fallito timeout30s (runtime58,981s), non escluso.
+Diagnostica temporanea rilevava AudioTrack reale tipo2/speaker; rerun1/1 in26,941s.
+Rimossa diagnostica: nuovo timeout esplicito «actual AudioTrack route must be observed»,
+effects Ready/UNKNOWN. Corretto difetto osservatore: al play la route può essere ancora
+null e il callback iniziale non aggiornarla successivamente in modo affidabile.
+Aggiunta rilettura500ms soltanto in play, cancellata a pause/stop/release; nessun tracing
+diagnostico nel codice finale. Nuova build/verifiche finali in corso, log
+`wt-bass-route-verified.log`; esito da completare nella nota seguente.
+
+Test offline aggiornato alla policy approvata: verifica route reale conosciuta e stato
+bassi coerente, non richiede più bassi ON su speaker; verifica opt-in/intensità200
+persistenti, volume STREAM_MUSIC invariato, zeroHTTP e restore senza autoplay.
+Checklist privata W12 sezioneD aggiunta senza alterare esiti utente A/B. Telefono non
+modificato/installato in questo incremento, release precedente non aggiornata.
+
+### Esiti finali D41
+
+Codice definitivo senza log diagnostico, polling route500ms solo in play:
+build app/androidTest/JVM/lint **BUILD SUCCESSFUL15m36s**, **177/177 JVM**, zero
+failure/skip (API reali incluse), **lint0errori/45avvisi**. Report finali letti.
+APK app/test installati e precompilati speed sull'AOSP, telefono non modificato.
+Esecuzioni Android finali separate: controller1/1(0,694s), Wave09OfflineHandover1/1
+(27,269s: route reale rilevata, gate bassi coerente, preferenza/intensità conservate,
+volume Android invariato, zeroHTTP offline e restore senza autoplay), Wave09Service1/1
+(26,525s: timer durante overlap, entrambi i deck fermati e niente ascolti dal preload).
+Non sommate come suite unica. Timeout intermedi documentati sopra; nessun test escluso.
+SHA256 debug `C222F47A06F590A5D9A692844CA85DBFADF93C49EB202A9467122870624ABBBF`.
+Diff --check senza errori. Emulator shutdown con sync, /data/local/tmp solo dalvik-cache,
+adb vuoto verificato. Aggiornati SPEC/DESIGN/ARCHITECTURE/README/PLAN/memoria/handoff e
+checklistW12D. Nessun commit/push/release. APK release precedente non riallineato.
+Prossimo passo: installazione in-place del debug sul Motorola e riscontri puntuali della
+sezioneD per speaker↔cuffie; risposta acustica non dichiarata superata da queste prove.
+
+## 2026-10-17 — Riscontro D41 positivo e richiesta commit/push W12
+
+Utente: «funziona, fai commt e push». Registrata conferma generale positiva sulla
+correzione bassi per route; non chiuse automaticamente tutte le singole voci checklistD
+né le altre prove hardware (Auto/batteria/font). Nessun nuovo difetto segnalato.
+Autorizzati commit e push del lavoro W12 e degli incrementi successivi (splash/tasti/
+feedback/bassi). Preflight: status, diff e ultimi10commit revisionati; origine/tracking
+main allineati a530e83a, fetch riuscito, divergenza0/0. Esclusioni confermate tramite
+git check-ignore per local/signing.env, test-server.env, NEXT_PROMPT e APK.
+Rifinite le nuove guide prima della pubblicazione: release ancora non disponibile,
+permesso sorgente APK per browser/file manager distinto da quello updater; privacy
+distingue telemetria da sync/ascolti funzionali e descrive i permessi effettivi.
+Nessuna modifica applicativa ulteriore: valgono177/177 JVM,lint0/45 e tre Android
+separati1/1 già eseguiti sul codice finale, più riscontro utente. Nessuna nuova build
+necessaria per queste sole note. Esito commit/push da registrare dopo esecuzione.

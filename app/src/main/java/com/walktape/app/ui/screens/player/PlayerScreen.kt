@@ -299,10 +299,11 @@ private fun KeysPanel(
                 label = stringResource(R.string.playback_previous),
                 icon = Icons.Filled.FastRewind,
                 onClick = Graph.playback::previous,
+                modifier = Modifier.weight(1f),
                 holdTick = rewindTick,
                 holdEnabled = state.canSeek,
                 enabled = state.canPrevious,
-                width = 64.dp,
+                height = 60.dp,
                 feedback = feedback,
                 accessibilityActions = listOf(CustomAccessibilityAction(scrubBackLabel) {
                     scrubTickAnchorless(-10_000L); true
@@ -312,9 +313,9 @@ private fun KeysPanel(
                 label = stringResource(if (state.playWhenReady && !state.ended) R.string.playback_pause else R.string.playback_play),
                 icon = if (state.playWhenReady && !state.ended) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                 onClick = Graph.playback::togglePlayPause,
+                modifier = Modifier.weight(1.25f),
                 emphasized = true,
                 enabled = state.canPlayPause,
-                width = 84.dp,
                 height = 60.dp,
                 feedback = feedback
             )
@@ -322,10 +323,11 @@ private fun KeysPanel(
                 label = stringResource(R.string.playback_next),
                 icon = Icons.Filled.FastForward,
                 onClick = Graph.playback::next,
+                modifier = Modifier.weight(1f),
                 holdTick = forwardTick,
                 holdEnabled = state.canSeek,
                 enabled = state.canNext,
-                width = 64.dp,
+                height = 60.dp,
                 feedback = feedback,
                 accessibilityActions = listOf(CustomAccessibilityAction(scrubForwardLabel) {
                     scrubTickAnchorless(+10_000L); true
@@ -335,20 +337,23 @@ private fun KeysPanel(
                 label = stringResource(R.string.player_stop),
                 icon = Icons.Filled.Stop,
                 onClick = { if (state.playWhenReady) Graph.playback.togglePlayPause() },
+                modifier = Modifier.weight(1.25f),
                 enabled = state.playWhenReady && state.canPlayPause,
-                width = 64.dp,
+                height = 60.dp,
                 feedback = feedback
             )
         }
         FlowRow(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             val shuffleLabel = stringResource(if (state.shuffleOn) R.string.queue_shuffle_off else R.string.queue_shuffle_on)
             MechanicalKey(
                 label = shuffleLabel,
                 icon = Icons.Filled.Shuffle,
                 onClick = Graph.playback::toggleShuffle,
+                modifier = Modifier.weight(1f),
                 engaged = state.shuffleOn,
                 enabled = state.canShuffle,
                 feedback = feedback
@@ -362,6 +367,7 @@ private fun KeysPanel(
                 label = repeatLabel,
                 icon = if (state.repeatMode == 1) Icons.Filled.RepeatOne else Icons.Filled.Repeat,
                 onClick = Graph.playback::cycleRepeat,
+                modifier = Modifier.weight(1f),
                 engaged = state.repeatMode != 0,
                 enabled = state.canRepeat,
                 feedback = feedback
@@ -371,6 +377,7 @@ private fun KeysPanel(
                     label = stringResource(R.string.queue_open, state.queue.size),
                     icon = Icons.AutoMirrored.Filled.QueueMusic,
                     onClick = onQueue,
+                    modifier = Modifier.weight(1f),
                     enabled = state.queue.isNotEmpty(),
                     feedback = feedback
                 )
@@ -379,6 +386,7 @@ private fun KeysPanel(
                 label = stringResource(R.string.player_volume_down),
                 icon = Icons.Filled.VolumeDown,
                 onClick = { Graph.playback.setSystemVolume((state.volume - 1).coerceAtLeast(0)) },
+                modifier = Modifier.weight(1f),
                 enabled = !state.volumeFixed,
                 feedback = feedback
             )
@@ -386,6 +394,7 @@ private fun KeysPanel(
                 label = stringResource(R.string.player_volume_up),
                 icon = Icons.Filled.VolumeUp,
                 onClick = { Graph.playback.setSystemVolume((state.volume + 1).coerceAtMost(state.maxVolume)) },
+                modifier = Modifier.weight(1f),
                 enabled = !state.volumeFixed,
                 feedback = feedback
             )

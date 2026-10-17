@@ -70,9 +70,13 @@ class LibraryNavigationTest {
         assertTrue(field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, Bundle().apply {
             putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "adele")
         }))
+        // W12: programmatic SET_TEXT now focuses the field and opens the IME on this
+        // Compose version; the keyboard hides the result rows from the a11y tree.
+        dismissImeIfShown()
         awaitText("Adele • 2011")
         println("wave04-ui: search")
         clickDescription("Cancella ricerca")
+        dismissImeIfShown()
         awaitText(albums.first().name)
         performOnClickable(awaitNode { it.text?.toString() == albums.first().name }, AccessibilityNodeInfo.ACTION_LONG_CLICK)
         awaitText("Selezionati: 1")
@@ -94,7 +98,8 @@ class LibraryNavigationTest {
             val p=playlistPage.data.first()
             awaitText(p.name)
             clickText(p.name)
-            awaitText("Playlist in lettura. Le modifiche saranno disponibili nella fase dedicata.")
+            // W07 semantic: playlists owned by another user are read-only (owner != username).
+            awaitText("Playlist di fixture: sola lettura.")
             if (fixtureCreated) {
                 awaitText("Fixture first")
                 awaitText("Fixture repeat")
@@ -153,11 +158,11 @@ class LibraryNavigationTest {
             find(root) { node ->
                 node.text?.toString()?.equals(text, ignoreCase = true) == true &&
                     node.isVisibleToUser && hasClickableAncestor(node)
-            }?.let { performOnClickable(it, AccessibilityNodeInfo.ACTION_CLICK); return }
+            }?.let { if (clickIfStillClickable(it)) return }
             find(root) { it.viewIdResourceName?.endsWith("library-tabs") == true }?.let { tabs ->
                 find(tabs) { node ->
                     node.text?.toString()?.equals(text, ignoreCase = true) == true && hasClickableAncestor(node)
-                }?.let { performOnClickable(it, AccessibilityNodeInfo.ACTION_CLICK); return }
+                }?.let { if (clickIfStillClickable(it)) return }
                 val direction = if (attempt % 12 < 6) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
                     else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
                 swipeTabStrip(tabs, direction)
@@ -166,6 +171,23 @@ class LibraryNavigationTest {
             SystemClock.sleep(500)
         }
         error("Expected tab '$text' did not appear")
+    }
+
+    /**
+     * W12: recomposition between find() and performAction can stale the node and make the
+     * click return false; retry through the caller's find/swipe loop instead of failing.
+     * The deadline in clickTab still bounds the total wait.
+     */
+    private fun clickIfStillClickable(node: AccessibilityNodeInfo): Boolean {
+        var target: AccessibilityNodeInfo? = node
+        while (target != null) {
+            if (target.isClickable) {
+                return try { target.performAction(AccessibilityNodeInfo.ACTION_CLICK) }
+                catch (_: IllegalStateException) { false }
+            }
+            target = target.parent
+        }
+        return false
     }
 
     private fun swipeTabStrip(tabs: AccessibilityNodeInfo, direction: Int) {
@@ -219,9 +241,24 @@ class LibraryNavigationTest {
                 continue
             }
             find(root, predicate)?.let { return it }
+            // W12: heavy recomposition (e.g. selection mode flipping every row) can leave
+            // the accessibility tree stale/empty; the documented remedy is clearing the
+            // UiAutomation cache before the next poll (same as the W05 selection tests).
+            instrumentation.uiAutomation.clearCache()
             SystemClock.sleep(250)
         }
-        error("Expected UI element did not appear")
+        // W12 diagnostics: what was actually visible when the wait expired.
+        val root = instrumentation.uiAutomation.rootInActiveWindow
+        val visible = StringBuilder()
+        fun collect(node: AccessibilityNodeInfo?) {
+            if (node == null) return
+            if (node.isVisibleToUser) {
+                (node.text ?: node.contentDescription)?.toString()?.let { visible.append(it).append(" | ") }
+            }
+            repeat(node.childCount) { collect(node.getChild(it)) }
+        }
+        collect(root)
+        error("Expected UI element did not appear; visible: $visible")
     }
 
     private fun find(node: AccessibilityNodeInfo?, predicate: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {
@@ -229,5 +266,17 @@ class LibraryNavigationTest {
         if (predicate(node)) return node
         repeat(node.childCount) { find(node.getChild(it), predicate)?.let { found -> return found } }
         return null
+    }
+
+    /** Closes the soft keyboard only when it is actually shown (BACK is never sent blindly). */
+    private fun dismissImeIfShown() {
+        val shown = android.os.ParcelFileDescriptor.AutoCloseInputStream(
+            instrumentation.uiAutomation.executeShellCommand("dumpsys input_method")).use {
+            it.readBytes().decodeToString().contains("mInputShown=true")
+        }
+        if (shown) {
+            instrumentation.uiAutomation.executeShellCommand("input keyevent 4")
+            SystemClock.sleep(600)
+        }
     }
 }

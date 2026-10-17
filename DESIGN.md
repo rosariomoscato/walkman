@@ -157,6 +157,62 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
   barre di navigazione nascoste sulle tre sotto-schermate come Diagnostica. TalkBack/adattività
   su telefono da collaudare con `local/PHONE_TESTS_W11.md`.
 
+## Incremento W12 — coerenza navigazione e informazioni (2026-10-17)
+
+### Rinforzo bassi: disponibilità per uscita approvata dall'utente
+
+Su speaker il comando appare spento/disabilitato con avviso «Rinforzo bassi non
+disponibile sull’altoparlante», preferenza e intensità conservate per le cuffie.
+Su route cuffie rilevata switch e slider tornano operativi con la preferenza salvata
+(slider accessibile anche a intensità zero). Spiegazione: resa dipendente da cuffie/
+effetti dispositivo. Prima di avviare audio o su route ignota avviso di sospensione,
+non un falso stato disponibile. Soli token/componenti esistenti, testi IT/EN e unica
+semantica Switch disabilitata quando non applicabile. Nessuna compensazione volume.
+La disponibilità segue gli AudioTrack realmente in riproduzione (entrambi durante
+overlap), non la lista di dispositivi collegati. Non ancora prova acustica della resa.
+
+### Splash richiesto dall'utente
+
+Benvenuto Compose locale al primo lancio launcher del processo: icona Cassetta originale,
+nome WalkTape, versione reale da PackageManager e claim autore già approvato (testo qui
+non interattivo, link permanente in Impostazioni). Fondo WtBlue, testo WtCream,
+durata nominale1200ms non bloccante; nessuna animazione/suono/rete. Logo decorativo,
+testo scalabile, area scrollabile per landscape/font grandi. Deadline monotona salvata
+evita di ricominciare il timer alla rotazione. Notifica e rientri nel processo esistente
+non ripetono il benvenuto. Gate impostazioni/biometria rimane dopo il benvenuto.
+Android12+ mantiene splash nativo con icona app e fondo blu coordinato; non è introdotta
+una seconda Activity. Splash e tasti approvati dall'utente nel collaudo successivo;
+nessuna estensione implicita a tutti i casi lifecycle/font/viewport.
+
+### Affinamento tasti player richiesto dall'utente
+
+Le due file di tasti occupano tutta la larghezza disponibile: pesi FlowRow distribuiscono
+lo spazio per ogni riga. Trasporto alto60dp, precedente/successivo uguali (peso1),
+Play/Pausa e Stop più larghi (peso1,25); fila secondaria alta56dp con tasti tutti
+di uguale larghezza (peso1). Spazi orizzontali/verticali10dp. Base56dp preserva i
+target touch e l'andata a capo su viewport stretti: anche le righe aggiuntive distribuiscono
+lo spazio disponibile. Nessun cambio a icone, comandi, hold/seek, aptica o clic.
+La coda omessa nel layout tablet affiancato lascia redistribuire gli altri tasti.
+
+- Le sotto-pagine di Impostazioni (Diagnostica, Backup e trasferimento, Aggiornamenti app) e
+  Profili ora hanno una `TopAppBar` con **freccia Indietro** (`action_back`) come i dettagli
+  de La mia musica: ogni schermata raggiungibile torna alla provenienza anche senza il gesto
+  di sistema. Titolo in `titleLarge` della barra; il testo introduttivo resta sotto la barra.
+  Le barre di navigazione restano nascoste sulle tre sotto-pagine W11; Profili mantiene la
+  barra come già in W05.
+- Fondo Impostazioni: **versione reale** "WalkTape <versionName>" letta da PackageManager
+  (coerente con Aggiornamenti app e Diagnostica `app.version`) e **crediti autore**
+  "© 2026 Rosario Moscato - handcrafted by a human, upgraded by agents." con il nome quale
+  link (`LinkAnnotation.Url`) a `https://rosmoscato.xyz`, aperto solo al tap esplicito;
+  corpo in `bodySmall`/`onSurfaceVariant`, link in `primary`. Nessuna risorsa localizzata
+  del claim (testo di marchio identico IT/EN).
+- Icona definitiva: **variante A "Cassetta" approvata dall'utente** (2026-10-17) e sostituita
+  in `ic_launcher_foreground.xml`: corpo cassetta crema `#F4F1EA` con bordo `#9AA1AC`,
+  bobine `#1B3268` con mozzo crema, finestra nastro `#F06A21`, viti steel; adaptive con
+  background `#2A4D9B` e monochrome sullo stesso vettore, contenuto nella safe zone.
+  Varianti non scelte (B "Bobine e onda", C "Finestra TPS-L2") archiviate con SVG e
+  anteprima in `local/` (W12).
+
 ## Fuori perimetro in v1
 
 - Skin alternative (backlog B04), animazioni non funzionali, temi dinamici Material You.

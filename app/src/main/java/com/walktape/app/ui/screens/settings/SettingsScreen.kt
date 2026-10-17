@@ -36,6 +36,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.unit.dp
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -138,14 +143,43 @@ fun SettingsScreen(
 
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
 
+        val versionName = remember {
+            try {
+                context.packageManager.getPackageInfo(context.packageName, 0).versionName
+            } catch (_: Exception) {
+                null
+            } ?: "?"
+        }
         Text(
-            text = stringResource(R.string.settings_version),
+            text = stringResource(R.string.settings_version, versionName),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 16.dp)
         )
+        AuthorClaim()
     }
 }
+
+/** Author credit: the name is a link to the author's site; opened only on explicit tap. */
+@Composable
+private fun AuthorClaim() {
+    val prefix = stringResource(R.string.settings_author_claim_before)
+    val name = stringResource(R.string.settings_author_name)
+    val suffix = stringResource(R.string.settings_author_claim_after)
+    val linkStyle = TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.primary))
+    Text(
+        text = buildAnnotatedString {
+            append(prefix)
+            withLink(LinkAnnotation.Url(AUTHOR_URL, linkStyle)) { append(name) }
+            append(suffix)
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
+}
+
+private const val AUTHOR_URL = "https://rosmoscato.xyz"
 
 @Composable
 private fun SettingLabel(text: String, paddingStart: Int) {
@@ -559,16 +593,25 @@ private fun SoundSection(viewModel: SettingsViewModel) {
                     }
                 }
             }
+            val bassAvailable = state.bassRoute == com.walktape.app.playback.dsp.BassBoostRouting.Route.HEADPHONES
             FeedbackSetting(
                 title = stringResource(R.string.audio_bass_boost),
-                help = stringResource(R.string.audio_bass_boost_help, state.bassStrength / 10),
-                enabled = state.bassEnabled,
-                onCheckedChange = viewModel::setBassBoostEnabled
+                help = when (state.bassRoute) {
+                    com.walktape.app.playback.dsp.BassBoostRouting.Route.SPEAKER ->
+                        stringResource(R.string.audio_bass_speaker_unavailable)
+                    com.walktape.app.playback.dsp.BassBoostRouting.Route.UNKNOWN ->
+                        stringResource(R.string.audio_bass_route_unknown)
+                    else -> stringResource(R.string.audio_bass_boost_help, settings.bassBoostStrength / 10) +
+                        " " + stringResource(R.string.audio_bass_device_help)
+                },
+                enabled = bassAvailable && settings.bassBoostEnabled,
+                onCheckedChange = viewModel::setBassBoostEnabled,
+                interactable = bassAvailable
             )
-            if (state.bassEnabled) {
+            if (bassAvailable && settings.bassBoostEnabled) {
                 val bassLabel = stringResource(R.string.audio_bass_boost)
                 androidx.compose.material3.Slider(
-                    value = state.bassStrength.toFloat(),
+                    value = settings.bassBoostStrength.toFloat(),
                     onValueChange = { viewModel.setBassBoostStrength((it.toInt() / 50 * 50)
                         .coerceIn(0, 1000)) },
                     valueRange = 0f..1000f,
@@ -671,12 +714,13 @@ private fun FeedbackSetting(
     title: String,
     help: String,
     enabled: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    interactable: Boolean = true
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .toggleable(value = enabled, role = Role.Switch, onValueChange = onCheckedChange)
+            .toggleable(value = enabled, enabled = interactable, role = Role.Switch, onValueChange = onCheckedChange)
             .padding(horizontal = 16.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -692,7 +736,7 @@ private fun FeedbackSetting(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Switch(checked = enabled, onCheckedChange = null)
+        Switch(checked = enabled, onCheckedChange = null, enabled = interactable)
     }
 }
 

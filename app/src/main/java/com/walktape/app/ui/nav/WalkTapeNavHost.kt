@@ -64,11 +64,11 @@ fun WalkTapeNavHost(
             )
         }
         composable(Routes.DIAGNOSTICS) {
-            DiagnosticsScreen()
+            DiagnosticsScreen(onBack = { navController.popBackStack() })
         }
-        composable(Routes.PROFILES) { ProfilesScreen() }
-        composable(Routes.BACKUP) { BackupScreen() }
-        composable(Routes.UPDATE) { UpdateScreen() }
+        composable(Routes.PROFILES) { ProfilesScreen(onBack = { navController.popBackStack() }) }
+        composable(Routes.BACKUP) { BackupScreen(onBack = { navController.popBackStack() }) }
+        composable(Routes.UPDATE) { UpdateScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.PLAYER) { PlayerScreen(onBack = { navController.popBackStack() }) }
         composable(Routes.ALBUM) { entry ->
             AlbumDetailScreen(

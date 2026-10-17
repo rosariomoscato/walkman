@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
@@ -12,7 +14,7 @@ android {
         applicationId = "com.walktape.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "0.1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -24,6 +26,23 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // W12-T05: local-only signing (local/signing.env, git-ignored). No secrets in VCS:
+            // the committed file only reads an optional local properties file.
+            val signingEnv = rootProject.file("local/signing.env")
+            if (signingEnv.exists()) {
+                val props = Properties().apply {
+                    signingEnv.inputStream().use { load(it) }
+                }
+                val storePath = props.getProperty("WALKTAPE_KEYSTORE")
+                if (!storePath.isNullOrBlank() && rootProject.file(storePath).exists()) {
+                    signingConfig = signingConfigs.create("localRelease") {
+                        storeFile = rootProject.file(storePath)
+                        storePassword = props.getProperty("WALKTAPE_KEYSTORE_PASSWORD")
+                        keyAlias = props.getProperty("WALKTAPE_KEY_ALIAS")
+                        keyPassword = props.getProperty("WALKTAPE_KEY_PASSWORD")
+                    }
+                }
+            }
         }
     }
 

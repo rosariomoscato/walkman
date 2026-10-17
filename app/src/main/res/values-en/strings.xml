@@ -27,7 +27,10 @@
     <string name="lock_prompt_title">Unlock WalkTape</string>
     <string name="lock_unlock">Unlock</string>
     <string name="settings_diagnostics">Diagnostics</string>
-    <string name="settings_version">Version</string>
+    <string name="settings_version">WalkTape %1$s</string>
+    <string name="settings_author_claim_before">© 2026\u0020</string>
+    <string name="settings_author_name">Rosario Moscato</string>
+    <string name="settings_author_claim_after">\u0020- handcrafted by a human, upgraded by agents.</string>
     <string name="settings_suggestions">Continuation suggestions</string>
     <string name="settings_suggestions_help">At the end of the queue, offers to continue with similar songs when the server can provide them.</string>
 

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_bass_speaker_unavailable">Bass boost is unavailable on the speaker. Your preference and strength are kept for headphones.</string>
+    <string name="audio_bass_route_unknown">Bass boost is suspended: output unknown or unsupported. Start playback with headphones. Your preference is kept.</string>
+    <string name="audio_bass_device_help">The result depends on your headphones and device audio effects.</string>
+</resources>

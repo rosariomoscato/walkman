@@ -22,7 +22,8 @@ class SystemEffectsController(context: Context) {
         /** Effects exist on this session: band count and level bounds for the UI. */
         data class Ready(val bands: Int, val centerHz: List<Int>, val levelRangeMilliB: IntRange,
                          val bandLevelsMilliB: List<Int>, val bassStrength: Int,
-                         val bassEnabled: Boolean, val eqEnabled: Boolean) : State
+                         val bassEnabled: Boolean, val eqEnabled: Boolean,
+                         val bassRoute: BassBoostRouting.Route) : State
         data class Unavailable(val reason: Reason) : State
         enum class Reason { NO_EFFECTS, SESSION_REJECTED, RELEASED }
     }
@@ -34,6 +35,36 @@ class SystemEffectsController(context: Context) {
     private var equalizer: Equalizer? = null
     private var bass: BassBoost? = null
     private var sessionId = AudioEffect.ERROR_BAD_VALUE
+    private val routing = BassBoostRouting()
+    private var requestedBass = false
+    private var requestedStrength = 0
+
+    fun outputRouteChanged(output: Any, route: BassBoostRouting.Route, playing: Boolean) {
+        val previous = routing.route
+        routing.update(output, route, playing)
+        if (routing.route != previous) applyBassRoute()
+    }
+
+    fun outputReleased(output: Any) {
+        val previous = routing.route
+        routing.remove(output)
+        if (routing.route != previous) applyBassRoute()
+    }
+
+    private fun applyBassRoute() {
+        val boost = bass ?: return
+        try {
+            val enabled = routing.shouldEnable(requestedBass, requestedStrength)
+            boost.enabled = enabled
+            publish()
+            if (!boost.hasControl() || boost.enabled != enabled)
+                stateFlow.value = State.Unavailable(State.Reason.SESSION_REJECTED)
+        } catch (_: Exception) {
+            stateFlow.value = State.Unavailable(State.Reason.SESSION_REJECTED)
+        } catch (_: Error) {
+            stateFlow.value = State.Unavailable(State.Reason.SESSION_REJECTED)
+        }
+    }
 
     fun attach(audioSessionId: Int) {
         if (sessionId == audioSessionId && equalizer != null) return
@@ -76,15 +107,17 @@ class SystemEffectsController(context: Context) {
 
     /** Applies user preferences; a failed control marks the state unavailable honestly. */
     fun apply(equalizerEnabled: Boolean, bandLevelsCsv: String, bassEnabled: Boolean, bassStrength: Int): Boolean {
+        requestedBass = bassEnabled
+        requestedStrength = bassStrength.coerceIn(0, 1000)
         val eq = equalizer ?: return false
         val boost = bass ?: return false
         val ok = try {
             applyBandLevels(eq, bandLevelsCsv)
             eq.enabled = equalizerEnabled
             boost.setStrength(bassStrength.coerceIn(0, 1000).toShort())
-            boost.enabled = bassEnabled && bassStrength > 0
+            boost.enabled = routing.shouldEnable(requestedBass, requestedStrength)
             eq.hasControl() && boost.hasControl() && eq.enabled == equalizerEnabled &&
-                boost.enabled == (bassEnabled && bassStrength > 0)
+                boost.enabled == routing.shouldEnable(requestedBass, requestedStrength)
         } catch (_: Exception) { false } catch (_: Error) { false }
         publish()
         if (!ok) stateFlow.value = State.Unavailable(State.Reason.SESSION_REJECTED)
@@ -135,6 +168,7 @@ class SystemEffectsController(context: Context) {
                 bassStrength = boostStrength,
                 bassEnabled = bass?.enabled == true,
                 eqEnabled = eq.enabled,
+                bassRoute = routing.route,
             )
         } catch (_: Exception) {
             stateFlow.value = State.Unavailable(State.Reason.SESSION_REJECTED)
@@ -144,6 +178,9 @@ class SystemEffectsController(context: Context) {
     }
 
     fun release() {
+        routing.clear()
+        requestedBass = false
+        requestedStrength = 0
         try { equalizer?.enabled = false } catch (_: Exception) {}
         try { bass?.enabled = false } catch (_: Exception) {}
         try { equalizer?.release() } catch (_: Exception) {}

@@ -152,7 +152,7 @@ class PlaybackService : MediaLibraryService() {
             val deck = ExoPlayer.Builder(this,
                 Graph.audioOutput.renderers(this, sinkHook = { builder ->
                     builder.setAudioProcessors(arrayOf(audio.gain, audio.tape))
-                }, monitor = true))
+                }, monitor = true, effects = Graph.systemEffects))
                 .setDeviceVolumeControlEnabled(true)
                 .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
                 .setAudioAttributes(musicAttributes, /* handleAudioFocus = */ false)

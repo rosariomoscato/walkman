@@ -226,7 +226,7 @@ class Wave09AudioEngineTest {
         val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE)
             as android.media.AudioManager
         val session = audioManager.generateAudioSessionId()
-        val controller = Graph.systemEffects
+        val controller = com.walktape.app.playback.dsp.SystemEffectsController(context)
         try {
             controller.attach(session)
             android.util.Log.i("W09Effects", controller.state.value.toString())
@@ -239,8 +239,25 @@ class Wave09AudioEngineTest {
                     val applied = controller.state.value
                         as com.walktape.app.playback.dsp.SystemEffectsController.State.Ready
                     assertTrue(applied.eqEnabled)
-                    assertTrue(applied.bassEnabled)
+                    assertFalse(applied.bassEnabled) // Unknown route fails closed.
                     assertEquals(400, applied.bassStrength)
+                    val output = Any()
+                    // Route fixtures test effect application, not acoustic headphone response.
+                    controller.outputRouteChanged(output,
+                        com.walktape.app.playback.dsp.BassBoostRouting.Route.HEADPHONES, true)
+                    fun ready() = controller.state.value as
+                        com.walktape.app.playback.dsp.SystemEffectsController.State.Ready
+                    assertTrue(ready().bassEnabled)
+                    controller.outputRouteChanged(output,
+                        com.walktape.app.playback.dsp.BassBoostRouting.Route.SPEAKER, true)
+                    assertFalse(ready().bassEnabled)
+                    assertTrue(ready().eqEnabled)
+                    assertEquals(400, ready().bassStrength)
+                    controller.outputRouteChanged(output,
+                        com.walktape.app.playback.dsp.BassBoostRouting.Route.HEADPHONES, true)
+                    assertTrue(ready().bassEnabled) // Request survives without another apply.
+                    controller.outputReleased(output)
+                    assertFalse(ready().bassEnabled)
                     val csv = controller.currentBandLevelsCsv()
                     assertTrue(csv.startsWith("0:500"))
                 }

@@ -27,7 +27,10 @@
     <string name="lock_prompt_title">Sblocca WalkTape</string>
     <string name="lock_unlock">Sblocca</string>
     <string name="settings_diagnostics">Diagnostica</string>
-    <string name="settings_version">Versione</string>
+    <string name="settings_version">WalkTape %1$s</string>
+    <string name="settings_author_claim_before">© 2026\u0020</string>
+    <string name="settings_author_name">Rosario Moscato</string>
+    <string name="settings_author_claim_after">\u0020- handcrafted by a human, upgraded by agents.</string>
     <string name="settings_suggestions">Suggerimenti di continuazione</string>
     <string name="settings_suggestions_help">Alla fine della coda propone di continuare con brani simili, se il server è in grado di fornirli.</string>
 

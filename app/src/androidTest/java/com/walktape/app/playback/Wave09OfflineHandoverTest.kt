@@ -26,6 +26,8 @@ class Wave09OfflineHandoverTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val previous = Graph.database.profileDao().active()?.id
         val settings = Graph.settingsRepository.settings.first()
+        val audioManager = context.getSystemService(android.content.Context.AUDIO_SERVICE) as android.media.AudioManager
+        val musicVolume = audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC)
         val wav = TestAudioEngine.wav(TestAudioEngine.sine(64000, 6000, 300))
         var id: Long? = null
         var controller: MediaController? = null
@@ -36,8 +38,12 @@ class Wave09OfflineHandoverTest {
             else MockResponse.Builder().body("""{"subsonic-response":{"status":"ok","version":"1.16.1"}}""").build()
         }
         server.start()
-        suspend fun await(predicate: suspend () -> Boolean) {
-            withTimeout(30_000) { while (!predicate()) delay(100) }
+        suspend fun await(message: String = "playback condition", predicate: suspend () -> Boolean) {
+            try {
+                withTimeout(30_000) { while (!predicate()) delay(100) }
+            } catch (e: TimeoutCancellationException) {
+                throw AssertionError("$message; effects=${Graph.systemEffects.state.value}", e)
+            }
         }
         try {
             Graph.settingsRepository.setCrossfadeEnabled(true)
@@ -78,10 +84,18 @@ class Wave09OfflineHandoverTest {
             await { withContext(Dispatchers.Main) { c.isPlaying && c.currentPosition > 100 } }
             withContext(Dispatchers.Main) { c.seekTo(0, 5600) }
             await { withContext(Dispatchers.Main) { c.currentMediaItemIndex == 1 && c.isPlaying && c.currentPosition > 1800 } }
+            await("actual AudioTrack route must be observed") {
+                val value = Graph.systemEffects.state.value
+                value is com.walktape.app.playback.dsp.SystemEffectsController.State.Unavailable ||
+                    (value is com.walktape.app.playback.dsp.SystemEffectsController.State.Ready &&
+                        value.bassRoute != com.walktape.app.playback.dsp.BassBoostRouting.Route.UNKNOWN)
+            }
             val effects = Graph.systemEffects.state.value
             if (effects is com.walktape.app.playback.dsp.SystemEffectsController.State.Ready) {
                 assertTrue(effects.eqEnabled)
-                assertTrue(effects.bassEnabled)
+                assertEquals(effects.bassRoute == com.walktape.app.playback.dsp.BassBoostRouting.Route.HEADPHONES,
+                    effects.bassEnabled)
+                assertTrue("route gating must not erase the user's opt-in", Graph.currentSettings.bassBoostEnabled)
             } else assertTrue(effects is com.walktape.app.playback.dsp.SystemEffectsController.State.Unavailable)
             val skips = Graph.offlineSkips.value
             withContext(Dispatchers.Main) {
@@ -108,6 +122,9 @@ class Wave09OfflineHandoverTest {
             await { withContext(Dispatchers.Main) { restored.currentMediaItemIndex == 3 } }
             assertFalse(withContext(Dispatchers.Main) { restored.playWhenReady })
             assertEquals(requests, server.requestCount)
+            assertTrue(Graph.currentSettings.bassBoostEnabled)
+            assertEquals(200, Graph.currentSettings.bassBoostStrength)
+            assertEquals(musicVolume, audioManager.getStreamVolume(android.media.AudioManager.STREAM_MUSIC))
         } finally {
             withContext(Dispatchers.Main) { controller?.pause(); controller?.release() }
             context.stopService(Intent(context, PlaybackService::class.java))

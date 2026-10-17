@@ -59,6 +59,10 @@ Un solo profilo attivo; dati e download isolati per profilo. Preferenze estetich
 - Originale su Wi-Fi e download; ridotta configurabile su rete mobile e opzionalmente nei download.
 - Transcoding del server quando configurato; indicazione esplicita quando manca e uso dell'originale.
 - ReplayGain album/brano, equalizzatore, rinforzo bassi ed effetto cassetta opzionali, inizialmente spenti.
+- Precisazione approvata nel collaudo W12: rinforzo bassi sospeso sull'altoparlante con
+  avviso esplicito; disponibile sulle cuffie secondo le capacità del dispositivo.
+  Preferenza e intensità conservate al cambio uscita, senza compensare il volume Android;
+  uscita non rilevata/non supportata segnalata, effetto non applicato finché incerta.
 - Effetto cassetta: lieve fruscio e oscillazione del suono; default pulito.
 - Verificare gapless/crossfade/effetti anche combinati, sui formati MP3/FLAC e hardware di riferimento.
 - Ascolti inviati a Navidrome, incluso recupero degli eventi offline evitando duplicati; eventuale Last.fm/ListenBrainz gestito dal server.
@@ -78,6 +82,8 @@ Un solo profilo attivo; dati e download isolati per profilo. Preferenze estetich
 ## Design
 
 - Un modello TPS-L2 nella prima versione, marchio WalkTape e icona originale.
+- Schermata di benvenuto al lancio con logo, versione e credits, circa un secondo;
+  non ripetuta ai normali rientri nell'app e senza provocare riproduzione automatica.
 - Blu, argento, accenti arancioni, superfici metalliche, tasti meccanici e finestra cassetta.
 - Bobine animate solo in riproduzione; etichetta album/playlist, titolo/artista; “Mixtape” per coda mista.
 - Copertina dedicata ingrandibile; comandi shuffle/ripetizione/coda visibili.

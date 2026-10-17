@@ -285,15 +285,25 @@ Criterio di uscita: l'utente può diagnosticare, trasferire configurazione e agg
 
 ## Wave 12 — Verifica complessiva e distribuzione
 
+Incrementi UI post-collaudo: tasti player a larghezza piena e splash con logo/versione/
+credits implementati e compilati (debug+lint); riscontro visivo e lifecycle sul telefono
+ancora da raccogliere, APK release da riallineare prima di un'eventuale pubblicazione.
+
+Successivo riscontro utente: splash/tasti approvati. Rinforzo bassi per route concordato
+in D41: sospensione su speaker/uscita ignota, preferenza conservata per cuffie. Verifiche
+software superate (177JVM,lint0/45, controller/offline/timer Android separati1/1 ciascuno),
+riscontro generale positivo utente «funziona» ricevuto; voci puntuali del collaudo D41
+non chiuse automaticamente e matrice Auto/hardware restante ancora aperta.
+
 Dipendenze: tutte le wave precedenti.
 
-- [ ] W12-T01 — Eseguire build, analisi statica e test significativi per isolamento, coda, sincronizzazione, download e migrazioni.
-- [ ] W12-T02 — Eseguire la matrice end-to-end con server reale, rete/offline, MP3/FLAC, Motorola Android 15/16 e Android Auto.
-- [ ] W12-T03 — Verificare prestazioni, batteria, storage, accessibilità, lingue e tutti gli impegni di `SPEC.md`.
-- [ ] W12-T04 — Preparare icona originale, README, guida installazione/Tailscale/Auto, privacy, licenza MIT e note di rilascio.
-- [ ] W12-T05 — Predisporre firma e processo riproducibile per gli APK, mantenendo chiavi e credenziali fuori da Git.
-- [ ] W12-T06 — Preparare APK firmato; pubblicare repository/release solo con richiesta esplicita dell'utente per tali operazioni.
-- [ ] W12-T07 — Chiudere la verifica del perimetro; aggiornare log/memoria con esiti, problemi residui e backlog.
+- [x] W12-T01 — Eseguire build, analisi statica e test significativi per isolamento, coda, sincronizzazione, download e migrazioni.
+- [ ] W12-T02 — Eseguire la matrice end-to-end con server reale, rete/offline, MP3/FLAC, Motorola Android 15/16 e Android Auto. *(emulatore/server reale e telefono sez.A/B verificati; Auto e residui hardware ancora aperti)*
+- [ ] W12-T03 — Verificare prestazioni, batteria, storage, accessibilità, lingue e tutti gli impegni di `SPEC.md`. *(porzioni emulatore/codice e TalkBack W12 confermati; batteria/font 200% e residui ancora aperti)*
+- [x] W12-T04 — Preparare icona originale, README, guida installazione/Tailscale/Auto, privacy, licenza MIT e note di rilascio.
+- [x] W12-T05 — Predisporre firma e processo riproducibile per gli APK, mantenendo chiavi e credenziali fuori da Git.
+- [x] W12-T06 — Preparare APK firmato; pubblicare repository/release solo con richiesta esplicita dell'utente per tali operazioni.
+- [x] W12-T07 — Chiudere la verifica del perimetro; aggiornare log/memoria con esiti, problemi residui e backlog.
 
 Criterio di uscita: prima versione conforme al perimetro approvato; i controlli non eseguiti e i blocchi non sono presentati come superati.
 

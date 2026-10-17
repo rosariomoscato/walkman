@@ -317,7 +317,111 @@ Vincoli registrati:
   dialog installer/unknown-sources interattivi, update da release reale (inesistente).
   W10-T04/T05, W09-T06 e residui W05–W08 restano aperti.
 
-## Controlli non eseguiti nella wave 01 (registro storico)
+## Incremento W12 — cancello qualità, coerenza UI e distribuzione (2026-10-17)
+
+- **Cancello qualità (T01)**: build app+androidTest, **172/172 JVM** (login reale),
+  lint **0 errori/45 avvisi**, suite Android su `walktape_aosp` in **esecuzioni separate**:
+  core/migrazioni/profili **12/12**; coda/playback **21 test OK** (skip opt-in attesi:
+  QueueSelection×2/VolumeKey senza marker/flag); servizio/focus/playerUI **6/6**;
+  W07 storage **4/4** + UI server **1/1**; W08 **13/13**; W09 **25/25 + RealQuality 1/1**;
+  W10 Auto **6/6**; W11 **10/10**; seeded UI **LibraryNavigation 1/1, QueueSelection 2/2,
+  PlayerUi 2/2**. Environment: due fail ambientali documentati (W07UI timeout 40s×2 sotto
+  carico + login fallito a 2 min dal cold boot → passato dopo cold reboot; Opus c2 decoder
+  che emetteva silenzio su un boot → passato dopo cold reboot). Nessun difetto app
+  attribuibile a questi fail; non sommare le esecuzioni come suite unica.
+- **Correzioni test W04-era (difetti di infrastruttura, non app)**:
+  `LibraryNavigationTest` non girava da wave04 mentre LibraryScreen evolveva in W05–W08:
+  (1) retry dei click tab su nodi stale (performAction false dopo ricomposizione);
+  (2) `SET_TEXT` a11y ora apre l'IME su Compose attuale → chiusura condizionata
+  (`dumpsys input_method` mInputShown, BACK solo se mostrata); (3) `clearCache()` nel
+  polling `awaitNode` (albero a11y vuoto dopo ricomposizione in modalità selezione,
+  rimedio già documentato in W05); (4) messaggio playlist readonly aggiornato alla
+  semantica W07 ("Playlist di fixture: sola lettura."). Aggiunta diagnostica "visible:"
+  all'errore di attesa. Diagnostic note a11y: uiautomator dump unifica gli span del
+  Text con link (il link va verificato funzionalmente, non dal dump).
+- **Coerenza UI (T02, richieste utente)**: `TopAppBar` con freccia Indietro
+  (`action_back` IT/EN esistente) sulle quattro sotto-pagine di Impostazioni
+  (Diagnostica, Backup, Update, Profili) come nei dettagli libreria; fondo Impostazioni
+  con versione reale `WalkTape <versionName>` da PackageManager e crediti
+  "© 2026 Rosario Moscato - handcrafted by a human, upgraded by agents." con nome-link
+  `https://rosmoscato.xyz` (`withLink`/`LinkAnnotation.Url`, apertura solo al tap).
+  Verificato via dump+tap su emulatore: tutte le sotto-pagine tornano alla provenienza,
+  versione coerente con Aggiornamenti app (`Versione installata: 0.1.0`) e Diagnostica
+  (`app.version`), link che apre il browser. **Room v12 invariata**.
+- **T03 (porzioni emulatore/codice)**: default SPEC puntuali nel codice: cache 1 GiB /
+  copertine 250 MiB, wifiOnly=true, skipUnavailable=true, haptics=true, suggerimenti/clic/
+  auto-check update/lock/crossfade/ReplayGain/EQ/bassi/cassetta=off; `allowBackup=false` +
+  `dataExtractionRules`. Nota: documenti W08 dicono "solo offline inizialmente on" ma il
+  default implementato è **off** (il gate è fail-closed fino al load, `awaitReady`):
+  comportamento funzionale coerente con SPEC, ambiguità documentale registrata.
+  Misure su walktape_aosp (NON rappresentative del telefono): cold start **8,57 s**
+  TotalTime (swiftshader), **PSS 83 MB** a regime con indice 6.403 brani. Paging/ricerca
+  10k fixture e finestre Auto ri-verificate dalle suite G1/G7. TalkBack/font200%/batteria
+  restano collaudi telefono (checklist W12).
+- **Firma stabile (T05)**: decisione utente — **riuso della chiave debug** come chiave
+  stabile (upgrade in-place preservato, percorso aggiornamenti in-app già verificato).
+  `local/signing.env` (git-ignored, template `signing.env.example`) + `signingConfigs`
+  condizionale in `app/build.gradle.kts`: nessun segreto committato; `local/` e
+  `*.keystore/*.jks` ignorati. Processo riproducibile:
+  `JAVA_HOME=<JBR> .\gradlew.bat :app:assembleRelease "-Dkotlin.compiler.execution.strategy=in-process"`;
+  verifica SHA256 + `apksigner verify`. **Release v0.1.0 (versionCode 2)**:
+  SHA256 `139A391A1C130AA4E788CE9C4740B3146ED7BFF497FCEA49070C8A48D5FFA74E`,
+  V2 signer CN=Android Debug, **cert SHA-256 `60e9a71f990819c44b2a07a6fc9254925a0d87414c36495f85feb9ffde7b178c`**
+  (digest registrato, mai la chiave). Upgrade reale via adb: debug v1 → release v2
+  `install -r` Success, dati persistenti (marker in files/), app resumed senza crash,
+  stato vuoto onesto "Nessun profilo configurato" dopo cleanup seed.
+- **Icona (T04)**: variante **A "Cassetta"** approvata e sostituita in
+  `ic_launcher_foreground.xml` (crema/steel, bobine WtBlueDeep, nastro WtOrange, safe
+  zone adaptive+monochrome). Varianti B/C archiviate in `local/` con SVG e anteprima PNG.
+- **Documentazione pubblica (T04)**: `README.md` (cos'è, requisiti, installazione APK con
+  avviso firme, funzioni, limiti, sviluppo, MIT), `LICENSE` MIT, `docs/PRIVACY.md`
+  (informativa coerente: nessun invio automatico, tabella destinatari), `docs/INSTALL.md`
+  (APK + LAN/Tailscale + primo profilo + problemi comuni), bozza note di rilascio in
+  `local/DRAFT_RELEASE_NOTES.md`. Guide esistenti linkate dal README.
+- **Non eseguiti (registro onesto)**: pubblicazione tag/release GitHub (nessuna richiesta),
+  download update da release reale (API `releases/latest` resta 404), collaudi telefono
+  (W10-T04/T05 auto, W11, W12 checklist) e residui W05–W09 hardware. APK release firmato
+  preparato; distribuzione solo su richiesta esplicita.
+
+## Emendamento W09-T04/W12-T02 — bassi per uscita (D41, approvato)
+
+Il Motorola collaudato usa Dynamic Bass Boost NXP e, su speaker, l'utente riferisce
+attenuazione più che rinforzo. La soluzione concordata sospende il bass boost su speaker
+e route ignota, conservando la preferenza per il ritorno alle cuffie; nessun aumento di
+volume, disattivazione Dolby o DSP sostitutivo. Room e backup invariati.
+
+`RoutedAudioOutputProvider` delega al provider AudioTrack Media3 standard e osserva
+`AudioTrackAudioOutput.audioTrack.routedDevice`/OnRoutingChangedListener. Registra solo
+tipo route/stato volatile, mai campioni, nomi dispositivi o indirizzi. Callback main,
+token distinto per output e invalidazione atomica alla release: eventi tardivi non
+resuscitano output rilasciati. Play/pause/stop/release delegati senza alterare PCM,
+sessionId, volume, clock, qualità o pipeline DSP. Il monitor è applicato ai deck del
+servizio; sink di test indipendenti rimangono indipendenti.
+Oltre ai callback, rilettura ogni500ms solo mentre l'output è in play: la route iniziale
+può essere null prima del primo frame senza un callback successivo affidabile.
+Polling cancellato in pausa/stop/release; nessun lavoro periodico a player fermo.
+
+`BassBoostRouting` aggrega i soli output in play (crossfade compreso): qualsiasi speaker
+blocca, qualsiasi route ignota sospende, tutti cuffie consentono il solo opt-in con
+intensità>0. Speaker incorporato/safe/auricolare e BLE speaker sono esclusi; wired/USB
+headset, Bluetooth A2DP/SCO/BLE headset e hearing aid consentiti. Tipi non riconosciuti
+sospesi. Il tipo A2DP pubblico non distingue sempre cuffie da casse Bluetooth: nessuna
+garanzia acustica o riconoscimento di form factor oltre quanto esposto da Android.
+
+SystemEffectsController distingue richiesta memorizzata e applicazione effettiva,
+riapplicando solo il bass boost alle transizioni di route. EQ indipendente. UI IT/EN:
+switch spento/disabilitato su speaker o uscita ignota con motivo, preferenza e intensità
+conservate; sulle cuffie slider disponibile anche a zero. In pausa, senza output attivo,
+stato ignoto e invito ad avviare con cuffie.
+
+API verificate sui sorgenti ufficiali Media3 **1.11.1** (nessuna dipendenza aggiornata):
+- https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/audio/AudioTrackAudioOutput.java
+- https://raw.githubusercontent.com/androidx/media/1.11.1/libraries/exoplayer/src/main/java/androidx/media3/exoplayer/audio/AudioTrackAudioOutputProvider.java
+
+Le prove della policy e delle transizioni audiofx sono distinte dalla risposta sonora
+hardware. Esiti aggiornati e hash dell'APK nel WORKLOG/memoria.
+
+## Controlli storici wave 01 — elenco conservato
 
 - Prove su emulatore e telefono (nessun AVD/dispositivo collegato in wave 01).
 - LAN/Tailscale dal telefono verso il server.

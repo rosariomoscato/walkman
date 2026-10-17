@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="audio_bass_speaker_unavailable">Rinforzo bassi non disponibile sull’altoparlante. La preferenza e l’intensità sono conservate per le cuffie.</string>
+    <string name="audio_bass_route_unknown">Rinforzo bassi sospeso: uscita non rilevata o non supportata. Avvia la riproduzione con le cuffie. La preferenza è conservata.</string>
+    <string name="audio_bass_device_help">La resa dipende dalle cuffie e dagli effetti audio del dispositivo.</string>
+</resources>
