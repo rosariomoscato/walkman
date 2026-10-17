@@ -1126,3 +1126,11 @@ MainActivity, Manifest (REQUEST_INSTALL_PACKAGES, FileProvider). APK debug final
 **658F31DA5E388ACB169874673DDC0E3D26D2254C10FC86767C37E05F22DA1DFD**. Emulatore spento, adb
 vuoto, temporanei di test rimossi (file storici in temp non toccati). Nessun commit/push/release;
 versionCode tornato a 1 dopo la prova upgrade.
+
+**Pubblicazione su richiesta esplicita dell'utente** (17ottobre2026): codice/test/documenti W11
+in **2805aa9 — Wave 11: impostazioni sistema, diagnostica, backup e aggiornamenti (T01-T05)**,
+49 file/4140 inserimenti/94 rimozioni. Push ordinario a49d0e7..2805aa9 riuscito; SHA locale e
+remoto `2805aa9e9bcfb64520fe11c40cc276c7f2259c5e` verificati identici, working tree pulita subito
+dopo. Esclusi come da prassi: local/ (credenziali, checklist W05–W11, archivi NEXT_PROMPT),
+NEXT_PROMPT.md corrente, APK. Nessuna release creata. Collaudi telefono W11 e Auto W10-T04/T05
+restano aperti; altri commit/push soltanto su nuova richiesta.

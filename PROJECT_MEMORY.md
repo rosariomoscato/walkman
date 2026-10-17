@@ -4,7 +4,12 @@ Ultimo aggiornamento: 2026-10-17 (Wave 11 implementata e verificata in automatic
 
 ## Punto corrente — W11-T01–T05 [x]; collaudi telefono/aperto W10-T04/T05, W09-T06
 
-- **W11 completata in automatico** sulla baseline a49d0e7: impostazioni/sistema reali (T01),
+- **W11 pubblicata su richiesta esplicita** nel commit **2805aa9 — Wave 11: impostazioni sistema,
+  diagnostica, backup e aggiornamenti (T01-T05)** (49 file/4140 inserimenti/94 rimozioni); push
+  ordinario a49d0e7..2805aa9 riuscito, SHA locale/remoto `2805aa9e9bcfb64520fe11c40cc276c7f2259c5e`
+  identici, working tree pulita subito dopo. Esclusi local/, checklist, NEXT_PROMPT e APK; nessuna
+  release. Dettagli tecnici e decisioni D38–D40 nel WORKLOG/ARCHITECTURE del 17ottobre.
+- **W11 completata in automatico** prima della pubblicazione: impostazioni/sistema reali (T01),
   diagnostica a sezioni con allowlist+redazione estesa ed export SAF/FileProvider (T02), backup
   versionato senza credenziali/audio con import validato e nuovo login (T03), aggiornamenti
   GitHub Releases con verifica package/versionCode/firma e installer Android (T04), verifiche
@@ -23,8 +28,9 @@ Ultimo aggiornamento: 2026-10-17 (Wave 11 implementata e verificata in automatic
   verificata 404), TalkBack delle nuove superfici. Stato GitHub Releases **vuoto** gestito
   onestamente dall'app.
 - W09-T06 e residui W05–W08 restano differiti e non superati; tutte le checklist W05–W11
-  preservate in `local/`. Nessun commit/push/release eseguito per W11 (versionCode tornato a 1
-  dopo la prova upgrade). Handoff W10 preservato in `local/NEXT_PROMPT_W10_ARCHIVE_20261016.md`.
+  preservate in `local/`. Codice W11 pubblicato in **2805aa9**; altri commit/push soltanto su
+  nuova richiesta. Handoff W10 preservato in `local/NEXT_PROMPT_W10_ARCHIVE_20261016.md`,
+  W11 in `local/NEXT_PROMPT_W11_ARCHIVE_20261017.md`.
 
 ## Baseline W10 pubblicata — T04/T05 ancora da collaudare
 
