@@ -1,24 +1,41 @@
 # WalkTape — memoria di progetto
 
-Ultimo aggiornamento: 2026-10-17 (W12 e incrementi UI/bassi pubblicati in bc93c3c su richiesta; collaudi W12A/B e W11 parziale ricevuti, riscontro D41 positivo; Auto/residui hardware aperti, nessuna GitHub Release).
+Ultimo aggiornamento: 2026-10-17 (release pubblica v0.1.0/code2 con APK aggiornato e checksum; documentazione riallineata; Auto e collaudi hardware residui aperti).
 
-## Punto corrente — post-W12; collaudi utente pendenti; release non pubblicata
+## Punto corrente — v0.1.0 pubblicata; collaudi residui
 
-- **Task corrente W12-T06/T07 — pubblicazione APK richiesta esplicitamente** («pubblichamo
-  l'apk disponibile e aggiorniamo tutta la documentazione ... commit e push»).
-  Versione mantenuta0.1.0/code2, release aggiornata dal sorgente afdb6a5 (code invariato).
-  Build assembleRelease/lintRelease riuscita12m53s,lint0/45, firma V2/cert60e9a71f…
-  verificati, ABI arm64-v8a/armeabi-v7a/x86/x86_64. Asset locale ignorato
-  `local/walktape-universal-0.1.0.apk`, SHA256
-  `c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`;
-  checksum `local/SHA256SUMS.txt`. Metadati e pipeline in docs/RELEASING.md,
-  note definitive in docs/RELEASE_NOTES.md. Non usare il vecchio candidato139A391A.
-  Prima prova install emulatore: broken pipe del servizio package, successivo comando
-  timeout tool ma install completata; base.apk letto ha hash C1CC identico, release
-  non-debuggable e marker dati conservato sopra debug0.1.0/code2. MainActivity resumed;
-  dump UI inizialmente bloccato da ANR Quickstep/system (non attestato come collaudo UI).
-  Prossima azione: commit/push documenti, tag v0.1.0 sul sorgente afdb6a5, draft+upload,
-  verifica download e pubblicazione latest, poi aggiornare stato e registri.
+- **W12-T06/T07 — release pubblicata su richiesta esplicita dell'utente**:
+  https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0
+  Release normale latest (non draft/prerelease), pubblicata2026-10-17T19:31:05Z.
+  Tag annotato sul sorgente `afdb6a57e381c574b2df94e4d17446b90dc2dd39`, include
+  splash/tasti/D41. Docs aggiornati in decdbc6 e note finali nel successivo commit.
+- **Artefatto pubblico corrente**: `walktape-universal-0.1.0.apk`,0.1.0/code2,
+  release non-debuggable,19.914.927byte, quattroABI. SHA256
+  `c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`.
+  Firma V2, certificato `60e9a71f990819c44b2a07a6fc9254925a0d87414c36495f85feb9ffde7b178c`.
+  Due asset pubblici (APK+SHA256SUMS.txt); copie locali ignorate in local/. Il vecchio
+  candidato139A391A non distribuito. Non sostituire l'asset o spostare il tag esistente.
+- **Verifiche pubblicazione**: assembleRelease/lintRelease riusciti12m53s,lint0/45;
+  codice applicativo invariato dal finale177/177 JVM e regressioni Android D41.
+  Download draft riscaricato con firma/hash verificati; dopo pubblicazione API latest
+  anonima200 (tag0.1.0), download APK pubblico200 e SHA identico, checksum pubblico
+  coerente; digest asset GitHub coincidente. Primo download PowerShell timeout tool,
+  ripetuto con curl pubblico (19.914.927byte completi). Passaggio debugcode2→releasecode2
+  installato sull'AOSP con marker conservato; hash base.apk identico. Avvio resumed/
+  Statusok, ma ANR di sistema e un abort AndroidXProfileInstaller durante DeadSystemException
+  documentati: non dichiarare smokeUI o aggiornamento futuro in-app completamente verdi.
+- **Prossima azione precisa**: collaudi residui W10Auto, W11 sei voci originarie più
+  due prove post-pubblicazione aggiunte alla checklist, e hardware
+  W05–W09/W12. Le build0.1.0 di sviluppo sono pari versione per il checker: primo APK
+  pubblico da installare manualmente in-place, stessa firma, nessuna disinstallazione.
+  Aggiornamenti futuri con versionName>0.1.0 e code>2, da concordare. Nessuna nuova
+  pubblicazione/commit/push senza richiesta. Guida manutentore docs/RELEASING.md;
+  note pubbliche docs/RELEASE_NOTES.md. SPEC/DESIGN e checklist precedenti preservati.
+  Pulizia finale: dopo boot completo, su0 ha verificato e rimosso il marker nell'app;
+  /data/local/tmp solo dalvik-cache, sync e shutdown eseguiti, adb vuoto verificato.
+  Copie temporanee di download rimosse, originali pubblicati conservati in local/.
+
+### Baseline W12 e riscontri precedenti (storico)
 
 - **Commit e push eseguiti su richiesta esplicita**: codice/test/documenti W12 e
   incrementi successivi in **bc93c3c — Wave 12: verifiche, interfaccia e bassi per uscita**,

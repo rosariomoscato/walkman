@@ -20,6 +20,16 @@ candidato locale con hash `139A391A…` non è l'artefatto di questa pubblicazio
 Il codice applicativo è quello del commit sorgente; gli aggiornamenti documentali della
 pubblicazione sono successivi su `main`.
 
+## Verifiche della distribuzione
+
+Release normale latest pubblicata il2026-10-17T19:31:05Z; API latest senza autenticazione
+HTTP200 e tagv0.1.0, due soli asset APK+checksum. APK riscaricato pubblicamente:
+HTTP200,19.914.927byte e SHA256 identico alla tabella. Checksum pubblico coerente;
+firma/certificato verificati anche sul download precedente alla pubblicazione.
+Passaggio debugcode2→releasecode2 installato sull'AOSP con marker dati conservato e
+digest base.apk identico. Il dumpUI non è attestato come smoke completamente verde
+per ANR di sistema dell'AVD: fallimenti e cleanup registrati nel WORKLOG.
+
 ## Chiave e configurazione locale
 
 Per scelta dell'utente si riusa la chiave delle build debug iniziali come firma stabile,

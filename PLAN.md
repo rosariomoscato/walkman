@@ -285,7 +285,7 @@ Criterio di uscita: l'utente può diagnosticare, trasferire configurazione e agg
 
 ## Wave 12 — Verifica complessiva e distribuzione
 
-Prima distribuzione autorizzata dall'utente: **v0.1.0 / versionCode2**, APK release
+Prima distribuzione pubblicata su richiesta: **[v0.1.0 / versionCode2](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0)**, APK release
 riallineato a splash/tasti/D41, firma stabile e checksum. Artefatto e processo in
 [RELEASING.md](docs/RELEASING.md), verifiche/limiti nelle [note](docs/RELEASE_NOTES.md).
 La pubblicazione non chiude T02/T03 né i collaudi hardware precedenti.

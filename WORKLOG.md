@@ -1567,3 +1567,48 @@ test già denominate0.1.0: updater le considera pari versione, non si inventa un
 né si chiude il collaudo di un futuro aggiornamento a versione maggiore.
 Tag previsto sul sorgenteafdb6a57e381c574b2df94e4d17446b90dc2dd39, aggiornamenti docs
 successivi su main. Pubblicazione effettiva e controlli download da registrare dopo.
+
+### Pubblicazione v0.1.0 e verifiche degli asset
+
+Documenti aggiornati in **decdbc6 — Documentazione e preparazione release v0.1.0**,
+15file/323inserimenti/33rimozioni, push ordinario riuscito su main e SHA remoto/locale
+`decdbc6f31cf041ad79089e7f8a07fe313e8b288` identici. App invariata rispetto ad afdb6a5.
+Tag annotato **v0.1.0** creato e pushato sul sorgente
+`afdb6a57e381c574b2df94e4d17446b90dc2dd39` (nessun force/retag).
+Creata via gh release draft con APK e SHA256SUMS; asset riscaricato dal draft con hash
+identico e firma V2/certificato verificati. Pubblicata come release normale latest,
+non prerelease, il2026-10-17T19:31:05Z:
+https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0
+
+Asset APK **walktape-universal-0.1.0.apk**,19.914.927byte; SHA256
+`c1ccacb4632d39da11c4bd0344cbe092a90f1eca7d6badc253ca04be72668957`.
+Secondo asset **SHA256SUMS.txt**,95byte, contenuto coerente col digest e nome APK.
+Metadati GitHub confermano esattamente due asset uploaded, digest server coincidente.
+API latest anonimaHTTP200/tagv0.1.0; primo download PowerShell rallentato oltre timeout
+tool, ripetuto con curl senza autenticazione: HTTP200,19.914.927byte, hash identico.
+Checksum pubblico verificato con WebFetch. Non confuso upload riuscito con disponibilità
+pubblica: entrambi controllati separatamente. Nessun token/chiave/config locale pubblicati.
+
+Avvio dopo cold reboot AOSP: am startCOLD Statusok/MainActivity resumed (26,336s sotto
+carico), dump ancora coperto da ANR SystemUI. Non prova UI verde; l'installazione e
+persistenza erano verificate prima del reboot, il crash DeadSystem nel log precedente
+non è stato nascosto. Tentativo cleanup marker senza root dopo reboot rifiutato;
+verifica/pulizia root mirata in corso prima dello spegnimento finale. Non ripetute suite
+applicative senza cambi codice. Note finali e stato corrente aggiornati nel commit
+documentale successivo alla pubblicazione; i collaudi Auto/hardware restano aperti.
+
+### Chiusura verifica e cleanup della pubblicazione
+
+Dopo boot completo AOSP (sys.boot_completed=1), verificata directory files/ dell'app
+tramite su0: marker release presente, rimosso e assenza verificata. Il primo tentativo
+senza root era stato rifiutato; una lettura anticipata prima di boot completo non era
+stata considerata prova d'assenza. Nessun wipe. /data/local/tmp finale solo dalvik-cache,
+sync prima di emu kill, adb vuoto verificato. Rimosse le sole tre copie binarie
+temporanee dei download di verifica; APK/checksum pubblicati conservati in local/.
+
+Handoff NEXT_PROMPT riscritto con stato release reale e archivio precedente preservato
+in local/NEXT_PROMPT_PRE_RELEASE_ARCHIVE_20261017.md; bozza release conservata come
+storico, checklist W11 con esiti404 precedenti preservati e due nuove prove post-release
+non spuntate. W12D mantiene i riscontri precedenti e distingue hash debug da pubblico.
+Nessuna nuova prova telefono attestata, nessun collaudo Auto/batteria chiuso. Ulteriori
+versioni richiederanno versionName e code crescenti concordati, senza sostituire asset/tag.

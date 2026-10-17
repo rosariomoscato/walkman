@@ -159,6 +159,11 @@ Incremento W05-T06: nel pannello scrollabile, dopo volume/coda, sezione Timer co
 
 ## Incremento W12 — coerenza navigazione e informazioni (2026-10-17)
 
+Distribuito nell'[APK pubblico v0.1.0](https://github.com/rosariomoscato/walktape/releases/tag/v0.1.0):
+icona Cassetta approvata, splash/versione/credits e disposizione dei tasti invariati
+rispetto al codice collaudato. Versione visualizzata letta dal pacchetto, non duplicata
+negli asset. Dettagli artefatto e checksum in docs/RELEASING.md.
+
 ### Rinforzo bassi: disponibilità per uscita approvata dall'utente
 
 Su speaker il comando appare spento/disabilitato con avviso «Rinforzo bassi non
